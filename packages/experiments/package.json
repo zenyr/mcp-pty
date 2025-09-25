@@ -15,7 +15,11 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@fxts/core": "^1.17.0",
+    "@sindresorhus/is": "^7.1.0",
+    "@xterm/addon-serialize": "^0.13.0",
     "@xterm/headless": "^5.5.0",
-    "bun-pty": "^0.3.2"
+    "bun-pty": "^0.3.2",
+    "consola": "^3.4.2"
   }
 }

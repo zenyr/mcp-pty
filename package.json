@@ -1,17 +1,5 @@
 {
   "name": "mcp-pty",
-  "type": "module",
-  "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
-  "scripts": {
-    "check": "tsc --noEmit",
-    "format": "prettier --write packages",
-    "build": "bun run build --filter=\"*\"",
-    "dev": "bun run dev --filter=\"@app/*\"",
-    "start": "bun run start --filter=\"@app/mcp-server\""
-  },
   "devDependencies": {
     "@types/bun": "latest",
     "prettier": "^3.6.2",
@@ -20,6 +8,16 @@
   "peerDependencies": {
     "typescript": "^5"
   },
-  "dependencies": {
-  }
+  "private": true,
+  "scripts": {
+    "check": "tsc --noEmit",
+    "format": "prettier --write packages",
+    "build": "bun run build --filter=\"*\"",
+    "dev": "bun run dev --filter=\"@app/*\"",
+    "start": "bun run start --filter=\"@app/mcp-server\""
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ]
 }
