@@ -1,0 +1,15 @@
+{
+  "name": "@pkgs/pty-manager",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test",
+    "check": "tsc --noEmit",
+    "format": "prettier --write src"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}

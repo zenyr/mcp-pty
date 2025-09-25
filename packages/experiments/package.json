@@ -1,0 +1,21 @@
+{
+  "name": "@pkgs/experiments",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test",
+    "check": "tsc --noEmit",
+    "format": "prettier --write src"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@xterm/headless": "^5.5.0",
+    "bun-pty": "^0.3.2"
+  }
+}
