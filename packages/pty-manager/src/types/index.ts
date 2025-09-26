@@ -16,10 +16,6 @@ export type PtyStatus =
   | "terminating"
   | "terminated";
 
-/**
- * PTY 인스턴스 인터페이스
- * 개별 PTY 프로세스를 나타냄
- */
 export interface PtyInstance {
   /** 프로세스 고유 ID (nanoid 기반) */
   id: string;

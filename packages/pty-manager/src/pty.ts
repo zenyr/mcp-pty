@@ -1,5 +1,5 @@
-import { spawn } from "bun-pty";
 import { Terminal } from "@xterm/headless";
+import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
 import type { PtyStatus, TerminalOutput } from "./types";
 
