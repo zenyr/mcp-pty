@@ -42,7 +42,7 @@
 - **주요 특징 및 가이드**:
   - Node.js 대신 Bun 독점적 사용. 모든 기능에 Bun 네이티브 API(Bun.spawn, Bun.serve, Bun.file 등) 최우선 적용.
   - `bun test`를 통한 테스트 실행, `Bun.serve()`를 통한 서버 구현, HTML 임포트와 내장 WebSocket 지원, Bun의 내장 API 활용 (SQLite, Redis, Postgres, YAML 등).
-  - Bun 사용 가이드: `node <file>` 또는 `ts-node <file>` 대신 `bun <file>` 사용, `jest` 또는 `vitest` 대신 `bun test` 사용, `webpack` 또는 `esbuild` 대신 `bun build <file.html|file.ts|file.css>` 사용, `npm install` 등 대신 `bun install`/`bun run <script>` 사용. 워크스페이스 패키지를 대상으로 할 때는 `bun --cwd=packages/experiments add consola`처럼 --cwd를 지정해야 함. Bun이 자동으로 .env를 로드하므로 dotenv 사용하지 않음.
+  - Bun 사용 가이드: `node <file>` 또는 `ts-node <file>` 대신 `bun <file>` 사용, `jest` 또는 `vitest` 대신 `bun test` 사용, `webpack` 또는 `esbuild` 대신 `bun build <file.html|file.ts|file.css>` 사용, `npm install` 등 대신 `bun install`/`bun run <script>` 사용. 워크스페이스 패키지를 대상으로 할 때는 `bun --cwd=packages/experiments add consola`처럼 --cwd를 지정해야 함. 또는 pushd packages/experiments && bun add consola && popd; 패턴을 활용하여 디렉토리를 임시로 변경할 수 있음. Bun이 자동으로 .env를 로드하므로 dotenv 사용하지 않음.
   - APIs: `Bun.serve()`는 WebSockets, HTTPS, 라우팅 지원 (`express` 사용하지 않음), SQLite에는 `bun:sqlite` (`better-sqlite3` 사용하지 않음), Redis에는 `Bun.redis` (`ioredis` 사용하지 않음), Postgres에는 `Bun.sql` (`pg` 또는 `postgres.js` 사용하지 않음), `WebSocket`은 내장됨 (`ws` 사용하지 않음), `node:fs`의 readFile/writeFile 대신 `Bun.file` 사용, execa 대신 Bun.$`ls` 사용. Node.js 모듈(node:\*) 사용시 반드시 node: 프리픽스 붙일 것, node-pty 대신 Bun.spawn 강제.
 - **Testing**:
   - `bun test`를 사용하여 테스트를 실행합니다.
