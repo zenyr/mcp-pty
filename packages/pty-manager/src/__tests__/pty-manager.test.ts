@@ -1,5 +1,6 @@
-import { test, expect } from "bun:test";
+import { expect, test } from "bun:test";
 import { PtyManager } from "../index";
+import { checkRootPermission } from "../utils/safety";
 
 test("PtyManager creates with sessionId", () => {
   const sessionId = "test-session-ulid";
@@ -51,4 +52,39 @@ test("PtyManager returns session info", () => {
   const session = manager.getSession();
   expect(session.sessionId).toBe(sessionId);
   expect(session.instances).toBeDefined();
+});
+
+test("checkRootPermission allows non-root execution", () => {
+  // 루트가 아닌 경우 정상 동작
+  expect(() => checkRootPermission()).not.toThrow();
+});
+
+test("checkRootPermission throws error when root without consent", () => {
+  // 루트를 시뮬레이션하기 위해 geteuid 재할당
+  const originalGeteuid = process.geteuid;
+  process.geteuid = () => 0; // 루트로 설정
+
+  // 환경 변수 없음
+  delete process.env.MCP_PTY_ALLOW_ROOT;
+
+  expect(() => checkRootPermission()).toThrow(
+    /MCP-PTY detected that it is running with root privileges/
+  );
+
+  // 복원
+  process.geteuid = originalGeteuid;
+});
+
+test("checkRootPermission allows root with consent", () => {
+  const originalGeteuid = process.geteuid;
+  process.geteuid = () => 0;
+
+  process.env.MCP_PTY_ALLOW_ROOT =
+    "I understand the risks and explicitly allow MCP-PTY to run with root privileges";
+
+  expect(() => checkRootPermission()).not.toThrow();
+
+  // 복원
+  process.geteuid = originalGeteuid;
+  delete process.env.MCP_PTY_ALLOW_ROOT;
 });
