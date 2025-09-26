@@ -122,3 +122,25 @@ export const checkSudoPermission = (command: string): void => {
     }
   }
 };
+
+/**
+ * 실행 파일 권한 감지 유틸리티
+ *
+ * PTY에서 실행할 파일 이름에 sudo가 포함된 경우,
+ * 사용자 동의(MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS 환경 변수)가 없는 경우 오류를 발생시킵니다.
+ *
+ * @param executable - 실행할 파일 이름
+ * @throws {Error} sudo 관련 파일이지만 동의가 없는 경우
+ */
+export const checkExecutablePermission = (executable: string): void => {
+  if (executable.toLowerCase().includes("sudo")) {
+    if (
+      !validateConsent(
+        dangerousConsentEnvVar,
+        "Executing sudo-related executable in PTY"
+      )
+    ) {
+      throw new Error(sudoPermissionErrorPrompt);
+    }
+  }
+};

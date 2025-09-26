@@ -1,8 +1,8 @@
 import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
-import type { PtyStatus, TerminalOutput } from "./types";
-import { checkSudoPermission } from "./utils/safety";
+import type { PtyStatus, TerminalOutput, PtyOptions } from "./types";
+import { checkSudoPermission, checkExecutablePermission } from "./utils/safety";
 
 /**
  * 개별 PTY 프로세스 관리 클래스
@@ -14,14 +14,24 @@ export class PtyProcess {
   public readonly process: ReturnType<typeof spawn>;
   public readonly createdAt: Date;
   public lastActivity: Date;
+  public readonly options: PtyOptions;
 
   private outputBuffer: string = "";
   private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
 
-  constructor(shell: string = "bash") {
+  constructor(shellOrOptions: string | PtyOptions = { executable: "bash" }) {
+    const options =
+      typeof shellOrOptions === "string"
+        ? { executable: shellOrOptions }
+        : shellOrOptions;
+
     this.id = nanoid();
     this.createdAt = new Date();
     this.lastActivity = new Date();
+    this.options = options;
+
+    // 보안 체크: 실행 파일 sudo 여부 확인
+    checkExecutablePermission(options.executable);
 
     // xterm headless 초기화
     this.terminal = new Terminal({
@@ -30,13 +40,13 @@ export class PtyProcess {
       allowTransparency: false,
     });
 
-    // bun-pty 프로세스 생성
-    this.process = spawn(shell, [], {
+    // bun-pty 프로세스 생성 (직접 프로그램 실행)
+    this.process = spawn(options.executable, options.args || [], {
       name: "xterm-256color",
       cols: 80,
       rows: 24,
-      cwd: process.cwd(),
-      env: process.env as Record<string, string>,
+      cwd: options.cwd || process.cwd(),
+      env: { ...process.env, ...options.env } as Record<string, string>,
     });
 
     this.setupStreams();
@@ -61,26 +71,32 @@ export class PtyProcess {
       this.updateActivity();
     });
 
-    // 프로세스 종료 처리
+    // 프로세스 종료 처리: autoDisposeOnExit 옵션에 따라 dispose 트리거
     this.process.onExit(({ exitCode, signal }) => {
       this.status = "terminated";
       console.log(
         `PTY ${this.id} exited with code ${exitCode}, signal ${signal}`
       );
+
+      if (this.options.autoDisposeOnExit) {
+        this.dispose("SIGTERM").catch(console.error); // 자동 클린업
+      }
     });
   }
 
   /**
-   * 명령 실행
+   * 인터랙티브 입력 또는 명령 쓰기 (쉘 프롬프트 없이 직접 프로그램에 전달)
+   * @param input - 키 입력 또는 명령 문자열 (예: vi 모드에서 'i' 또는 전체 명령)
    */
-  public writeCommand(command: string): void {
+  public writeInput(input: string): void {
     if (this.status !== "active") {
       throw new Error(`PTY ${this.id} is not active`);
     }
 
-    checkSudoPermission(command);
+    // sudo 관련 입력 체크 (보안)
+    checkSudoPermission(input); // 기존 함수 재사용 (입력에 "sudo" 포함 시)
 
-    this.terminal.write(command + "\n");
+    this.terminal.write(input + "\n"); // \n으로 엔터 시뮬 (인터랙티브 적합)
     this.updateActivity();
   }
 
@@ -115,18 +131,38 @@ export class PtyProcess {
   }
 
   /**
-   * 프로세스 종료
+   * 자원 정리 (Graceful shutdown 포함)
+   * @param signal - 종료 신호 (기본: SIGTERM). 3초 후 응답 없으면 SIGKILL로 전환.
    */
-  public kill(signal: string = "SIGTERM"): void {
-    this.status = "terminating";
-    this.process.kill(signal);
-  }
+  public async dispose(signal: string = "SIGTERM"): Promise<void> {
+    if (this.status === "terminated") return;
 
-  /**
-   * 정리
-   */
-  public dispose(): void {
+    this.status = "terminating";
+
+    // Graceful shutdown: SIGTERM 후 3초 타임아웃
+    const timeout = 3000;
+    const killPromise = new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        this.process.kill("SIGKILL");
+        resolve();
+      }, timeout);
+
+      this.process.onExit(() => {
+        clearTimeout(timer);
+        resolve();
+      });
+
+      this.process.kill(signal);
+    });
+
+    await killPromise;
+
+    // 추가 클린업
     this.terminal.dispose();
-    this.kill();
+    this.outputBuffer = "";
+    this.outputCallbacks = [];
+    this.status = "terminated";
+
+    console.log(`PTY ${this.id} disposed successfully`);
   }
 }

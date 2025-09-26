@@ -69,3 +69,19 @@ export interface CommandInput {
   /** 입력 시각 */
   timestamp: Date;
 }
+
+/**
+ * PtyProcess 생성 옵션 인터페이스
+ */
+export interface PtyOptions {
+  /** 실행할 프로그램 (예: "vi", "bash") */
+  executable: string;
+  /** 프로그램에 전달할 인자 */
+  args?: string[];
+  /** 작업 디렉토리 */
+  cwd?: string;
+  /** 환경 변수 오버라이드 */
+  env?: Record<string, string>;
+  /** 프로그램 종료 시 자동 dispose 여부 (인터랙티브 프로그램용) */
+  autoDisposeOnExit?: boolean;
+}
