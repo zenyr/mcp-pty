@@ -33,8 +33,8 @@ mcp-pty는 Bun + xterm.js + 공식 MCP SDK를 활용하여 background process를
 
 각 MCP 클라이언트에 대해 고유한 세션 컨텍스트를 유지합니다:
 
-- **세션 식별**: UUID 기반 세션 ID 생성
-- **생명주기 추적**: 클라이언트 연결/해제 상태 모니터링
+- **세션 식별**: ULID 기반 세션 ID 생성 (UUID 대신 ULID로 변경, 시간 정렬 가능)
+- **생명주기 추적**: 클라이언트 연결/해제 상태 모니터링 (상태: initializing → active → idle → terminating → terminated)
 - **자원 바인딩**: PTY 인스턴스와 세션의 1:N 매핑 (세션당 여러 인스턴스)
 
 ### 4. PTY 프로세스 관리
