@@ -5,10 +5,10 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "test": "bun test",
     "check": "tsc --noEmit",
     "format": "prettier --write src",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "bun test"
   },
   "dependencies": {
     "@xterm/headless": "^5.5.0",
