@@ -1,5 +1,6 @@
 import { PtyProcess } from "./pty";
 import type { PtyInstance, PtySession } from "./types";
+import { checkRootPermission } from "./utils/safety";
 
 /**
  * PTY Manager 클래스
@@ -10,6 +11,8 @@ export class PtyManager {
   private readonly instances = new Map<string, PtyInstance>();
 
   constructor(sessionId: string) {
+    // 루트 권한 실행 안전장치 체크
+    checkRootPermission();
     this.sessionId = sessionId;
   }
 
