@@ -1,6 +1,10 @@
 import { expect, test } from "bun:test";
 import { PtyManager } from "../index";
-import { checkRootPermission } from "../utils/safety";
+import {
+  checkRootPermission,
+  checkSudoPermission,
+  validateConsent,
+} from "../utils/safety";
 
 test("PtyManager creates with sessionId", () => {
   const sessionId = "test-session-ulid";
@@ -65,7 +69,7 @@ test("checkRootPermission throws error when root without consent", () => {
   process.geteuid = () => 0; // 루트로 설정
 
   // 환경 변수 없음
-  delete process.env.MCP_PTY_ALLOW_ROOT;
+  delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
 
   expect(() => checkRootPermission()).toThrow(
     /MCP-PTY detected that it is running with root privileges/
@@ -79,12 +83,75 @@ test("checkRootPermission allows root with consent", () => {
   const originalGeteuid = process.geteuid;
   process.geteuid = () => 0;
 
-  process.env.MCP_PTY_ALLOW_ROOT =
-    "I understand the risks and explicitly allow MCP-PTY to run with root privileges";
+  process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS =
+    "I understand the risks and explicitly allow dangerous actions in MCP-PTY";
+
+  const originalWarn = console.warn;
+  let warnCalled = false;
+  console.warn = () => {
+    warnCalled = true;
+  };
 
   expect(() => checkRootPermission()).not.toThrow();
+  expect(warnCalled).toBe(true);
 
   // 복원
+  console.warn = originalWarn;
   process.geteuid = originalGeteuid;
-  delete process.env.MCP_PTY_ALLOW_ROOT;
+  delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
+});
+
+test("checkSudoPermission allows non-sudo command", () => {
+  // sudo로 시작하지 않는 명령: throw 안 함
+  expect(() => checkSudoPermission("ls -la")).not.toThrow();
+});
+
+test("checkSudoPermission throws error for sudo without consent", () => {
+  // sudo 명령, env 없음 → throw
+  delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
+  expect(() => checkSudoPermission("sudo apt update")).toThrow(
+    /MCP-PTY detected an attempt to execute a sudo command/
+  );
+});
+
+test("checkSudoPermission allows sudo with consent", () => {
+  process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS =
+    "I understand the risks and explicitly allow dangerous actions in MCP-PTY";
+
+  const originalWarn = console.warn;
+  let warnCalled = false;
+  console.warn = () => {
+    warnCalled = true;
+  };
+
+  expect(() => checkSudoPermission("sudo ls")).not.toThrow();
+  expect(warnCalled).toBe(true);
+
+  // 복원
+  console.warn = originalWarn;
+  delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
+});
+
+test("validateConsent handles trimmed empty string", () => {
+  // 트림 후 빈 문자열: false 반환
+  process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS = "   ";
+  expect(
+    validateConsent("MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS", "test action")
+  ).toBe(false);
+
+  // 유효한 동의: true 반환 + warn 호출
+  process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS = "valid consent";
+  const originalWarn = console.warn;
+  let warnCalled = false;
+  console.warn = () => {
+    warnCalled = true;
+  };
+
+  expect(
+    validateConsent("MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS", "test action")
+  ).toBe(true);
+  expect(warnCalled).toBe(true);
+
+  console.warn = originalWarn;
+  delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
 });

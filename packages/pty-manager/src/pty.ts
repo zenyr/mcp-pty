@@ -2,6 +2,7 @@ import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
 import type { PtyStatus, TerminalOutput } from "./types";
+import { checkSudoPermission } from "./utils/safety";
 
 /**
  * 개별 PTY 프로세스 관리 클래스
@@ -76,6 +77,9 @@ export class PtyProcess {
     if (this.status !== "active") {
       throw new Error(`PTY ${this.id} is not active`);
     }
+
+    checkSudoPermission(command);
+
     this.terminal.write(command + "\n");
     this.updateActivity();
   }
