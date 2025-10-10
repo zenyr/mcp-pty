@@ -6,11 +6,11 @@ import tsparser from "@typescript-eslint/parser";
 export default [
   js.configs.recommended,
   {
-    files: ["src/**/*.ts"],
+    files: ["packages/*/src/**/*.ts"],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
-        ecmaVersion: "latest",
+        ecmaVersion: 2022,
         sourceType: "module",
       },
       globals: {
@@ -22,6 +22,7 @@ export default [
       "@typescript-eslint": tseslint,
     },
     rules: {
+      ...tseslint.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "error",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
