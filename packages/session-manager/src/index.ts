@@ -1,13 +1,13 @@
+import { PtyManager } from "@pkgs/pty-manager";
+import { consola } from "consola";
+import { ulid } from "ulid";
 import type {
+  PtyInstanceReference,
   Session,
+  SessionEvent,
   SessionId,
   SessionStatus,
-  PtyInstanceReference,
-  SessionEvent,
 } from "./types/index.ts";
-import { generateSessionId } from "./utils/ulid.ts";
-import { consola } from "consola";
-import { PtyManager } from "@pkgs/pty-manager";
 
 /**
  * Session manager class.
@@ -23,7 +23,7 @@ export class SessionManager {
    * Create new session.
    */
   createSession(): SessionId {
-    const id = generateSessionId();
+    const id = ulid();
     const session: Session = {
       id,
       status: "initializing",

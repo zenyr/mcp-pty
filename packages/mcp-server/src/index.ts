@@ -1,6 +1,4 @@
 #!/usr/bin/env bun
-import { Hono } from "hono";
-import { toReqRes } from "fetch-to-node";
 import {
   McpServer,
   ResourceTemplate,
@@ -8,7 +6,8 @@ import {
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { sessionManager } from "@pkgs/session-manager";
-import { randomUUID } from "crypto";
+import { toReqRes } from "fetch-to-node";
+import { Hono } from "hono";
 import { z } from "zod";
 
 // Parse command line arguments
@@ -29,7 +28,7 @@ process.on("SIGINT", () => {
 });
 
 // Initialize MCP server factory
-const createServer = () => {
+export const createServer = () => {
   const server = new McpServer({
     name: "mcp-pty",
     version: "0.1.0",

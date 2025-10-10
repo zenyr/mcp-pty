@@ -3,6 +3,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "prettier": "^3.6.2",
+    "turbo": "^2.5.8",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
