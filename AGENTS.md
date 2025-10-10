@@ -74,7 +74,6 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 ### Auto-Reject Code Review Criteria
 
 - `require('child_process')` found.
-- `../` relative imports found.
 - Unguarded `any` overuse.
 - Unguarded `any`/`as unknown` overuse.
 - Unguarded `!` assertions outside tests/generic utils.

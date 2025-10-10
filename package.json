@@ -11,7 +11,8 @@
   "private": true,
   "scripts": {
     "reset": "bun x --bun rimraf './**/node_modules' node_modules; bun i",
-    "check": "bun --filter=\"*\" run check",
+    "type-check": "bun --filter=\"*\" run check",
+    "check": "bun biome check --write",
     "format": "bun biome format --write",
     "lint": "bun biome lint --write",
     "build": "bun --filter=\"*\" run build",

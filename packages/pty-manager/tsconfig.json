@@ -4,10 +4,7 @@
     "target": "ES2022",
     "module": "ESNext",
     "noImplicitAny": true,
-    "baseUrl": ".",
-    "paths": {
-      "@self/*": ["src"]
-    }
+    "baseUrl": "."
   },
   "include": ["src/**/*"]
 }

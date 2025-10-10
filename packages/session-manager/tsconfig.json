@@ -3,10 +3,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "baseUrl": ".",
-    "paths": {
-      "@self/*": ["src"]
-    }
+    "baseUrl": "."
   },
   "include": ["src/**/*"]
 }
