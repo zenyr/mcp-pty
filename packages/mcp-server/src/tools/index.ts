@@ -1,6 +1,15 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { sessionManager } from "@pkgs/session-manager";
-import { z } from "zod";
+import {
+  KillPtyInputSchema,
+  KillPtyOutputSchema,
+  ListPtyInputSchema,
+  ListPtyOutputSchema,
+  ReadPtyInputSchema,
+  ReadPtyOutputSchema,
+  StartPtyInputSchema,
+  StartPtyOutputSchema,
+} from "../types";
 
 /**
  * Register PTY tools to the server
@@ -13,8 +22,8 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Start PTY",
       description: "Create new PTY instance",
-      inputSchema: { sessionId: z.string(), command: z.string() },
-      outputSchema: { processId: z.string() },
+      inputSchema: StartPtyInputSchema.shape,
+      outputSchema: StartPtyOutputSchema.shape,
     },
     async ({ sessionId, command }: { sessionId: string; command: string }) => {
       const ptyManager = sessionManager.getPtyManager(sessionId);
@@ -34,8 +43,8 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Kill PTY",
       description: "Terminate PTY instance",
-      inputSchema: { sessionId: z.string(), processId: z.string() },
-      outputSchema: { success: z.boolean() },
+      inputSchema: KillPtyInputSchema.shape,
+      outputSchema: KillPtyOutputSchema.shape,
     },
     async ({
       sessionId,
@@ -61,15 +70,18 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "List PTY",
       description: "List PTY processes",
-      inputSchema: { sessionId: z.string() },
-      outputSchema: {
-        ptys: z.array(z.any()), // TODO: Proper schema
-      },
+      inputSchema: ListPtyInputSchema.shape,
+      outputSchema: ListPtyOutputSchema.shape,
     },
     async ({ sessionId }: { sessionId: string }) => {
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
-      const ptys = ptyManager.getAllPtys();
+      const ptys = ptyManager.getAllPtys().map((pty) => ({
+        id: pty.id,
+        status: pty.status,
+        createdAt: pty.createdAt.toISOString(),
+        lastActivity: pty.lastActivity.toISOString(),
+      }));
       return {
         content: [{ type: "text", text: JSON.stringify({ ptys }) }],
         structuredContent: { ptys },
@@ -83,8 +95,8 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Read PTY",
       description: "Read PTY output",
-      inputSchema: { sessionId: z.string(), processId: z.string() },
-      outputSchema: { output: z.string() },
+      inputSchema: ReadPtyInputSchema.shape,
+      outputSchema: ReadPtyOutputSchema.shape,
     },
     async ({
       sessionId,
@@ -97,8 +109,7 @@ export const registerPtyTools = (server: McpServer): void => {
       if (!ptyManager) throw new Error("Session not found");
       const pty = ptyManager.getPty(processId);
       if (!pty) throw new Error("PTY not found");
-      // TODO: Get output
-      const output = "PTY output here";
+      const output = pty.getOutputBuffer();
       return {
         content: [{ type: "text", text: JSON.stringify({ output }) }],
         structuredContent: { output },

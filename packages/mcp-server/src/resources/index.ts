@@ -23,7 +23,12 @@ export const registerPtyResources = (server: McpServer): void => {
           uri: "pty://status",
           text: JSON.stringify({
             sessions: sessionManager.getSessionCount(),
-            processes: 0, // TODO: PTY count
+            processes: sessionManager
+              .getAllSessions()
+              .reduce((sum, session) => {
+                const ptyManager = sessionManager.getPtyManager(session.id);
+                return sum + (ptyManager ? ptyManager.getAllPtys().length : 0);
+              }, 0),
           }),
         },
       ],
@@ -58,8 +63,13 @@ export const registerPtyResources = (server: McpServer): void => {
       if (typeof id !== "string") throw new Error("Invalid session id");
       const session = sessionManager.getSession(id);
       if (!session) throw new Error("Session not found");
-      // TODO: Get PTY output
-      return { contents: [{ uri: uri.href, text: "PTY output here" }] };
+      const ptyManager = sessionManager.getPtyManager(id);
+      if (!ptyManager) throw new Error("PTY manager not found");
+      const outputs = ptyManager.getAllPtys().map((pty) => ({
+        processId: pty.id,
+        output: pty.getOutputBuffer(),
+      }));
+      return { contents: [{ uri: uri.href, text: JSON.stringify(outputs) }] };
     },
   );
 
