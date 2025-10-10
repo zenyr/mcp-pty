@@ -4,6 +4,7 @@
     "onsessioninitialized",
     "sindresorhus",
     "stty",
-    "pty", "ptys"
+    "pty",
+    "ptys"
   ]
 }
