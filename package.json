@@ -3,6 +3,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.2.5",
     "@types/bun": "latest",
+    "husky": "^9.1.7",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
@@ -12,12 +13,14 @@
   "scripts": {
     "reset": "bun x --bun rimraf './**/node_modules' node_modules; bun i",
     "type-check": "bun --filter=\"*\" run check",
-    "check": "bun biome check --write",
-    "format": "bun biome format --write",
-    "lint": "bun biome lint --write",
+    "biome:all": "biome check --write && biome format --write && biome lint --write",
+    "check": "biome check --write",
+    "format": "biome format --write",
+    "lint": "biome lint --write",
     "build": "bun --filter=\"*\" run build",
     "dev": "bun --filter=\"@pkgs/*\" run dev",
-    "start": "bun --filter=\"@pkgs/mcp-server\" run start"
+    "start": "bun --filter=\"@pkgs/mcp-server\" run start",
+    "prepare": "husky"
   },
   "type": "module",
   "workspaces": [
