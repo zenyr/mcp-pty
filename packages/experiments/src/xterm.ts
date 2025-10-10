@@ -78,7 +78,7 @@ const testTuiMan = async () => {
     pty.onExit(({ exitCode, signal }) => {
       logToFile(
         logFile,
-        `Process ended with exit code: ${exitCode}, signal: ${signal}`,
+        `Process ended with exit code: ${exitCode}, signal: ${signal}`
       );
       resolve(void 0);
     });

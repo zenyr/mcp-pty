@@ -15,7 +15,7 @@ import { consola } from "consola";
 export class SessionManager {
   private sessions = new Map<SessionId, Session>();
   private eventListeners = new Set<(event: SessionEvent) => void>();
-  private monitorInterval?: Timer;
+  private monitorInterval?: ReturnType<typeof setInterval>;
 
   /**
    * Create new session.
