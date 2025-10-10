@@ -36,9 +36,14 @@ export const StartPtyOutputSchema = z.object({ processId: z.string() });
 
 export const KillPtyOutputSchema = z.object({ success: z.boolean() });
 
-export const ListPtyOutputSchema = z.object({
-  ptys: z.array(z.any()), // TODO: Proper schema
+export const PtyInfoSchema = z.object({
+  id: z.string(),
+  status: z.string(),
+  createdAt: z.string(),
+  lastActivity: z.string(),
 });
+
+export const ListPtyOutputSchema = z.object({ ptys: z.array(PtyInfoSchema) });
 
 export const ReadPtyOutputSchema = z.object({ output: z.string() });
 
