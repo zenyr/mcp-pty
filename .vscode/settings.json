@@ -1,7 +1,9 @@
 {
-    "cSpell.words": [
-        "onsessioninitialized",
-        "sindresorhus",
-        "stty"
-    ]
+  "cSpell.words": [
+    "Crockford",
+    "onsessioninitialized",
+    "sindresorhus",
+    "stty",
+    "pty", "ptys"
+  ]
 }

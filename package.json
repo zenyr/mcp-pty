@@ -10,6 +10,7 @@
   },
   "private": true,
   "scripts": {
+    "reset": "bun x --bun rimraf './**/node_modules' node_modules; bun i",
     "check": "tsc --noEmit",
     "format": "prettier --write packages",
     "build": "bun run build --filter=\"*\"",
