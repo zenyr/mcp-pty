@@ -27,8 +27,12 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
 /**
  * Start HTTP server
  * @param server McpServer instance
+ * @param port HTTP server port
  */
-export const startHttpServer = async (server: McpServer): Promise<void> => {
+export const startHttpServer = async (
+  server: McpServer,
+  port: number,
+): Promise<void> => {
   const app = new Hono();
   const transports = new Map<string, StreamableHTTPServerTransport>();
 
@@ -72,7 +76,6 @@ export const startHttpServer = async (server: McpServer): Promise<void> => {
     }
   });
 
-  const port = 3000;
   logServer(`MCP PTY server started via HTTP on port ${port}`);
   Bun.serve({ port, fetch: app.fetch });
 };

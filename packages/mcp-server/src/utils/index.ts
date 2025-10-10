@@ -1,12 +1,57 @@
+import { parseArgs } from "node:util";
 import { sessionManager } from "@pkgs/session-manager";
 
 /**
  * Parse command line arguments
- * @param args command line arguments
- * @returns transport type
+ * @returns parsed options
  */
-export const parseTransportType = (args: string[]): "stdio" | "http" => {
-  return args[2] === "http" ? "http" : "stdio";
+export const parseCliArgs = () => {
+  const { values } = parseArgs({
+    args: process.argv.slice(2),
+    options: {
+      transport: {
+        type: "string",
+        short: "t",
+        default: "stdio",
+      },
+      port: {
+        type: "string",
+        short: "p",
+        default: "3000",
+      },
+      help: {
+        type: "boolean",
+        short: "h",
+        default: false,
+      },
+    },
+    strict: true,
+    allowPositionals: false,
+  });
+
+  if (values.help) {
+    console.log(`
+Usage: mcp-pty [options]
+
+Options:
+  -t, --transport <type>  Transport type: stdio (default) or http
+  -p, --port <port>       HTTP server port (default: 3000)
+  -h, --help              Show this help message
+`);
+    process.exit(0);
+  }
+
+  const transport = values.transport as "stdio" | "http";
+  if (transport !== "stdio" && transport !== "http") {
+    throw new Error(
+      `Invalid transport type: ${transport}. Must be "stdio" or "http".`,
+    );
+  }
+
+  return {
+    transport,
+    port: Number.parseInt(values.port as string, 10),
+  };
 };
 
 /**

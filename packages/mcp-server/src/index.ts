@@ -1,14 +1,10 @@
 #!/usr/bin/env bun
 import { McpServerFactory } from "./server";
 import { startHttpServer, startStdioServer } from "./transports";
-import {
-  initializeServer,
-  parseTransportType,
-  setupGracefulShutdown,
-} from "./utils";
+import { initializeServer, parseCliArgs, setupGracefulShutdown } from "./utils";
 
 // Parse command line arguments
-const transportType = parseTransportType(process.argv);
+const { transport, port } = parseCliArgs();
 
 // Start session monitoring
 initializeServer();
@@ -26,8 +22,8 @@ const serverFactory = new McpServerFactory({
 const server = serverFactory.createServer();
 
 // Start server based on transport type
-if (transportType === "http") {
-  startHttpServer(server);
+if (transport === "http") {
+  startHttpServer(server, port);
 } else {
   startStdioServer(server);
 }
