@@ -1,6 +1,3 @@
-import type { Terminal } from "@xterm/headless";
-import type { IPty } from "bun-pty";
-
 /**
  * PTY Manager type definitions
  * Pure PTY management types without MCP protocol dependencies
@@ -15,34 +12,6 @@ export type PtyStatus =
   | "idle"
   | "terminating"
   | "terminated";
-
-export interface PtyInstance {
-  /** Unique process ID (nanoid-based) */
-  id: string;
-  /** Current status */
-  status: PtyStatus;
-  /** xterm headless terminal instance */
-  terminal: Terminal;
-  /** bun-pty process instance */
-  process: IPty;
-  /** Creation time */
-  createdAt: Date;
-  /** Last activity time */
-  lastActivity: Date;
-}
-
-/**
- * PTY session interface
- * Manages all PTY instances belonging to one session
- */
-export interface PtySession {
-  /** Unique session ID (ULID, passed from session-manager) */
-  sessionId: string;
-  /** processId -> PtyInstance mapping */
-  instances: Map<string, PtyInstance>;
-  /** Session creation time */
-  createdAt: Date;
-}
 
 /**
  * Terminal output interface

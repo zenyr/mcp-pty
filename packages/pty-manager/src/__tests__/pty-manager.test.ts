@@ -33,7 +33,7 @@ test("PtyManager creates with sessionId", () => {
   const manager = new PtyManager(sessionId);
   managers.push(manager);
   expect(manager).toBeDefined();
-  expect(manager.getSession().sessionId).toBe(sessionId);
+  expect(manager.getSessionInfo().sessionId).toBe(sessionId);
 });
 
 test("PtyManager creates PTY instance and tracks it", () => {
@@ -92,15 +92,15 @@ test("PtyManager removePty returns false for non-existent ID", () => {
   expect(manager.removePty("non-existent")).toBe(false);
 });
 
-test("PtyManager returns session info with instances Map", () => {
+test("PtyManager returns session info", () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
   manager.createPty("sh");
-  const session = manager.getSession();
-  expect(session.sessionId).toBe(sessionId);
-  expect(session.instances).toBeDefined();
-  expect(session.instances.size).toBe(1);
+  const info = manager.getSessionInfo();
+  expect(info.sessionId).toBe(sessionId);
+  expect(info.processCount).toBe(1);
+  expect(info.createdAt).toBeInstanceOf(Date);
 });
 
 test("PtyManager dispose cleans up all PTYs", () => {

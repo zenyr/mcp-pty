@@ -1,5 +1,4 @@
 import { PtyProcess } from "./process";
-import type { PtyInstance, PtySession } from "./types";
 import { checkRootPermission } from "./utils/safety";
 
 /**
@@ -8,12 +7,14 @@ import { checkRootPermission } from "./utils/safety";
  */
 export class PtyManager {
   private readonly sessionId: string;
-  private readonly instances = new Map<string, PtyInstance>();
+  private readonly sessionCreatedAt: Date;
+  private readonly instances = new Map<string, PtyProcess>();
 
   constructor(sessionId: string) {
     // Check root privilege execution safety
     checkRootPermission();
     this.sessionId = sessionId;
+    this.sessionCreatedAt = new Date();
   }
 
   /**
@@ -21,36 +22,21 @@ export class PtyManager {
    */
   public createPty(command: string): string {
     const process = new PtyProcess(command);
-    const instance: PtyInstance = {
-      id: process.id,
-      status: process.status,
-      terminal: process.terminal,
-      process: process.process,
-      createdAt: process.createdAt,
-      lastActivity: process.lastActivity,
-    };
-
-    this.instances.set(process.id, instance);
-
-    // Monitor status changes (simply)
-    process.process.onExit(() => {
-      instance.status = "terminated";
-    });
-
+    this.instances.set(process.id, process);
     return process.id;
   }
 
   /**
    * Get PTY instance
    */
-  public getPty(processId: string): PtyInstance | undefined {
+  public getPty(processId: string): PtyProcess | undefined {
     return this.instances.get(processId);
   }
 
   /**
    * List all PTY instances
    */
-  public getAllPtys(): PtyInstance[] {
+  public getAllPtys(): PtyProcess[] {
     return Array.from(this.instances.values());
   }
 
@@ -58,10 +44,9 @@ export class PtyManager {
    * Remove PTY instance
    */
   public removePty(processId: string): boolean {
-    const instance = this.instances.get(processId);
-    if (instance) {
-      instance.process.kill();
-      instance.terminal.dispose();
+    const process = this.instances.get(processId);
+    if (process) {
+      process.dispose().catch(console.error);
       return this.instances.delete(processId);
     }
     return false;
@@ -70,11 +55,11 @@ export class PtyManager {
   /**
    * Get session info
    */
-  public getSession(): PtySession {
+  public getSessionInfo() {
     return {
       sessionId: this.sessionId,
-      instances: this.instances,
-      createdAt: new Date(), // TODO: Manage session creation time
+      processCount: this.instances.size,
+      createdAt: this.sessionCreatedAt,
     };
   }
 
@@ -82,9 +67,8 @@ export class PtyManager {
    * Dispose all PTYs
    */
   public dispose(): void {
-    for (const instance of this.instances.values()) {
-      instance.process.kill();
-      instance.terminal.dispose();
+    for (const process of this.instances.values()) {
+      process.dispose().catch(console.error);
     }
     this.instances.clear();
   }
