@@ -77,6 +77,7 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 - `../` relative imports found.
 - Unguarded `any` overuse.
 - Unguarded `any`/`as unknown` overuse.
+- Unguarded `!` assertions outside tests/generic utils.
 - Missing error handling (core features, except tests).
 - Core features without tests.
 
