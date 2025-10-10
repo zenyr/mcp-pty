@@ -6,7 +6,7 @@
     "noImplicitAny": true,
     "baseUrl": ".",
     "paths": {
-      "@app/*": ["src"]
+      "@self/*": ["src"]
     }
   },
   "include": ["src/**/*"]
