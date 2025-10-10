@@ -2,9 +2,9 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { sessionManager } from "@pkgs/session-manager";
-import { logError, logServer } from "../utils";
 import { toReqRes } from "fetch-to-node";
 import { Hono } from "hono";
+import { logError, logServer } from "../utils";
 
 /**
  * Start stdio server

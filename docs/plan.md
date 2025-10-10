@@ -11,7 +11,7 @@
 - ✅ ESLint & Prettier setup
 - ✅ Package dependency management
 
-#### Phase 2: PTY Manager (@app/pty-manager)
+#### Phase 2: PTY Manager (@pkgs/pty-manager)
 
 - ✅ Type definitions (PtySession, PtyInstance, SessionStatus, etc.)
 - ✅ Process status types (initializing, active, idle, terminating, terminated)
@@ -24,7 +24,7 @@
 - ✅ Graceful shutdown (SIGTERM → SIGKILL with 3s grace period)
 - ✅ Unit & integration tests
 
-#### Phase 3: Session Manager (@app/session-manager)
+#### Phase 3: Session Manager (@pkgs/session-manager)
 
 - ✅ Type definitions (Session, SessionStatus, SessionId, etc.)
 - ✅ Transport layer types (stdio | streaming-http)
@@ -39,7 +39,7 @@
 - ✅ Graceful shutdown with cleanup procedures
 - ✅ Unit & integration tests
 
-#### Phase 4: MCP Server Implementation (@app/mcp-server)
+#### Phase 4: MCP Server Implementation (@pkgs/mcp-server)
 
 - ✅ Core server setup with MCP SDK, dual transports (stdio/HTTP), detection logic
 - ✅ Session integration with client connection mapping and cleanup
@@ -105,6 +105,16 @@
 - ✅ End-to-end tests with real MCP clients
 - ✅ Type checks (`bun check`)
 - ✅ Linting (`bun run lint`)
+
+#### 4.7 Implementation Refinements
+
+- [ ] ANSI strip 옵션 구현 (pty-manager/process.ts)
+- [ ] PTY 스키마 개선 (mcp-server/types/index.ts, tools/index.ts - z.any() 제거)
+- [ ] PTY 출력 가져오기 구현 (mcp-server/tools/index.ts, resources/index.ts)
+- [ ] PTY 개수 계산 (mcp-server/resources/index.ts)
+- [ ] 세션 생성 시간 관리 (pty-manager/manager.ts)
+- [ ] PTY 인스턴스 정리 로직 (session-manager/index.ts)
+- [ ] 세션별 서버 인스턴스 생성 검토 (mcp-server/transports/index.ts)
 
 ---
 
@@ -179,24 +189,26 @@ Phase 1 (Infrastructure)
   ├─→ Phase 2 (PTY Manager) ✅
   └─→ Phase 3 (Session Manager) ✅
         ├─→ Phase 4 (MCP Server) ✅
-              ├─→ Phase 5 (Documentation) ⬅️ **Current Phase**
-              └─→ Phase 6 (Production Readiness)
+              ├─→ Phase 4.7 (Refinements)
+              │     ├─→ Phase 5 (Documentation) ⬅️ **Current Phase**
+              │     └─→ Phase 6 (Production Readiness)
 ```
 
 ---
 
-## Current Priority: Phase 5 - Documentation & Examples
+## Current Priority: Phase 4.7 - Implementation Refinements
 
 ### In Progress
 
-- **5.1 User Documentation** - updating README and API docs (in progress)
+- **4.7 Implementation Refinements** - addressing TODO comments and code improvements
 
 ### Suggested Implementation Order
 
-1. **5.1 User Documentation** - update README and API docs ✅ (in progress)
-2. **5.2 Developer Documentation** - architecture and contribution guides
-3. **5.3 Examples & Demos** - client configurations and use cases
+1. **4.7 Implementation Refinements** - complete all TODO items
+2. **5.1 User Documentation** - update README and API docs ✅ (completed)
+3. **5.2 Developer Documentation** - architecture and contribution guides
+4. **5.3 Examples & Demos** - client configurations and use cases
 
 ### Next Steps
 
-Continue with README updates and API documentation to support user adoption.
+Address the identified TODO comments to complete core implementation before proceeding to documentation.

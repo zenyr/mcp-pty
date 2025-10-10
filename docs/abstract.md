@@ -10,9 +10,9 @@ mcp-pty는 Bun + xterm.js + 공식 MCP SDK를 활용하여 background process를
 
 프로젝트는 세 가지 핵심 패키지로 구성된 모노레포입니다:
 
-- `@app/mcp-server`: MCP 서버 및 통신 레이어
-- `@app/pty-manager`: PTY 생성, 관리 및 프로세스 제어
-- `@app/session-manager`: 세션 추적, 생명주기 관리
+- `@pkgs/mcp-server`: MCP 서버 및 통신 레이어
+- `@pkgs/pty-manager`: PTY 생성, 관리 및 프로세스 제어
+- `@pkgs/session-manager`: 세션 추적, 생명주기 관리
 
 ### 2. 이중 전송 계층 지원
 

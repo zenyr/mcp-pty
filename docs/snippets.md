@@ -28,12 +28,12 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "@app/mcp-server": ["./packages/mcp-server/src"],
-      "@app/mcp-server/*": ["./packages/mcp-server/src/*"],
-      "@app/pty-manager": ["./packages/pty-manager/src"],
-      "@app/pty-manager/*": ["./packages/pty-manager/src/*"],
-      "@app/session-manager": ["./packages/session-manager/src"],
-      "@app/session-manager/*": ["./packages/session-manager/src/*"]
+      "@pkgs/mcp-server": ["./packages/mcp-server/src"],
+      "@pkgs/mcp-server/*": ["./packages/mcp-server/src/*"],
+      "@pkgs/pty-manager": ["./packages/pty-manager/src"],
+      "@pkgs/pty-manager/*": ["./packages/pty-manager/src/*"],
+      "@pkgs/session-manager": ["./packages/session-manager/src"],
+      "@pkgs/session-manager/*": ["./packages/session-manager/src/*"]
     }
   },
   "references": [
@@ -353,7 +353,7 @@ private async startHttpTransport(server: McpServer): Promise<void> {
 
 ```typescript
 // packages/mcp-server/src/index.ts
-import { MCPPTYServer } from "@app/mcp-server/server";
+import { MCPPTYServer } from "@pkgs/mcp-server/server";
 
 async function main() {
   const server = new MCPPTYServer();

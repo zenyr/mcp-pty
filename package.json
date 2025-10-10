@@ -16,8 +16,8 @@
     "format": "bun biome format --write",
     "lint": "bun biome lint --write",
     "build": "bun --filter=\"*\" run build",
-    "dev": "bun --filter=\"@app/*\" run dev",
-    "start": "bun --filter=\"@app/mcp-server\" run start"
+    "dev": "bun --filter=\"@pkgs/*\" run dev",
+    "start": "bun --filter=\"@pkgs/mcp-server\" run start"
   },
   "type": "module",
   "workspaces": [
