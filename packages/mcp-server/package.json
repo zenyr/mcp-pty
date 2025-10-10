@@ -9,6 +9,7 @@
     "dev": "bun run --watch src/index.ts",
     "test": "bun test",
     "check": "tsc --noEmit",
+    "lint": "eslint src",
     "format": "prettier --write src"
   },
   "peerDependencies": {
