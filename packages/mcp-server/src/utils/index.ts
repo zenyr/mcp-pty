@@ -9,21 +9,9 @@ export const parseCliArgs = () => {
   const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
-      transport: {
-        type: "string",
-        short: "t",
-        default: "stdio",
-      },
-      port: {
-        type: "string",
-        short: "p",
-        default: "3000",
-      },
-      help: {
-        type: "boolean",
-        short: "h",
-        default: false,
-      },
+      transport: { type: "string", short: "t", default: "stdio" },
+      port: { type: "string", short: "p", default: "3000" },
+      help: { type: "boolean", short: "h", default: false },
     },
     strict: true,
     allowPositionals: false,
@@ -48,10 +36,7 @@ Options:
     );
   }
 
-  return {
-    transport,
-    port: Number.parseInt(values.port as string, 10),
-  };
+  return { transport, port: Number.parseInt(values.port as string, 10) };
 };
 
 /**

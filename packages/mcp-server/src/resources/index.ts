@@ -65,10 +65,9 @@ export const registerPtyResources = (server: McpServer): void => {
       if (!session) throw new Error("Session not found");
       const ptyManager = sessionManager.getPtyManager(id);
       if (!ptyManager) throw new Error("PTY manager not found");
-      const outputs = ptyManager.getAllPtys().map((pty) => ({
-        processId: pty.id,
-        output: pty.getOutputBuffer(),
-      }));
+      const outputs = ptyManager
+        .getAllPtys()
+        .map((pty) => ({ processId: pty.id, output: pty.getOutputBuffer() }));
       return { contents: [{ uri: uri.href, text: JSON.stringify(outputs) }] };
     },
   );
