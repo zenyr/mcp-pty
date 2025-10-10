@@ -18,14 +18,14 @@ export const parseCliArgs = () => {
   });
 
   if (values.help) {
-    console.log(`
-Usage: mcp-pty [options]
+    process.stdout.write(`
+ Usage: mcp-pty [options]
 
-Options:
-  -t, --transport <type>  Transport type: stdio (default) or http
-  -p, --port <port>       HTTP server port (default: 3000)
-  -h, --help              Show this help message
-`);
+ Options:
+   -t, --transport <type>  Transport type: stdio (default) or http
+   -p, --port <port>       HTTP server port (default: 3000)
+   -h, --help              Show this help message
+ `);
     process.exit(0);
   }
 
@@ -66,12 +66,4 @@ export const setupGracefulShutdown = (): void => {
  */
 export const logError = (message: string, error: unknown): void => {
   console.error(`${message}:`, error);
-};
-
-/**
- * Server status logging
- * @param message log message
- */
-export const logServer = (message: string): void => {
-  console.log(message);
 };

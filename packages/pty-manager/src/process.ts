@@ -2,6 +2,7 @@ import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
+import { parseCommand } from "./utils/command";
 import { checkExecutablePermission, checkSudoPermission } from "./utils/safety";
 
 /**
@@ -20,10 +21,7 @@ export class PtyProcess {
   private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
 
   constructor(commandOrOptions: string | PtyOptions) {
-    const options =
-      typeof commandOrOptions === "string"
-        ? { executable: commandOrOptions }
-        : commandOrOptions;
+    const options = parseCommand(commandOrOptions);
 
     this.id = nanoid();
     this.createdAt = new Date();

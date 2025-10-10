@@ -77,24 +77,16 @@ const detectTerminalSize = async (): Promise<{
 };
 
 export const main = async () => {
-  console.log("Hello from experiments!");
   const { cols = 80, rows = 24 } = await detectTerminalSize();
   const term = await spawn({
     command: "vim",
     args: ["/dev/null"],
     ptyOptions: { cols, rows },
   });
-  console.log("--- Status ---");
-  console.log(term.getStatus());
   await sleep(1000);
-  console.log("--- Screen after 1 second ---");
   console.info(`${term.getScreen()}\\033[0m`);
   await sleep(1000);
-  console.log("--- Status before kill ---");
-  console.log(term.getStatus());
   term.kill("SIGINT");
-  console.log("--- Status after kill ---");
-  console.log(term.getStatus());
 };
 
 if (import.meta.main) {
