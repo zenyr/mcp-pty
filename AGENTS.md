@@ -32,6 +32,7 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
   - Include comprehensive TSDoc.
   - Maintain latest TS compatibility.
   - Enforce ESLint + Prettier; minimize any/! assertions/relative paths: Prefer path aliases or absolute imports.
+  - 워크스페이스 간 상대 경로 임포트(../{패키지명}) 철저하게 금지. @pkgs/\* alias 사용.
   - File Structure: src/index.ts, types/, utils/, [feature]/ dirs (use absolute imports).
 - **@modelcontextprotocol/sdk Import Note**:
   - Allow `.js` postfix for this module only.
