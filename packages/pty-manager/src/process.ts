@@ -5,7 +5,7 @@ import type { PtyStatus, TerminalOutput, PtyOptions } from "./types";
 import { checkSudoPermission, checkExecutablePermission } from "./utils/safety";
 
 /**
- * 개별 PTY 프로세스 관리 클래스
+ * Individual PTY process management class
  */
 export class PtyProcess {
   public readonly id: string;
@@ -30,17 +30,17 @@ export class PtyProcess {
     this.lastActivity = new Date();
     this.options = options;
 
-    // 보안 체크: 실행 파일 sudo 여부 확인
+    // Security check: Verify if executable is sudo
     checkExecutablePermission(options.executable);
 
-    // xterm headless 초기화
+    // Initialize xterm headless
     this.terminal = new Terminal({
       cols: 80,
       rows: 24,
       allowTransparency: false,
     });
 
-    // bun-pty 프로세스 생성 (직접 프로그램 실행)
+    // Create bun-pty process (direct program execution)
     this.process = spawn(options.executable, options.args || [], {
       name: "xterm-256color",
       cols: 80,
@@ -54,16 +54,16 @@ export class PtyProcess {
   }
 
   /**
-   * 스트림 설정
+   * Setup streams
    */
   private setupStreams(): void {
-    // 터미널 입력 -> 프로세스
+    // Terminal input -> process
     this.terminal.onData((data) => {
       this.process.write(data);
       this.updateActivity();
     });
 
-    // 프로세스 출력 -> 터미널
+    // Process output -> terminal
     this.process.onData((data: string) => {
       this.terminal.write(data);
       this.outputBuffer += data;
@@ -71,7 +71,7 @@ export class PtyProcess {
       this.updateActivity();
     });
 
-    // 프로세스 종료 처리: autoDisposeOnExit 옵션에 따라 dispose 트리거
+    // Process exit handling: Trigger dispose based on autoDisposeOnExit option
     this.process.onExit(({ exitCode, signal }) => {
       this.status = "terminated";
       console.log(
@@ -79,49 +79,49 @@ export class PtyProcess {
       );
 
       if (this.options.autoDisposeOnExit) {
-        this.dispose("SIGTERM").catch(console.error); // 자동 클린업
+        this.dispose("SIGTERM").catch(console.error); // Automatic cleanup
       }
     });
   }
 
   /**
-   * 인터랙티브 입력 또는 명령 쓰기 (쉘 프롬프트 없이 직접 프로그램에 전달)
-   * @param input - 키 입력 또는 명령 문자열 (예: vi 모드에서 'i' 또는 전체 명령)
+   * Write interactive input or command (pass directly to program without shell prompt)
+   * @param input - Key input or command string (e.g., 'i' in vi mode or full command)
    */
   public writeInput(input: string): void {
     if (this.status !== "active") {
       throw new Error(`PTY ${this.id} is not active`);
     }
 
-    // sudo 관련 입력 체크 (보안)
-    checkSudoPermission(input); // 기존 함수 재사용 (입력에 "sudo" 포함 시)
+    // Check sudo-related input (security)
+    checkSudoPermission(input); // Reuse existing function (when input contains "sudo")
 
-    this.terminal.write(input + "\n"); // \n으로 엔터 시뮬 (인터랙티브 적합)
+    this.terminal.write(input + "\n"); // Simulate enter with \n (suitable for interactive)
     this.updateActivity();
   }
 
   /**
-   * 출력 콜백 등록
+   * Register output callback
    */
   public onOutput(callback: (output: TerminalOutput) => void): void {
     this.outputCallbacks.push(callback);
   }
 
   /**
-   * 출력 알림
+   * Notify output
    */
   private notifyOutput(output: string): void {
     const terminalOutput: TerminalOutput = {
       processId: this.id,
       output,
-      ansiStripped: false, // TODO: ANSI strip 옵션
+      ansiStripped: false, // TODO: ANSI strip option
       timestamp: new Date(),
     };
     this.outputCallbacks.forEach((cb) => cb(terminalOutput));
   }
 
   /**
-   * 활동 시간 업데이트
+   * Update activity time
    */
   private updateActivity(): void {
     this.lastActivity = new Date();
@@ -131,15 +131,15 @@ export class PtyProcess {
   }
 
   /**
-   * 자원 정리 (Graceful shutdown 포함)
-   * @param signal - 종료 신호 (기본: SIGTERM). 3초 후 응답 없으면 SIGKILL로 전환.
+   * Dispose resources (includes graceful shutdown)
+   * @param signal - Termination signal (default: SIGTERM). Switches to SIGKILL after 3 seconds if no response.
    */
   public async dispose(signal: string = "SIGTERM"): Promise<void> {
     if (this.status === "terminated") return;
 
     this.status = "terminating";
 
-    // Graceful shutdown: SIGTERM 후 3초 타임아웃
+    // Graceful shutdown: Timeout 3 seconds after SIGTERM
     const timeout = 3000;
     const killPromise = new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
@@ -157,7 +157,7 @@ export class PtyProcess {
 
     await killPromise;
 
-    // 추가 클린업
+    // Additional cleanup
     this.terminal.dispose();
     this.outputBuffer = "";
     this.outputCallbacks = [];

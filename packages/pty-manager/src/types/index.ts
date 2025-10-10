@@ -2,12 +2,12 @@ import type { Terminal } from "@xterm/headless";
 import type { IPty } from "bun-pty";
 
 /**
- * PTY Manager 타입 정의
- * MCP 프로토콜에 대한 의존 없이 순수한 PTY 관리용 타입
+ * PTY Manager type definitions
+ * Pure PTY management types without MCP protocol dependencies
  */
 
 /**
- * PTY 프로세스 상태
+ * PTY process status
  */
 export type PtyStatus =
   | "initializing"
@@ -17,59 +17,59 @@ export type PtyStatus =
   | "terminated";
 
 export interface PtyInstance {
-  /** 프로세스 고유 ID (nanoid 기반) */
+  /** Unique process ID (nanoid-based) */
   id: string;
-  /** 현재 상태 */
+  /** Current status */
   status: PtyStatus;
-  /** xterm headless 터미널 인스턴스 */
+  /** xterm headless terminal instance */
   terminal: Terminal;
-  /** bun-pty 프로세스 인스턴스 */
+  /** bun-pty process instance */
   process: IPty;
-  /** 생성 시각 */
+  /** Creation time */
   createdAt: Date;
-  /** 마지막 활동 시각 */
+  /** Last activity time */
   lastActivity: Date;
 }
 
 /**
- * PTY 세션 인터페이스
- * 하나의 세션에 속한 모든 PTY 인스턴스를 관리
+ * PTY session interface
+ * Manages all PTY instances belonging to one session
  */
 export interface PtySession {
-  /** 세션 고유 ID (ULID, session-manager에서 전달) */
+  /** Unique session ID (ULID, passed from session-manager) */
   sessionId: string;
-  /** processId -> PtyInstance 매핑 */
+  /** processId -> PtyInstance mapping */
   instances: Map<string, PtyInstance>;
-  /** 세션 생성 시각 */
+  /** Session creation time */
   createdAt: Date;
 }
 
 /**
- * 터미널 출력 인터페이스
+ * Terminal output interface
  */
 export interface TerminalOutput {
-  /** 출력이 발생한 프로세스 ID */
+  /** Process ID where output occurred */
   processId: string;
-  /** 출력 내용 */
+  /** Output content */
   output: string;
-  /** ANSI 시퀀스 제거 여부 */
+  /** Whether ANSI sequences are stripped */
   ansiStripped?: boolean;
-  /** 출력 시각 */
+  /** Output time */
   timestamp: Date;
 }
 
 /**
- * PtyProcess 생성 옵션 인터페이스
+ * PtyProcess creation options interface
  */
 export interface PtyOptions {
-  /** 실행할 프로그램 (예: "vi", "bash") */
+  /** Program to execute (e.g., "vi", "bash") */
   executable: string;
-  /** 프로그램에 전달할 인자 */
+  /** Arguments to pass to program */
   args?: string[];
-  /** 작업 디렉토리 */
+  /** Working directory */
   cwd?: string;
-  /** 환경 변수 오버라이드 */
+  /** Environment variable overrides */
   env?: Record<string, string>;
-  /** 프로그램 종료 시 자동 dispose 여부 (인터랙티브 프로그램용) */
+  /** Whether to auto-dispose on program exit (for interactive programs) */
   autoDisposeOnExit?: boolean;
 }

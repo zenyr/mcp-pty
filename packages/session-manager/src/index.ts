@@ -9,8 +9,8 @@ import { generateSessionId } from "./utils/ulid.ts";
 import { consola } from "consola";
 
 /**
- * 세션 관리자 클래스.
- * 세션의 생성, 조회, 삭제 및 PTY 바인딩을 관리합니다.
+ * Session manager class.
+ * Manages session creation, retrieval, deletion, and PTY binding.
  */
 export class SessionManager {
   private sessions = new Map<SessionId, Session>();
@@ -18,7 +18,7 @@ export class SessionManager {
   private monitorInterval?: Timer;
 
   /**
-   * 새로운 세션을 생성합니다.
+   * Create new session.
    */
   createSession(): SessionId {
     const id = generateSessionId();
@@ -38,21 +38,21 @@ export class SessionManager {
   }
 
   /**
-   * 세션을 조회합니다.
+   * Retrieve session.
    */
   getSession(id: SessionId): Session | undefined {
     return this.sessions.get(id);
   }
 
   /**
-   * 모든 세션을 조회합니다.
+   * Retrieve all sessions.
    */
   getAllSessions(): Session[] {
     return Array.from(this.sessions.values());
   }
 
   /**
-   * 세션을 삭제합니다.
+   * Delete session.
    */
   deleteSession(id: SessionId): boolean {
     const session = this.sessions.get(id);
@@ -66,7 +66,7 @@ export class SessionManager {
   }
 
   /**
-   * 세션 상태를 업데이트합니다.
+   * Update session status.
    */
   updateStatus(id: SessionId, status: SessionStatus): boolean {
     const session = this.sessions.get(id);
@@ -83,7 +83,7 @@ export class SessionManager {
   }
 
   /**
-   * PTY 인스턴스를 세션에 바인딩합니다.
+   * Bind PTY instance to session.
    */
   addPty(id: SessionId, processId: PtyInstanceReference): boolean {
     const session = this.sessions.get(id);
@@ -99,7 +99,7 @@ export class SessionManager {
   }
 
   /**
-   * PTY 인스턴스를 세션에서 제거합니다.
+   * Remove PTY instance from session.
    */
   removePty(id: SessionId, processId: PtyInstanceReference): boolean {
     const session = this.sessions.get(id);
@@ -116,21 +116,21 @@ export class SessionManager {
   }
 
   /**
-   * 이벤트 리스너를 추가합니다.
+   * Add event listener.
    */
   addEventListener(listener: (event: SessionEvent) => void): void {
     this.eventListeners.add(listener);
   }
 
   /**
-   * 이벤트 리스너를 제거합니다.
+   * Remove event listener.
    */
   removeEventListener(listener: (event: SessionEvent) => void): void {
     this.eventListeners.delete(listener);
   }
 
   /**
-   * 이벤트를 방출합니다.
+   * Emit event.
    */
   private emitEvent(event: SessionEvent): void {
     for (const listener of this.eventListeners) {
@@ -143,25 +143,25 @@ export class SessionManager {
   }
 
   /**
-   * 세션을 종료합니다. terminating 상태로 변경 후 terminated로.
+   * Terminate session. Change to terminating status then terminated.
    */
   terminateSession(id: SessionId): boolean {
     const session = this.sessions.get(id);
     if (!session || session.status === "terminated") return false;
 
     this.updateStatus(id, "terminating");
-    // TODO: PTY 인스턴스 정리 로직 추가 (pty-manager 연동 시)
+    // TODO: Add PTY instance cleanup logic (when integrating pty-manager)
     this.updateStatus(id, "terminated");
 
     return true;
   }
 
   /**
-   * idle 세션들을 모니터링하고 5분 후 종료합니다.
+   * Monitor idle sessions and terminate after 5 minutes.
    */
   monitorIdleSessions(): void {
     const now = Date.now();
-    const idleTimeout = 5 * 60 * 1000; // 5분
+    const idleTimeout = 5 * 60 * 1000; // 5 minutes
 
     for (const session of this.sessions.values()) {
       if (
@@ -174,19 +174,19 @@ export class SessionManager {
   }
 
   /**
-   * idle 세션 모니터링을 시작합니다. 1분마다 체크합니다.
+   * Start idle session monitoring. Checks every minute.
    */
   startMonitoring(): void {
-    if (this.monitorInterval) return; // 이미 실행 중
+    if (this.monitorInterval) return; // Already running
 
     this.monitorInterval = setInterval(() => {
       this.monitorIdleSessions();
-    }, 60 * 1000); // 1분마다
+    }, 60 * 1000); // Every minute
     consola.info("Session monitoring started");
   }
 
   /**
-   * idle 세션 모니터링을 중지합니다.
+   * Stop idle session monitoring.
    */
   stopMonitoring(): void {
     if (this.monitorInterval) {
@@ -197,8 +197,8 @@ export class SessionManager {
   }
 
   /**
-   * 모든 세션을 정리하고 모니터링을 중지합니다.
-   * Graceful shutdown을 위해 사용합니다.
+   * Clean up all sessions and stop monitoring.
+   * Used for graceful shutdown.
    */
   cleanup(): void {
     this.stopMonitoring();
@@ -215,12 +215,12 @@ export class SessionManager {
   }
 
   /**
-   * 세션 수를 반환합니다.
+   * Return session count.
    */
   getSessionCount(): number {
     return this.sessions.size;
   }
 }
 
-// 기본 인스턴스 export
+// Default instance export
 export const sessionManager = new SessionManager();

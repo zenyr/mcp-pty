@@ -1,15 +1,15 @@
 /**
- * 세션 ID 타입. ULID 기반의 문자열입니다.
+ * Session ID type. ULID-based string.
  */
 export type SessionId = string;
 
 /**
- * 세션 상태 타입.
- * - initializing: 세션 초기화 중
- * - active: 활성 상태, PTY 명령 실행 가능
- * - idle: 유휴 상태, 명령이 실행되지 않은 상태
- * - terminating: 종료 중
- * - terminated: 완전히 종료됨
+ * Session status type.
+ * - initializing: Session initializing
+ * - active: Active state, PTY commands executable
+ * - idle: Idle state, no commands executed
+ * - terminating: Terminating
+ * - terminated: Fully terminated
  */
 export type SessionStatus =
   | "initializing"
@@ -19,40 +19,40 @@ export type SessionStatus =
   | "terminated";
 
 /**
- * PTY 인스턴스 참조 타입. processId를 나타냅니다.
+ * PTY instance reference type. Represents processId.
  */
 export type PtyInstanceReference = string;
 
 /**
- * 세션 인터페이스.
+ * Session interface.
  */
 export interface Session {
-  /** 세션 고유 ID */
+  /** Unique session ID */
   readonly id: SessionId;
-  /** 현재 세션 상태 */
+  /** Current session status */
   status: SessionStatus;
-  /** 세션 생성 시간 */
+  /** Session creation time */
   readonly createdAt: Date;
-  /** 마지막 활동 시간 */
+  /** Last activity time */
   lastActivity: Date;
-  /** 연결된 PTY 인스턴스들의 processId 집합 */
+  /** Set of processIds of connected PTY instances */
   ptyInstances: Set<PtyInstanceReference>;
-  /** 추가 메타데이터 (필요시 확장) */
+  /** Additional metadata (expand as needed) */
   metadata?: Record<string, unknown>;
 }
 
 /**
- * PTY 바인딩 인터페이스. 세션에 PTY를 바인딩할 때 사용.
+ * PTY binding interface. Used when binding PTY to session.
  */
 export interface PtyBinding {
-  /** 세션 ID */
+  /** Session ID */
   sessionId: SessionId;
   /** PTY processId */
   processId: PtyInstanceReference;
 }
 
 /**
- * 세션 이벤트 타입.
+ * Session event type.
  */
 export type SessionEvent =
   | { type: "created"; sessionId: SessionId }

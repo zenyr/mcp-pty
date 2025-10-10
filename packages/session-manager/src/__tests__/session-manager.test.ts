@@ -108,10 +108,10 @@ describe("SessionManager", () => {
     const sessionId = manager.createSession();
     manager.updateStatus(sessionId, "idle");
 
-    // lastActivity를 과거로 설정
+    // Set lastActivity to past
     const session = manager.getSession(sessionId);
     if (session) {
-      session.lastActivity = new Date(Date.now() - 6 * 60 * 1000); // 6분 전
+      session.lastActivity = new Date(Date.now() - 6 * 60 * 1000); // 6 minutes ago
     }
 
     manager.monitorIdleSessions();
