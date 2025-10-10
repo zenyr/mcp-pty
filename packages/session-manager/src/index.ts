@@ -7,6 +7,7 @@ import type {
 } from "./types/index.ts";
 import { generateSessionId } from "./utils/ulid.ts";
 import { consola } from "consola";
+import { PtyManager } from "@pkgs/pty-manager";
 
 /**
  * Session manager class.
@@ -16,6 +17,7 @@ export class SessionManager {
   private sessions = new Map<SessionId, Session>();
   private eventListeners = new Set<(event: SessionEvent) => void>();
   private monitorInterval?: ReturnType<typeof setInterval>;
+  private ptyManagers = new Map<SessionId, PtyManager>();
 
   /**
    * Create new session.
@@ -31,6 +33,7 @@ export class SessionManager {
     };
 
     this.sessions.set(id, session);
+    this.ptyManagers.set(id, new PtyManager(id));
     this.emitEvent({ type: "created", sessionId: id });
     consola.info(`Session created: ${id}`);
 
@@ -58,6 +61,8 @@ export class SessionManager {
     const session = this.sessions.get(id);
     if (!session) return false;
 
+    this.ptyManagers.get(id)?.dispose();
+    this.ptyManagers.delete(id);
     this.sessions.delete(id);
     this.emitEvent({ type: "terminated", sessionId: id });
     consola.info(`Session deleted: ${id}`);
@@ -210,6 +215,7 @@ export class SessionManager {
     }
 
     this.sessions.clear();
+    this.ptyManagers.clear();
     this.eventListeners.clear();
     consola.info("Session manager cleanup completed");
   }
@@ -219,6 +225,13 @@ export class SessionManager {
    */
   getSessionCount(): number {
     return this.sessions.size;
+  }
+
+  /**
+   * Get PTY manager for session.
+   */
+  getPtyManager(sessionId: SessionId): PtyManager | undefined {
+    return this.ptyManagers.get(sessionId);
   }
 }
 

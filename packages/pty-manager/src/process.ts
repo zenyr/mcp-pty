@@ -131,6 +131,13 @@ export class PtyProcess {
   }
 
   /**
+   * Get output buffer
+   */
+  public getOutputBuffer(): string {
+    return this.outputBuffer;
+  }
+
+  /**
    * Dispose resources (includes graceful shutdown)
    * @param signal - Termination signal (default: SIGTERM). Switches to SIGKILL after 3 seconds if no response.
    */
