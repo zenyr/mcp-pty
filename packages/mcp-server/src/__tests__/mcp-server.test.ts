@@ -1,6 +1,6 @@
-import { test, expect } from "bun:test";
-import { createServer } from "../index";
+import { expect, test } from "bun:test";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { createServer } from "../server";
 
 test("MCP server factory creates server", () => {
   const server = createServer();

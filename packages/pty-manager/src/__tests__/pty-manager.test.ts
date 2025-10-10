@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, afterAll, expect, test, spyOn } from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
 import { PtyManager } from "../index";
 import { PtyProcess } from "../process";
 import {
@@ -22,9 +22,9 @@ afterAll(() => {
 });
 
 afterEach(() => {
-  managers.forEach((m) => m.dispose());
+  managers.forEach((m) => void m.dispose());
   managers.length = 0;
-  ptys.forEach((p) => p.dispose());
+  ptys.forEach((p) => void p.dispose());
   ptys.length = 0;
 });
 
@@ -122,7 +122,7 @@ test("checkRootPermission throws error when root without consent", () => {
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
 
   expect(() => checkRootPermission()).toThrow(
-    /MCP-PTY detected that it is running with root privileges/
+    /MCP-PTY detected that it is running with root privileges/,
   );
 
   process.geteuid = originalGeteuid;
@@ -155,7 +155,7 @@ test("checkSudoPermission allows non-sudo command", () => {
 test("checkSudoPermission throws error for sudo without consent", () => {
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
   expect(() => checkSudoPermission("sudo apt update")).toThrow(
-    /MCP-PTY detected an attempt to execute a sudo command/
+    /MCP-PTY detected an attempt to execute a sudo command/,
   );
 });
 
@@ -179,7 +179,10 @@ test("checkSudoPermission allows sudo with consent and logs warning", () => {
 test("validateConsent returns false for trimmed empty string", () => {
   process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS = "   ";
   expect(
-    validateConsent("MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS", "test action")
+    validateConsent(
+      "MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS",
+      "test action",
+    ),
   ).toBe(false);
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
 });
@@ -193,7 +196,10 @@ test("validateConsent returns true and logs warning for valid consent", () => {
   };
 
   expect(
-    validateConsent("MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS", "test action")
+    validateConsent(
+      "MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS",
+      "test action",
+    ),
   ).toBe(true);
   expect(warnCalled).toBe(true);
 
@@ -202,11 +208,7 @@ test("validateConsent returns true and logs warning for valid consent", () => {
 });
 
 test("PtyProcess creates with options and initializes", () => {
-  const options = {
-    executable: "cat",
-    args: [],
-    autoDisposeOnExit: true,
-  };
+  const options = { executable: "cat", args: [], autoDisposeOnExit: true };
 
   const pty = new PtyProcess(options);
   ptys.push(pty);
@@ -271,7 +273,7 @@ test("checkExecutablePermission allows non-sudo executable", () => {
 test("checkExecutablePermission throws error for sudo executable without consent", () => {
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
   expect(() => checkExecutablePermission("sudo-vi")).toThrow(
-    /MCP-PTY detected an attempt to execute a sudo command/
+    /MCP-PTY detected an attempt to execute a sudo command/,
   );
   expect(() => checkExecutablePermission("SUDO")).toThrow();
 });
