@@ -1,9 +1,8 @@
 {
   "name": "mcp-pty",
   "devDependencies": {
+    "@biomejs/biome": "2.2.5",
     "@types/bun": "latest",
-    "prettier": "^3.6.2",
-    "turbo": "^2.5.8",
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
@@ -12,11 +11,12 @@
   "private": true,
   "scripts": {
     "reset": "bun x --bun rimraf './**/node_modules' node_modules; bun i",
-    "check": "tsc --noEmit",
-    "format": "prettier --write packages",
-    "build": "bun run build --filter=\"*\"",
-    "dev": "bun run dev --filter=\"@app/*\"",
-    "start": "bun run start --filter=\"@app/mcp-server\""
+    "check": "bun --filter=\"*\" run check",
+    "format": "bun biome format --write",
+    "lint": "bun biome lint --write",
+    "build": "bun --filter=\"*\" run build",
+    "dev": "bun --filter=\"@app/*\" run dev",
+    "start": "bun --filter=\"@app/mcp-server\" run start"
   },
   "type": "module",
   "workspaces": [
