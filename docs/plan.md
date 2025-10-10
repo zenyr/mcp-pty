@@ -39,11 +39,19 @@
 - ✅ Graceful shutdown with cleanup procedures
 - ✅ Unit & integration tests
 
+#### Phase 4: MCP Server Implementation (@app/mcp-server)
+
+- ✅ Core server setup with MCP SDK, dual transports (stdio/HTTP), detection logic
+- ✅ Session integration with client connection mapping and cleanup
+- ✅ MCP resources: status, sessions/list, session/{id}/output, session/{id}/status
+- ✅ MCP tools: start_pty, kill_pty, list_pty, read_pty, activate_pty_tools
+- ✅ Integration layer wiring SessionManager + PtyManager
+- ✅ Error handling, logging, and MCP responses
+- ✅ Testing & quality assurance (unit, integration, type checks)
+
 ---
 
 ## Remaining Phases
-
-### Phase 4: MCP Server Implementation (@app/mcp-server)
 
 #### 4.1 Core Server Setup
 
@@ -170,24 +178,21 @@
 Phase 1 (Infrastructure)
   ├─→ Phase 2 (PTY Manager) ✅
   └─→ Phase 3 (Session Manager) ✅
-        ├─→ Phase 4 (MCP Server) ⬅️ **Current Phase**
-              ├─→ Phase 5 (Documentation)
+        ├─→ Phase 4 (MCP Server) ✅
+              ├─→ Phase 5 (Documentation) ⬅️ **Current Phase**
               └─→ Phase 6 (Production Readiness)
 ```
 
 ---
 
-## Current Priority: Phase 4 - MCP Server Implementation
+## Current Priority: Phase 5 - Documentation & Examples
 
 ### Suggested Implementation Order
 
-1. **4.1 Core Server Setup** - establish transport layers
-2. **4.2 Session Integration** - connect session lifecycle to MCP clients
-3. **4.3 MCP Resources** - primary interface (preferred over tools)
-4. **4.5 Integration Layer** - wire managers into server
-5. **4.4 MCP Tools** - fallback mode for non-resource clients
-6. **4.6 Testing & Quality** - validate complete system
+1. **5.1 User Documentation** - update README and API docs
+2. **5.2 Developer Documentation** - architecture and contribution guides
+3. **5.3 Examples & Demos** - client configurations and use cases
 
 ### Next Steps
 
-Start with implementing the stdio transport layer as it's simpler (1:1 binding, automatic cleanup) before tackling the HTTP transport with multi-client complexity.
+Begin with README updates and API documentation to support user adoption.
