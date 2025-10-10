@@ -220,6 +220,14 @@ test("PtyProcess creates with options and initializes", () => {
   expect(pty.createdAt).toBeInstanceOf(Date);
 });
 
+test("PtyProcess creates with command string and parses correctly", () => {
+  const pty = new PtyProcess("ls -la /tmp");
+  ptys.push(pty);
+  expect(pty.options.executable).toBe("ls");
+  expect(pty.options.args).toEqual(["-la", "/tmp"]);
+  expect(pty.status).toBe("active");
+});
+
 test("PtyProcess writeInput sends data to terminal", () => {
   const pty = new PtyProcess({ executable: "cat" });
   ptys.push(pty);

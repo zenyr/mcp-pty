@@ -1,10 +1,27 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "bun:test";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { PtyManager } from "@pkgs/pty-manager";
 import { sessionManager } from "@pkgs/session-manager";
 import { createServer } from "../server";
 
 describe("MCP Server", () => {
+  const originalConsoleLog = console.log;
+
+  beforeAll(() => {
+    console.log = () => {};
+  });
+
+  afterAll(() => {
+    console.log = originalConsoleLog;
+  });
   test("creates server instance", () => {
     const server = createServer();
     expect(server).toBeDefined();
@@ -13,11 +30,14 @@ describe("MCP Server", () => {
 
   describe("Integration Tests", () => {
     let sessionId: string;
-    let ptyManager: PtyManager | undefined;
+    let ptyManager: PtyManager;
 
     beforeEach(() => {
       sessionId = sessionManager.createSession();
-      ptyManager = sessionManager.getPtyManager(sessionId);
+      const currentPtyManager = sessionManager.getPtyManager(sessionId);
+      if (!currentPtyManager)
+        throw new Error("Failed to get PtyManager for session");
+      ptyManager = currentPtyManager;
     });
 
     afterEach(() => {
@@ -32,8 +52,6 @@ describe("MCP Server", () => {
     });
 
     test("ptyManager creates and lists PTY processes", () => {
-      if (!ptyManager) throw new Error("ptyManager is undefined");
-
       const processId = ptyManager.createPty("echo");
       expect(processId).toBeDefined();
 
@@ -44,8 +62,6 @@ describe("MCP Server", () => {
     });
 
     test("ptyManager reads output buffer", () => {
-      if (!ptyManager) throw new Error("ptyManager is undefined");
-
       const processId = ptyManager.createPty("echo");
       if (!processId) throw new Error("Failed to create PTY");
 
@@ -57,8 +73,6 @@ describe("MCP Server", () => {
     });
 
     test("ptyManager removes PTY", () => {
-      if (!ptyManager) throw new Error("ptyManager is undefined");
-
       const processId = ptyManager.createPty("sleep");
       if (!processId) throw new Error("Failed to create PTY");
 
@@ -68,15 +82,11 @@ describe("MCP Server", () => {
     });
 
     test("ptyManager returns false when removing non-existent PTY", () => {
-      if (!ptyManager) throw new Error("ptyManager is undefined");
-
       const removed = ptyManager.removePty("non-existent");
       expect(removed).toBe(false);
     });
 
     test("sessionManager counts sessions and processes", () => {
-      if (!ptyManager) throw new Error("ptyManager is undefined");
-
       ptyManager.createPty("echo");
       ptyManager.createPty("ls");
 
