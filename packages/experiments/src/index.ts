@@ -1,15 +1,15 @@
+import { setTimeout as sleep } from "node:timers/promises";
+import { stripVTControlCharacters } from "node:util";
 import { isNumber } from "@sindresorhus/is";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { Terminal } from "@xterm/headless";
 import { $ } from "bun";
-import { spawn as ptySpawn, type IPtyForkOptions } from "bun-pty";
-import { setTimeout as sleep } from "node:timers/promises";
-import { stripVTControlCharacters } from "node:util";
+import { type IPtyForkOptions, spawn as ptySpawn } from "bun-pty";
 
 const XTERM_DEFAULT_OPTIONS = {
   allowProposedApi: true,
   cursorBlink: false,
-} satisfies {};
+} as const;
 interface Params {
   command: string;
   args?: string[];
@@ -88,7 +88,7 @@ export const main = async () => {
   console.log(term.getStatus());
   await sleep(1000);
   console.log("--- Screen after 1 second ---");
-  console.info(term.getScreen() + "\\033[0m");
+  console.info(`${term.getScreen()}\\033[0m`);
   await sleep(1000);
   console.log("--- Status before kill ---");
   console.log(term.getStatus());

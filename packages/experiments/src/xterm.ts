@@ -1,7 +1,7 @@
 import { appendFile } from "node:fs/promises";
 import { Terminal } from "@xterm/headless";
-import { spawn } from "bun-pty";
 import type { IPty } from "bun-pty";
+import { spawn } from "bun-pty";
 
 /**
  * Helper function to log to file
@@ -51,7 +51,7 @@ const testTuiMan = async () => {
     for (let i = 0; i < Math.min(buffer.length, 24); i++) {
       const line = buffer.getLine(i);
       if (line) {
-        screenText += line.translateToString() + "\n";
+        screenText += `${line.translateToString()}\n`;
       }
     }
     return screenText;
@@ -78,7 +78,7 @@ const testTuiMan = async () => {
     pty.onExit(({ exitCode, signal }) => {
       logToFile(
         logFile,
-        `Process ended with exit code: ${exitCode}, signal: ${signal}`
+        `Process ended with exit code: ${exitCode}, signal: ${signal}`,
       );
       resolve(void 0);
     });
