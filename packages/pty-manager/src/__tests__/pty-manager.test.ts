@@ -1,6 +1,6 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, beforeAll, afterAll, expect, test, spyOn } from "bun:test";
 import { PtyManager } from "../index";
-import { PtyProcess } from "../pty";
+import { PtyProcess } from "../process";
 import {
   checkExecutablePermission,
   checkRootPermission,
@@ -10,6 +10,16 @@ import {
 
 const managers: PtyManager[] = [];
 const ptys: PtyProcess[] = [];
+
+let consoleLogSpy: ReturnType<typeof spyOn>;
+
+beforeAll(() => {
+  consoleLogSpy = spyOn(console, "log").mockImplementation(() => {});
+});
+
+afterAll(() => {
+  consoleLogSpy.mockRestore();
+});
 
 afterEach(() => {
   managers.forEach((m) => m.dispose());
@@ -30,7 +40,7 @@ test("PtyManager creates PTY instance and tracks it", () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId = manager.createPty();
+  const processId = manager.createPty("sh");
   expect(processId).toBeDefined();
   expect(typeof processId).toBe("string");
   expect(manager.getAllPtys().length).toBe(1);
@@ -40,7 +50,7 @@ test("PtyManager gets PTY instance by ID", () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId = manager.createPty();
+  const processId = manager.createPty("sh");
   const instance = manager.getPty(processId);
   expect(instance).toBeDefined();
   expect(instance?.id).toBe(processId);
@@ -57,8 +67,8 @@ test("PtyManager lists all PTYs", () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId1 = manager.createPty();
-  const processId2 = manager.createPty();
+  const processId1 = manager.createPty("sh");
+  const processId2 = manager.createPty("sh");
   const instances = manager.getAllPtys();
   expect(instances.length).toBe(2);
   expect(instances.map((i) => i.id)).toContain(processId1);
@@ -69,7 +79,7 @@ test("PtyManager removePty cleans up resources", () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId = manager.createPty();
+  const processId = manager.createPty("sh");
   expect(manager.getPty(processId)).toBeDefined();
   const removed = manager.removePty(processId);
   expect(removed).toBe(true);
@@ -86,7 +96,7 @@ test("PtyManager returns session info with instances Map", () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  manager.createPty();
+  manager.createPty("sh");
   const session = manager.getSession();
   expect(session.sessionId).toBe(sessionId);
   expect(session.instances).toBeDefined();
@@ -95,8 +105,8 @@ test("PtyManager returns session info with instances Map", () => {
 
 test("PtyManager dispose cleans up all PTYs", () => {
   const manager = new PtyManager("test");
-  manager.createPty();
-  manager.createPty();
+  manager.createPty("sh");
+  manager.createPty("sh");
   expect(manager.getAllPtys().length).toBe(2);
   manager.dispose();
   expect(manager.getAllPtys().length).toBe(0);
@@ -222,7 +232,7 @@ test("PtyProcess writeInput throws when PTY is not active", async () => {
 });
 
 test("PtyProcess writeInput rejects sudo commands without consent", () => {
-  const pty = new PtyProcess({ executable: "bash" });
+  const pty = new PtyProcess({ executable: "sh" });
   ptys.push(pty);
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
   expect(() => pty.writeInput("sudo ls")).toThrow(/sudo command/);
@@ -255,7 +265,7 @@ test("PtyProcess dispose is idempotent", async () => {
 
 test("checkExecutablePermission allows non-sudo executable", () => {
   expect(() => checkExecutablePermission("vi")).not.toThrow();
-  expect(() => checkExecutablePermission("bash")).not.toThrow();
+  expect(() => checkExecutablePermission("sh")).not.toThrow();
 });
 
 test("checkExecutablePermission throws error for sudo executable without consent", () => {

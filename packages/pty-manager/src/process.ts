@@ -19,11 +19,11 @@ export class PtyProcess {
   private outputBuffer: string = "";
   private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
 
-  constructor(shellOrOptions: string | PtyOptions = { executable: "bash" }) {
+  constructor(commandOrOptions: string | PtyOptions) {
     const options =
-      typeof shellOrOptions === "string"
-        ? { executable: shellOrOptions }
-        : shellOrOptions;
+      typeof commandOrOptions === "string"
+        ? { executable: commandOrOptions }
+        : commandOrOptions;
 
     this.id = nanoid();
     this.createdAt = new Date();

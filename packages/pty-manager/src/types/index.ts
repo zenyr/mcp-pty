@@ -59,18 +59,6 @@ export interface TerminalOutput {
 }
 
 /**
- * 명령 입력 인터페이스
- */
-export interface CommandInput {
-  /** 명령을 실행할 프로세스 ID */
-  processId: string;
-  /** 실행할 명령어 */
-  command: string;
-  /** 입력 시각 */
-  timestamp: Date;
-}
-
-/**
  * PtyProcess 생성 옵션 인터페이스
  */
 export interface PtyOptions {
