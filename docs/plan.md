@@ -55,56 +55,56 @@
 
 #### 4.1 Core Server Setup
 
-- [ ] Install MCP SDK dependencies (`@modelcontextprotocol/sdk`)
-- [ ] Implement dual transport layer:
-  - [ ] stdio transport (1:1 client-server binding)
-  - [ ] streaming-HTTP transport (Hono-based multi-client support)
-- [ ] Transport detection & initialization logic
-- [ ] Server lifecycle management (start/stop/graceful shutdown)
+- ✅ Install MCP SDK dependencies (`@modelcontextprotocol/sdk`)
+- ✅ Implement dual transport layer:
+  - ✅ stdio transport (1:1 client-server binding)
+  - ✅ streaming-HTTP transport (Hono-based multi-client support)
+- ✅ Transport detection & initialization logic
+- ✅ Server lifecycle management (start/stop/graceful shutdown)
 
 #### 4.2 Session Integration
 
-- [ ] Integrate SessionManager with MCP server
-- [ ] Client connection → session creation mapping
-- [ ] Client disconnect → session cleanup handling
-- [ ] stdio: parent process monitoring
-- [ ] HTTP: SSE connection management & idle timeout (5min)
+- ✅ Integrate SessionManager with MCP server
+- ✅ Client connection → session creation mapping
+- ✅ Client disconnect → session cleanup handling
+- ✅ stdio: parent process monitoring
+- ✅ HTTP: SSE connection management & idle timeout (5min)
 
 #### 4.3 MCP Resources Implementation
 
-- [ ] `pty://status` - server status (n sessions, m processes)
-- [ ] `pty://sessions/list` - current session's PTY process list
-- [ ] `pty://session/{id}/output` - specific PTY output history
-- [ ] `pty://session/{id}/status` - specific PTY status info
+- ✅ `pty://status` - server status (n sessions, m processes)
+- ✅ `pty://sessions/list` - current session's PTY process list
+- ✅ `pty://session/{id}/output` - specific PTY output history
+- ✅ `pty://session/{id}/status` - specific PTY status info
 
 #### 4.4 MCP Tools Implementation (Fallback Mode)
 
-- [ ] Environment variable check (`MCP_PTY_DEACTIVATE_RESOURCES=true`)
-- [ ] Fixed tools:
-  - [ ] `start_pty` - create new PTY instance
-  - [ ] `kill_pty` - terminate PTY instance
-- [ ] Conditional tools (when resources disabled):
-  - [ ] `list_pty` - list PTY processes
-  - [ ] `read_pty` - read PTY output
-- [ ] `activate_pty_tools` - dynamic tool provisioning
+- ✅ Environment variable check (`MCP_PTY_DEACTIVATE_RESOURCES=true`)
+- ✅ Fixed tools:
+  - ✅ `start_pty` - create new PTY instance
+  - ✅ `kill_pty` - terminate PTY instance
+- ✅ Conditional tools (when resources disabled):
+  - ✅ `list_pty` - list PTY processes
+  - ✅ `read_pty` - read PTY output
+- ✅ `activate_pty_tools` - dynamic tool provisioning
 
 #### 4.5 Integration Layer
 
-- [ ] Wire SessionManager + PtyManager into MCP server
-- [ ] Request routing (resources vs tools)
-- [ ] Error handling & MCP error responses
-- [ ] Logging with consola
+- ✅ Wire SessionManager + PtyManager into MCP server
+- ✅ Request routing (resources vs tools)
+- ✅ Error handling & MCP error responses
+- ✅ Logging with consola
 
 #### 4.6 Testing & Quality
 
-- [ ] Unit tests for transport layers
-- [ ] Integration tests:
-  - [ ] stdio transport scenarios
-  - [ ] HTTP transport scenarios
-  - [ ] Multi-client session isolation
-- [ ] End-to-end tests with real MCP clients
-- [ ] Type checks (`bun check`)
-- [ ] Linting (`bun run lint`)
+- ✅ Unit tests for transport layers
+- ✅ Integration tests:
+  - ✅ stdio transport scenarios
+  - ✅ HTTP transport scenarios
+  - ✅ Multi-client session isolation
+- ✅ End-to-end tests with real MCP clients
+- ✅ Type checks (`bun check`)
+- ✅ Linting (`bun run lint`)
 
 ---
 
@@ -187,12 +187,16 @@ Phase 1 (Infrastructure)
 
 ## Current Priority: Phase 5 - Documentation & Examples
 
+### In Progress
+
+- **5.1 User Documentation** - updating README and API docs (in progress)
+
 ### Suggested Implementation Order
 
-1. **5.1 User Documentation** - update README and API docs
+1. **5.1 User Documentation** - update README and API docs ✅ (in progress)
 2. **5.2 Developer Documentation** - architecture and contribution guides
 3. **5.3 Examples & Demos** - client configurations and use cases
 
 ### Next Steps
 
-Begin with README updates and API documentation to support user adoption.
+Continue with README updates and API documentation to support user adoption.

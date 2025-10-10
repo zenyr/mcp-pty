@@ -78,10 +78,10 @@ bun-pty + @xterm/headless 활용
 
 ### 7. 타입스크립트 모노레포 설정
 
-#### 절대 경로 임포트
+#### 임포트 전략
 
-- `@app/*` 프리픽스를 통한 패키지 내 참조
-- TypeScript path mapping과 Bun workspace 연동
+- 상대 경로 임포트 허용 (relative imports allowed)
+- Bun workspace를 통한 패키지 간 참조
 - `bun check` 명령어로 타입 체크 자동화
 
 #### 빌드 파이프라인
