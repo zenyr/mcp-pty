@@ -1,8 +1,8 @@
 import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
-import type { PtyStatus, TerminalOutput, PtyOptions } from "./types";
-import { checkSudoPermission, checkExecutablePermission } from "./utils/safety";
+import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
+import { checkExecutablePermission, checkSudoPermission } from "./utils/safety";
 
 /**
  * Individual PTY process management class
@@ -75,7 +75,7 @@ export class PtyProcess {
     this.process.onExit(({ exitCode, signal }) => {
       this.status = "terminated";
       console.log(
-        `PTY ${this.id} exited with code ${exitCode}, signal ${signal}`
+        `PTY ${this.id} exited with code ${exitCode}, signal ${signal}`,
       );
 
       if (this.options.autoDisposeOnExit) {
@@ -96,7 +96,7 @@ export class PtyProcess {
     // Check sudo-related input (security)
     checkSudoPermission(input); // Reuse existing function (when input contains "sudo")
 
-    this.terminal.write(input + "\n"); // Simulate enter with \n (suitable for interactive)
+    this.terminal.write(`${input}\n`); // Simulate enter with \n (suitable for interactive)
     this.updateActivity();
   }
 
@@ -117,7 +117,7 @@ export class PtyProcess {
       ansiStripped: false, // TODO: ANSI strip option
       timestamp: new Date(),
     };
-    this.outputCallbacks.forEach((cb) => cb(terminalOutput));
+    this.outputCallbacks.forEach((cb) => void cb(terminalOutput));
   }
 
   /**

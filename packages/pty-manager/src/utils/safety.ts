@@ -22,7 +22,7 @@ export const validateConsent = (envVar: string, action: string): boolean => {
   const userConsent = process.env[envVar];
   if (userConsent?.trim()) {
     console.warn(
-      `⚠️  ${action} allowed by explicit user consent: "${userConsent}"`
+      `⚠️  ${action} allowed by explicit user consent: "${userConsent}"`,
     );
     return true;
   }
@@ -93,7 +93,7 @@ export const checkRootPermission = (): void => {
     if (
       !validateConsent(
         dangerousConsentEnvVar,
-        "MCP-PTY running with root privileges"
+        "MCP-PTY running with root privileges",
       )
     ) {
       throw new Error(rootPermissionErrorPrompt);
@@ -132,7 +132,7 @@ export const checkExecutablePermission = (executable: string): void => {
     if (
       !validateConsent(
         dangerousConsentEnvVar,
-        "Executing sudo-related executable in PTY"
+        "Executing sudo-related executable in PTY",
       )
     ) {
       throw new Error(sudoPermissionErrorPrompt);
