@@ -1,5 +1,9 @@
 {
   "name": "mcp-pty",
+  "version": "0.1.0",
+  "bin": {
+    "mcp-pty": "./packages/mcp-server/src/index.ts"
+  },
   "devDependencies": {
     "@biomejs/biome": "2.2.5",
     "@types/bun": "latest",
