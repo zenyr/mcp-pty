@@ -4,38 +4,76 @@ mcp-pty는 Bun + xterm.js + 공식 MCP SDK를 활용하여 background process를
 
 ## 설치
 
+### 글로벌 설치 (권장)
+
 ```bash
+bun install -g mcp-pty
+```
+
+### 로컬 개발
+
+```bash
+git clone <repository>
+cd mcp-pty
 bun install
+bun link  # 글로벌 명령어 등록
 ```
 
 ## 실행
 
-### stdio 모드 (기본)
-
-MCP 클라이언트가 서버를 자식 프로세스로 직접 실행합니다.
+### CLI 명령어 (권장)
 
 ```bash
-bun run packages/mcp-server/src/index.ts
+# 기본 실행 (stdio 모드)
+mcp-pty
+
+# HTTP 모드
+mcp-pty --transport http --port 3000
+
+# 도움말
+mcp-pty --help
 ```
 
-### HTTP 모드
-
-원격 MCP 서버로 동작합니다.
+### 직접 실행 (개발용)
 
 ```bash
-bun run packages/mcp-server/src/index.ts --http
+# stdio 모드
+bun run packages/mcp-server/src/index.ts
+
+# HTTP 모드
+bun run packages/mcp-server/src/index.ts --transport http
 ```
 
 ## 설정 가이드
 
+### 설정 우선순위
+
+1. **CLI 인자** (최우선): `--transport`, `--port`
+2. **XDG Config 파일**: `~/.config/mcp-pty/config.json`
+3. **환경 변수**: `MCP_PTY_DEACTIVATE_RESOURCES`
+4. **기본값**: stdio transport, port 3000
+
+### XDG 설정 파일
+
+`~/.config/mcp-pty/config.json` (또는 `$XDG_CONFIG_HOME/mcp-pty/config.json`):
+
+```json
+{
+  "transport": "stdio",
+  "port": 3000,
+  "deactivateResources": false
+}
+```
+
 ### 전송 계층
 
 - **stdio**: MCP 클라이언트가 서버를 자식 프로세스로 직접 실행. 프로세스 종료시 자동 cleanup 보장. 1:1 클라이언트-서버 바인딩.
-- **Streaming-HTTP**: 원격 MCP 서버로 동작. 다중 클라이언트 동시 세션 지원. Hono 기반 HTTP 서버 구현. SSE를 통한 실시간 notification 지원.
+- **http**: 원격 MCP 서버로 동작. 다중 클라이언트 동시 세션 지원. Hono 기반 HTTP 서버 구현. SSE를 통한 실시간 notification 지원.
 
 ### 환경 변수
 
 - `MCP_PTY_DEACTIVATE_RESOURCES=true`: Resources 미지원 클라이언트용 동적 툴 제공 활성화.
+- `XDG_CONFIG_HOME`: XDG 설정 디렉토리 경로 (기본: `~/.config`)
 
 ## API 문서
 

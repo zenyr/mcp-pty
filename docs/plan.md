@@ -48,6 +48,9 @@
 - ✅ Integration layer wiring SessionManager + PtyManager
 - ✅ Error handling, logging, and MCP responses
 - ✅ Testing & quality assurance (unit, integration, type checks)
+- ✅ CLI entry point with bin field configuration
+- ✅ XDG Base Directory specification support
+- ✅ Configuration priority system (CLI args > XDG config > env vars > defaults)
 
 ---
 
@@ -108,6 +111,10 @@
 
 #### 4.7 Implementation Refinements
 
+- ✅ CLI entry point configuration (`package.json` bin field)
+- ✅ XDG config loader implementation (`utils/config.ts`)
+- ✅ Configuration cascade system (CLI > XDG > env > defaults)
+- ✅ `bunx mcp-pty` command support
 - [ ] ANSI strip 옵션 구현 (pty-manager/process.ts)
 - [ ] PTY 스키마 개선 (mcp-server/types/index.ts, tools/index.ts - z.any() 제거)
 - [ ] PTY 출력 가져오기 구현 (mcp-server/tools/index.ts, resources/index.ts)
@@ -122,15 +129,16 @@
 
 #### 5.1 User Documentation
 
-- [ ] README.md update:
-  - [ ] Project overview
-  - [ ] Installation instructions
-  - [ ] Configuration guide (stdio vs HTTP)
-  - [ ] Environment variables reference
-- [ ] API documentation:
-  - [ ] MCP resources schema
-  - [ ] MCP tools schema
-  - [ ] Error codes & handling
+- ✅ README.md update:
+  - ✅ Project overview
+  - ✅ Installation instructions
+  - ✅ Configuration guide (stdio vs HTTP)
+  - ✅ Environment variables reference
+  - ✅ XDG config file location
+- ✅ API documentation:
+  - ✅ MCP resources schema
+  - ✅ MCP tools schema
+  - ✅ Error codes & handling
 
 #### 5.2 Developer Documentation
 
@@ -198,17 +206,28 @@ Phase 1 (Infrastructure)
 
 ## Current Priority: Phase 4.7 - Implementation Refinements
 
+### Recently Completed
+
+- ✅ **CLI Entry Point Setup** - `bunx mcp-pty` command support
+- ✅ **XDG Config System** - `~/.config/mcp-pty/config.json` support
+- ✅ **Configuration Priority** - CLI args > XDG config > env vars > defaults
+- ✅ **5.1 User Documentation** - README with XDG config guide
+
 ### In Progress
 
-- **4.7 Implementation Refinements** - addressing TODO comments and code improvements
+- **4.7 Implementation Refinements** - addressing remaining TODO comments
 
 ### Suggested Implementation Order
 
-1. **4.7 Implementation Refinements** - complete all TODO items
-2. **5.1 User Documentation** - update README and API docs ✅ (completed)
-3. **5.2 Developer Documentation** - architecture and contribution guides
-4. **5.3 Examples & Demos** - client configurations and use cases
+1. **4.7 Implementation Refinements** - complete remaining TODO items
+2. **5.2 Developer Documentation** - architecture and contribution guides
+3. **5.3 Examples & Demos** - client configurations and use cases
+4. **6.x Production Readiness** - performance, security, observability
 
 ### Next Steps
 
-Address the identified TODO comments to complete core implementation before proceeding to documentation.
+1. Complete ANSI strip options implementation
+2. Improve PTY schema (remove z.any() usage)
+3. Implement PTY output retrieval features
+4. Add session/process count tracking
+5. Review session-specific server instance requirements
