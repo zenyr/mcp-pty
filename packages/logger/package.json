@@ -1,0 +1,19 @@
+{
+  "name": "@pkgs/logger",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "bun test",
+    "check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "consola": "^3.4.2"
+  }
+}
