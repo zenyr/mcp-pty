@@ -22,6 +22,8 @@
 - ✅ PtyManager class with sessionId-based lifecycle management
 - ✅ System shell environment inheritance (shellMode with PATH preservation)
 - ✅ ANSI sequence capture & strip options
+- ✅ Interactive input support (write method with terminal state extraction)
+- ✅ CJK/Emoji/multiline/ANSI control codes support (Ctrl+C, etc.)
 - ✅ Graceful shutdown (SIGTERM → SIGKILL with 3s grace period)
 - ✅ Unit & integration tests
 
@@ -87,6 +89,7 @@
 - ✅ Fixed tools:
   - ✅ `start` - create new PTY instance (renamed from `start_pty`, returns immediate output)
   - ✅ `kill` - terminate PTY instance (renamed from `kill_pty`)
+  - ✅ `write_input` - write data to PTY stdin with terminal state response
 - ✅ Conditional tools (when resources disabled):
   - ✅ `list` - list PTY processes (renamed from `list_pty`)
   - ✅ `read` - read PTY output (renamed from `read_pty`)
@@ -116,11 +119,13 @@
 - ✅ XDG config loader implementation (`utils/config.ts`)
 - ✅ Configuration cascade system (CLI > XDG > env > defaults)
 - ✅ `bunx mcp-pty` command support
-- [ ] ANSI strip 옵션 구현 (pty-manager/process.ts)
+- ✅ ANSI strip 옵션 구현 (pty-manager/process.ts - ansiStrip option in PtyOptions)
 - ✅ PTY 스키마 개선 (mcp-server/types/index.ts, tools/index.ts - z.any() 제거)
 - ✅ PTY 출력 가져오기 구현 (mcp-server/tools/index.ts, resources/index.ts)
 - ✅ PTY 개수 계산 (mcp-server/resources/index.ts)
 - ✅ 세션 생성 시간 관리 (pty-manager/manager.ts)
+- ✅ Interactive input support (PtyProcess.write() + write_input tool)
+- ✅ Terminal state extraction (xterm buffer + cursor position)
 - [ ] PTY 인스턴스 정리 로직 (session-manager/index.ts)
 - [ ] 세션별 서버 인스턴스 생성 검토 (mcp-server/transports/index.ts)
 
@@ -221,10 +226,13 @@ Phase 1 (Infrastructure)
 - ✅ **Tool Name Simplification** - Removed `_pty` suffix from all tools (start, kill, list, read)
 - ✅ **Resource URI Simplification** - Removed `sessions/` prefix from resource templates
 - ✅ **Immediate Output on Start** - `start` tool now returns initial PTY output with 500ms wait
+- ✅ **Interactive Input Support** - `write_input` tool with terminal state extraction
+- ✅ **Terminal State Queries** - xterm buffer-based screen content + cursor position
+- ✅ **Comprehensive Text Support** - CJK/Emoji/multiline/ANSI control codes (Ctrl+C, etc.)
 
 ### In Progress
 
-- **4.7 Implementation Refinements** - remaining TODO items: ANSI strip, PTY cleanup, server instance review
+- **4.7 Implementation Refinements** - remaining TODO items: PTY cleanup, server instance review
 
 ### Suggested Implementation Order
 
@@ -235,6 +243,7 @@ Phase 1 (Infrastructure)
 
 ### Next Steps
 
-1. Complete ANSI strip options implementation
-2. Add PTY instance cleanup logic in session termination
-3. Review session-specific server instance requirements
+1. Add PTY instance cleanup logic in session termination
+2. Review session-specific server instance requirements
+3. Developer documentation (architecture deep-dive)
+4. Example client configurations and use cases
