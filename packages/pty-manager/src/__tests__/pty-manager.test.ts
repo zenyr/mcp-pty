@@ -208,16 +208,35 @@ test("validateConsent returns true and logs warning for valid consent", () => {
 });
 
 test("PtyProcess creates with options and initializes", () => {
-  const options = { executable: "cat", args: [], autoDisposeOnExit: true };
+  const options = {
+    executable: "cat",
+    args: [],
+    autoDisposeOnExit: true,
+    shellMode: false,
+  };
 
   const pty = new PtyProcess(options);
   ptys.push(pty);
   expect(pty.options.executable).toBe("cat");
   expect(pty.options.args).toEqual([]);
   expect(pty.options.autoDisposeOnExit).toBe(true);
+  expect(pty.options.shellMode).toBe(false);
   expect(pty.status).toBe("active");
   expect(pty.id).toBeDefined();
   expect(pty.createdAt).toBeInstanceOf(Date);
+});
+
+test("PtyProcess creates with shellMode true", () => {
+  const options = { executable: "echo", args: ["hello"], shellMode: true };
+
+  const pty = new PtyProcess(options);
+  ptys.push(pty);
+  console.log("options:", options);
+  console.log("pty.options:", pty.options);
+  expect(pty.options.executable).toBe("echo");
+  expect(pty.options.args).toEqual(["hello"]);
+  expect(pty.options.shellMode).toBe(true);
+  expect(pty.status).toBe("active");
 });
 
 test("PtyProcess creates with command string and parses correctly", () => {
@@ -229,27 +248,27 @@ test("PtyProcess creates with command string and parses correctly", () => {
 });
 
 test("PtyProcess writeInput sends data to terminal", () => {
-  const pty = new PtyProcess({ executable: "cat" });
+  const pty = new PtyProcess({ executable: "cat", shellMode: true });
   ptys.push(pty);
   expect(() => pty.writeInput("test input")).not.toThrow();
   expect(pty.status).toBe("active");
 });
 
 test("PtyProcess writeInput throws when PTY is not active", async () => {
-  const pty = new PtyProcess({ executable: "cat" });
+  const pty = new PtyProcess({ executable: "cat", shellMode: true });
   await pty.dispose();
   expect(() => pty.writeInput("test")).toThrow(/is not active/);
 });
 
 test("PtyProcess writeInput rejects sudo commands without consent", () => {
-  const pty = new PtyProcess({ executable: "sh" });
+  const pty = new PtyProcess({ executable: "sh", shellMode: true });
   ptys.push(pty);
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
   expect(() => pty.writeInput("sudo ls")).toThrow(/sudo command/);
 });
 
 test("PtyProcess onOutput registers callback", () => {
-  const pty = new PtyProcess({ executable: "cat" });
+  const pty = new PtyProcess({ executable: "cat", shellMode: true });
   ptys.push(pty);
   let callbackFired = false;
   pty.onOutput(() => {
@@ -259,14 +278,14 @@ test("PtyProcess onOutput registers callback", () => {
 });
 
 test("PtyProcess dispose transitions to terminated state", async () => {
-  const pty = new PtyProcess({ executable: "cat" });
+  const pty = new PtyProcess({ executable: "cat", shellMode: true });
   expect(pty.status).toBe("active");
   await pty.dispose();
   expect(pty.status).toBe("terminated");
 });
 
 test("PtyProcess dispose is idempotent", async () => {
-  const pty = new PtyProcess({ executable: "cat" });
+  const pty = new PtyProcess({ executable: "cat", shellMode: true });
   await pty.dispose();
   expect(pty.status).toBe("terminated");
   await pty.dispose();
@@ -305,9 +324,10 @@ test("checkExecutablePermission allows sudo executable with consent", () => {
 
 test("PtyProcess autoDisposeOnExit triggers cleanup on process exit", async () => {
   const pty = new PtyProcess({
-    executable: "echo",
-    args: ["test"],
+    executable: "true",
+    args: [],
     autoDisposeOnExit: true,
+    shellMode: false,
   });
   expect(pty.status).toBe("active");
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -315,7 +335,11 @@ test("PtyProcess autoDisposeOnExit triggers cleanup on process exit", async () =
 });
 
 test("PtyProcess onOutput callback receives output data", async () => {
-  const pty = new PtyProcess({ executable: "echo", args: ["hello"] });
+  const pty = new PtyProcess({
+    executable: "echo",
+    args: ["hello"],
+    shellMode: false,
+  });
   ptys.push(pty);
 
   const outputs: string[] = [];
@@ -344,7 +368,7 @@ test("PtyManager tracks process lifecycle through status updates", async () => {
 });
 
 test("PtyProcess graceful shutdown transitions to terminated", async () => {
-  const pty = new PtyProcess({ executable: "cat" });
+  const pty = new PtyProcess({ executable: "cat", shellMode: true });
   expect(pty.status).toBe("active");
 
   await pty.dispose("SIGTERM");
@@ -353,9 +377,10 @@ test("PtyProcess graceful shutdown transitions to terminated", async () => {
 
 test("PtyProcess with custom cwd and env options", () => {
   const pty = new PtyProcess({
-    executable: "pwd",
+    executable: "cat",
     cwd: "/tmp",
     env: { CUSTOM_VAR: "test_value" },
+    shellMode: true,
   });
   ptys.push(pty);
 
