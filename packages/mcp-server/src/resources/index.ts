@@ -35,25 +35,25 @@ export const registerPtyResources = (server: McpServer): void => {
     }),
   );
 
-  // Register sessions/list resource
+  // Register list resource
   server.registerResource(
-    "sessions/list",
-    new ResourceTemplate("pty://sessions/list", { list: undefined }),
+    "list",
+    new ResourceTemplate("pty://list", { list: undefined }),
     { title: "Sessions List", description: "List of all sessions" },
     async () => ({
       contents: [
         {
-          uri: "pty://sessions/list",
+          uri: "pty://list",
           text: JSON.stringify(sessionManager.getAllSessions()),
         },
       ],
     }),
   );
 
-  // Register session/output resource
+  // Register output resource
   server.registerResource(
-    "session/output",
-    new ResourceTemplate("pty://session/{id}/output", { list: undefined }),
+    "output",
+    new ResourceTemplate("pty://{id}/output", { list: undefined }),
     {
       title: "Session PTY Output",
       description: "PTY output for a specific session",
@@ -72,10 +72,10 @@ export const registerPtyResources = (server: McpServer): void => {
     },
   );
 
-  // Register session/status resource
+  // Register status resource template
   server.registerResource(
-    "session/status",
-    new ResourceTemplate("pty://session/{id}/status", { list: undefined }),
+    "session-status",
+    new ResourceTemplate("pty://{id}/status", { list: undefined }),
     { title: "Session Status", description: "Status of a specific session" },
     async (uri, params) => {
       const id = params.id;
