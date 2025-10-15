@@ -15,6 +15,7 @@ export interface McpServerConfig {
 export const StartPtyInputSchema = z.object({
   sessionId: z.string(),
   command: z.string(),
+  shellMode: z.boolean().optional(),
 });
 
 export const KillPtyInputSchema = z.object({

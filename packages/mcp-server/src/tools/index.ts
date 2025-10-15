@@ -21,14 +21,16 @@ export const registerPtyTools = (server: McpServer): void => {
     "start_pty",
     {
       title: "Start PTY",
-      description: "Create new PTY instance",
+      description:
+        "Create new PTY instance. Use shellMode=true to inherit system shell environment.",
       inputSchema: StartPtyInputSchema.shape,
       outputSchema: StartPtyOutputSchema.shape,
     },
-    async ({ sessionId, command }) => {
+    async ({ sessionId, command, shellMode }) => {
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
-      const processId = ptyManager.createPty(command);
+      const options = shellMode ? { executable: command, shellMode } : command;
+      const processId = ptyManager.createPty(options);
       sessionManager.addPty(sessionId, processId);
       return {
         content: [{ type: "text", text: JSON.stringify({ processId }) }],

@@ -1,6 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { consola } from "consola";
+import { createLogger } from "@pkgs/logger";
+
+const logger = createLogger("config");
 
 /**
  * XDG Base Directory specification compliant config path resolver
@@ -11,7 +13,7 @@ export const getConfigDir = (): string => {
   const home = process.env.HOME ?? process.env.USERPROFILE;
 
   if (!home) {
-    consola.warn("HOME or USERPROFILE environment variable not found");
+    logger.warn("HOME or USERPROFILE environment variable not found");
     return ".config/mcp-pty";
   }
 
@@ -55,10 +57,10 @@ export const loadConfig = async (): Promise<McpPtyConfig> => {
     try {
       const file = Bun.file(configPath);
       const config = await file.json();
-      consola.info(`Loaded config from ${configPath}`);
+      // logger.info(`Loaded config from ${configPath}`);
       return config;
     } catch (error) {
-      consola.warn(`Failed to parse config file: ${configPath}`, error);
+      // logger.warn(`Failed to parse config file: ${configPath}`, error);
     }
   }
 
@@ -67,6 +69,6 @@ export const loadConfig = async (): Promise<McpPtyConfig> => {
     deactivateResources: process.env.MCP_PTY_DEACTIVATE_RESOURCES === "true",
   };
 
-  consola.info("Using default configuration (no config file found)");
+  // logger.info("Using default configuration (no config file found)");
   return config;
 };

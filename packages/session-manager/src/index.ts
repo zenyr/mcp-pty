@@ -1,5 +1,5 @@
+import { createLogger } from "@pkgs/logger";
 import { PtyManager } from "@pkgs/pty-manager";
-import { consola } from "consola";
 import { ulid } from "ulid";
 import type {
   PtyInstanceReference,
@@ -8,6 +8,8 @@ import type {
   SessionId,
   SessionStatus,
 } from "./types/index.ts";
+
+const logger = createLogger("session-manager");
 
 /**
  * Session manager class.
@@ -35,7 +37,7 @@ export class SessionManager {
     this.sessions.set(id, session);
     this.ptyManagers.set(id, new PtyManager(id));
     this.emitEvent({ type: "created", sessionId: id });
-    consola.info(`Session created: ${id}`);
+    logger.info(`Session created: ${id}`);
 
     return id;
   }
@@ -65,7 +67,7 @@ export class SessionManager {
     this.ptyManagers.delete(id);
     this.sessions.delete(id);
     this.emitEvent({ type: "terminated", sessionId: id });
-    consola.info(`Session deleted: ${id}`);
+    logger.info(`Session deleted: ${id}`);
 
     return true;
   }
@@ -82,7 +84,7 @@ export class SessionManager {
     session.lastActivity = new Date();
 
     this.emitEvent({ type: "statusChanged", sessionId: id, from, to: status });
-    consola.debug(`Session status changed: ${id} ${from} -> ${status}`);
+    logger.debug(`Session status changed: ${id} ${from} -> ${status}`);
 
     return true;
   }
@@ -98,7 +100,7 @@ export class SessionManager {
     session.lastActivity = new Date();
 
     this.emitEvent({ type: "ptyBound", sessionId: id, processId });
-    consola.debug(`PTY bound to session: ${id} -> ${processId}`);
+    logger.debug(`PTY bound to session: ${id} -> ${processId}`);
 
     return true;
   }
@@ -114,7 +116,7 @@ export class SessionManager {
     if (removed) {
       session.lastActivity = new Date();
       this.emitEvent({ type: "ptyUnbound", sessionId: id, processId });
-      consola.debug(`PTY unbound from session: ${id} -> ${processId}`);
+      logger.debug(`PTY unbound from session: ${id} -> ${processId}`);
     }
 
     return removed;
@@ -142,7 +144,7 @@ export class SessionManager {
       try {
         listener(event);
       } catch (error) {
-        consola.error("Event listener error:", error);
+        logger.error("Event listener error:", error);
       }
     }
   }
@@ -187,7 +189,7 @@ export class SessionManager {
     this.monitorInterval = setInterval(() => {
       this.monitorIdleSessions();
     }, 60 * 1000); // Every minute
-    consola.info("Session monitoring started");
+    logger.info("Session monitoring started");
   }
 
   /**
@@ -197,7 +199,7 @@ export class SessionManager {
     if (this.monitorInterval) {
       clearInterval(this.monitorInterval);
       this.monitorInterval = undefined;
-      consola.info("Session monitoring stopped");
+      logger.info("Session monitoring stopped");
     }
   }
 
@@ -217,7 +219,7 @@ export class SessionManager {
     this.sessions.clear();
     this.ptyManagers.clear();
     this.eventListeners.clear();
-    consola.info("Session manager cleanup completed");
+    logger.info("Session manager cleanup completed");
   }
 
   /**

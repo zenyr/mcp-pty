@@ -15,13 +15,13 @@
   },
   "private": true,
   "scripts": {
+    "inspect": "bun x --bun @modelcontextprotocol/inspector mcp-pty",
     "reset": "bun x --bun rimraf './**/node_modules' node_modules; bun i",
     "type-check": "bun --filter=\"*\" run check",
     "biome:all": "biome check --write && biome format --write && biome lint --write",
     "check": "biome check --write",
     "format": "biome format --write",
     "lint": "biome lint --write",
-    "build": "bun --filter=\"*\" run build",
     "dev": "bun --filter=\"@pkgs/*\" run dev",
     "start": "bun --filter=\"@pkgs/mcp-server\" run start",
     "prepare": "husky"

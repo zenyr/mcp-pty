@@ -1,4 +1,5 @@
 import { parseArgs } from "node:util";
+import { logger } from "@pkgs/logger";
 import { sessionManager } from "@pkgs/session-manager";
 
 export * from "./config";
@@ -71,7 +72,7 @@ export const setupGracefulShutdown = (): void => {
  * @param message server message
  */
 export const logServer = (message: string): void => {
-  console.log(message);
+  logger.info(message);
 };
 
 /**
@@ -80,5 +81,5 @@ export const logServer = (message: string): void => {
  * @param error error object
  */
 export const logError = (message: string, error: unknown): void => {
-  console.error(`${message}:`, error);
+  logger.error(message, error);
 };

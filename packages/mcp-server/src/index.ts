@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { consola } from "consola";
 import { McpServerFactory } from "./server";
 import { startHttpServer, startStdioServer } from "./transports";
 import {
@@ -13,6 +14,15 @@ const config = await loadConfig();
 
 // Parse command line arguments (CLI args override config)
 const { transport, port } = parseCliArgs();
+
+// Start server based on transport type (CLI args > config > default)
+const finalTransport = transport ?? config.transport ?? "stdio";
+const finalPort = port ?? config.port ?? 3000;
+
+// Configure consola for stdio transport (suppress stdout logs)
+if (finalTransport === "stdio") {
+  consola.level = 0;
+}
 
 // Start session monitoring
 initializeServer();
@@ -30,10 +40,6 @@ const serverFactory = new McpServerFactory({
 });
 
 const server = serverFactory.createServer();
-
-// Start server based on transport type (CLI args > config > default)
-const finalTransport = transport ?? config.transport ?? "stdio";
-const finalPort = port ?? config.port ?? 3000;
 
 if (finalTransport === "http") {
   startHttpServer(server, finalPort);
