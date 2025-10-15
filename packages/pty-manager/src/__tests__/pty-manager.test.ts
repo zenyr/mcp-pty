@@ -281,6 +281,64 @@ test("PtyProcess dispose is idempotent", async () => {
   expect(pty.status).toBe("terminated");
 });
 
+test("PtyProcess write() sends plain text and returns screen state", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  const result = await pty.write("hello world\n", 500);
+  expect(result.screen).toContain("hello world");
+  expect(result.cursor).toHaveProperty("x");
+  expect(result.cursor).toHaveProperty("y");
+  expect(result.exitCode).toBeNull();
+});
+
+test("PtyProcess write() handles CJK characters", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  const result = await pty.write("안녕하세요\n", 500);
+  expect(result.screen).toContain("안녕하세요");
+});
+
+test("PtyProcess write() handles Emoji", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  const result = await pty.write("Hello 👋🌍\n", 500);
+  expect(result.screen).toContain("👋");
+  expect(result.screen).toContain("🌍");
+});
+
+test("PtyProcess write() handles multiline input", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  const result = await pty.write("line1\nline2\nline3\n", 500);
+  expect(result.screen).toContain("line1");
+  expect(result.screen).toContain("line2");
+  expect(result.screen).toContain("line3");
+});
+
+test("PtyProcess write() handles Ctrl+C (\\x03)", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  const result = await pty.write("\x03", 500);
+  // Ctrl+C sends SIGINT but cat may not exit immediately with 500ms
+  // Just verify write completes without error
+  expect(result.screen).toBeDefined();
+  expect(result.cursor).toHaveProperty("x");
+  expect(result.cursor).toHaveProperty("y");
+});
+
+test("PtyProcess write() throws when PTY is not active", async () => {
+  const pty = new PtyProcess("cat");
+  await pty.dispose();
+  await expect(pty.write("test")).rejects.toThrow(/is not active/);
+});
+
+test("PtyProcess write() rejects sudo commands without consent", async () => {
+  const pty = new PtyProcess("sh");
+  ptys.push(pty);
+  delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
+  await expect(pty.write("sudo ls\n")).rejects.toThrow(/sudo command/);
+});
+
 test("checkExecutablePermission allows non-sudo executable", () => {
   expect(() => checkExecutablePermission("vi")).not.toThrow();
   expect(() => checkExecutablePermission("sh")).not.toThrow();
