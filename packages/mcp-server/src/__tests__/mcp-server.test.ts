@@ -366,5 +366,56 @@ describe("MCP Server", () => {
         "PTY not found",
       );
     });
+
+    test("write_input tool handler writes data and returns terminal state", async () => {
+      const { processId } = await ptyManager.createPty("cat");
+      sessionManager.addPty(sessionId, processId);
+
+      const { write_input } = createToolHandlers(server);
+      const result = await write_input({
+        processId,
+        data: "hello world\n",
+        waitMs: 500,
+      });
+
+      expect(result).toBeDefined();
+      expect(result.content).toBeDefined();
+      expect(result.structuredContent).toBeDefined();
+
+      const structured = result.structuredContent as {
+        screen: string;
+        cursor: { x: number; y: number };
+        exitCode: number | null;
+      };
+      expect(typeof structured.screen).toBe("string");
+      expect(structured.screen).toContain("hello world");
+      expect(structured.cursor).toHaveProperty("x");
+      expect(structured.cursor).toHaveProperty("y");
+      expect(structured.exitCode).toBeNull();
+    });
+
+    test("write_input tool handler handles CJK and Emoji", async () => {
+      const { processId } = await ptyManager.createPty("cat");
+      sessionManager.addPty(sessionId, processId);
+
+      const { write_input } = createToolHandlers(server);
+      const result = await write_input({
+        processId,
+        data: "안녕하세요 👋\n",
+        waitMs: 500,
+      });
+
+      const structured = result.structuredContent as { screen: string };
+      expect(structured.screen).toContain("안녕하세요");
+      expect(structured.screen).toContain("👋");
+    });
+
+    test("write_input tool handler throws for non-existent PTY", async () => {
+      const { write_input } = createToolHandlers(server);
+
+      await expect(
+        write_input({ processId: "non-existent", data: "test\n" }),
+      ).rejects.toThrow("PTY not found");
+    });
   });
 });
