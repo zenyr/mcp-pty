@@ -77,19 +77,19 @@
 #### 4.3 MCP Resources Implementation
 
 - ✅ `pty://status` - server status (n sessions, m processes)
-- ✅ `pty://sessions/list` - current session's PTY process list
-- ✅ `pty://session/{id}/output` - specific PTY output history
-- ✅ `pty://session/{id}/status` - specific PTY status info
+- ✅ `pty://list` - current session's PTY process list (renamed from `sessions/list`)
+- ✅ `pty://{id}/output` - specific PTY output history (renamed from `session/{id}/output`)
+- ✅ `pty://{id}/status` - specific PTY status info (renamed from `session/{id}/status`)
 
 #### 4.4 MCP Tools Implementation (Fallback Mode)
 
 - ✅ Environment variable check (`MCP_PTY_DEACTIVATE_RESOURCES=true`)
 - ✅ Fixed tools:
-  - ✅ `start_pty` - create new PTY instance
-  - ✅ `kill_pty` - terminate PTY instance
+  - ✅ `start` - create new PTY instance (renamed from `start_pty`, returns immediate output)
+  - ✅ `kill` - terminate PTY instance (renamed from `kill_pty`)
 - ✅ Conditional tools (when resources disabled):
-  - ✅ `list_pty` - list PTY processes
-  - ✅ `read_pty` - read PTY output
+  - ✅ `list` - list PTY processes (renamed from `list_pty`)
+  - ✅ `read` - read PTY output (renamed from `read_pty`)
 - ✅ `activate_pty_tools` - dynamic tool provisioning
 
 #### 4.5 Integration Layer
@@ -218,6 +218,9 @@ Phase 1 (Infrastructure)
 - ✅ **PTY Count Calculation** - Added to status resource
 - ✅ **Session Creation Time Management** - Added to PtyManager
 - ✅ **System Shell Environment Inheritance** - shellMode with PATH preservation
+- ✅ **Tool Name Simplification** - Removed `_pty` suffix from all tools (start, kill, list, read)
+- ✅ **Resource URI Simplification** - Removed `sessions/` prefix from resource templates
+- ✅ **Immediate Output on Start** - `start` tool now returns initial PTY output with 500ms wait
 
 ### In Progress
 

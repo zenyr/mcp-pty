@@ -80,16 +80,16 @@ bun run packages/mcp-server/src/index.ts --transport http
 ### MCP Resources
 
 - `pty://status`: 본 MCP 서버 상태 제공 (n 개 세션에서 m 개의 process)
-- `pty://sessions/list`: 현재 세션의 하위 PTY 프로세스 목록 조회
-- `pty://session/{id}/output`: 현재 세션의 특정 PTY 프로세스 출력 히스토리
-- `pty://session/{id}/status`: 현재 세션의 특정 PTY 프로세스 상태 정보
+- `pty://list`: 현재 세션의 하위 PTY 프로세스 목록 조회
+- `pty://{id}/output`: 현재 세션의 특정 PTY 프로세스 출력 히스토리
+- `pty://{id}/status`: 현재 세션의 특정 PTY 프로세스 상태 정보
 
 ### MCP Tools
 
-- `start_pty`: 새 PTY 인스턴스 생성
-- `kill_pty`: PTY 인스턴스 종료
-- `list_pty`: PTY 프로세스 목록 조회 (Resources 비활성화 시)
-- `read_pty`: PTY 출력 읽기 (Resources 비활성화 시)
+- `start`: 새 PTY 인스턴스 생성 (초기 출력 포함 즉시 반환)
+- `kill`: PTY 인스턴스 종료
+- `list`: PTY 프로세스 목록 조회 (Resources 비활성화 시)
+- `read`: PTY 출력 읽기 (Resources 비활성화 시)
 - `activate_pty_tools`: 동적 툴 제공 (Resources 비활성화 시)
 
 ### 에러 코드
