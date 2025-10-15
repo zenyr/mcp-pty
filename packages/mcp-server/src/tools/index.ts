@@ -46,13 +46,13 @@ const getBoundSessionId = (server: McpServer): string => {
  * @param server McpServer instance
  */
 export const registerPtyTools = (server: McpServer): void => {
-  // Register start_pty tool
+  // Register start tool
   server.registerTool(
-    "start_pty",
+    "start",
     {
       title: "Start PTY",
       description:
-        "Create new PTY instance. Use shellMode=true to inherit system shell environment.",
+        "Create new PTY instance. Use shellMode=true to inherit system shell environment. Returns processId and initial output.",
       inputSchema: StartPtyInputSchema.shape,
       outputSchema: StartPtyOutputSchema.shape,
     },
@@ -67,18 +67,21 @@ export const registerPtyTools = (server: McpServer): void => {
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
       const options = shellMode ? { executable: command, shellMode } : command;
-      const processId = ptyManager.createPty(options);
+      const { processId, output } =
+        await ptyManager.createPtyWithOutput(options);
       sessionManager.addPty(sessionId, processId);
       return {
-        content: [{ type: "text", text: JSON.stringify({ processId }) }],
-        structuredContent: { processId },
+        content: [
+          { type: "text", text: JSON.stringify({ processId, output }) },
+        ],
+        structuredContent: { processId, output },
       };
     },
   );
 
-  // Register kill_pty tool
+  // Register kill tool
   server.registerTool(
-    "kill_pty",
+    "kill",
     {
       title: "Kill PTY",
       description: "Terminate PTY instance",
@@ -98,9 +101,9 @@ export const registerPtyTools = (server: McpServer): void => {
     },
   );
 
-  // Register list_pty tool
+  // Register list tool
   server.registerTool(
-    "list_pty",
+    "list",
     {
       title: "List PTY",
       description: "List PTY processes",
@@ -126,9 +129,9 @@ export const registerPtyTools = (server: McpServer): void => {
     },
   );
 
-  // Register read_pty tool
+  // Register read tool
   server.registerTool(
-    "read_pty",
+    "read",
     {
       title: "Read PTY",
       description: "Read PTY output",

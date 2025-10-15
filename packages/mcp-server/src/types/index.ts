@@ -27,7 +27,10 @@ export const ReadPtyInputSchema = z.object({ processId: z.string() });
 /**
  * PTY tool output schemas
  */
-export const StartPtyOutputSchema = z.object({ processId: z.string() });
+export const StartPtyOutputSchema = z.object({
+  processId: z.string(),
+  output: z.string(),
+});
 
 export const KillPtyOutputSchema = z.object({ success: z.boolean() });
 

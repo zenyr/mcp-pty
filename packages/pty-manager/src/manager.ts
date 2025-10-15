@@ -31,6 +31,34 @@ export class PtyManager {
   }
 
   /**
+   * Create new PTY instance and wait for initial output
+   * @param commandOrOptions - Command string or PtyOptions
+   * @param timeoutMs - Timeout in milliseconds (default: 500ms)
+   * @returns Object with processId and initial output
+   */
+  public async createPtyWithOutput(
+    commandOrOptions: string | PtyOptions,
+    timeoutMs = 500,
+  ): Promise<{ processId: string; output: string }> {
+    const process = new PtyProcess(commandOrOptions);
+    this.instances.set(process.id, process);
+
+    // Wait for initial output with timeout
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, timeoutMs);
+      const checkOutput = setInterval(() => {
+        if (process.getOutputBuffer().length > 0) {
+          clearTimeout(timer);
+          clearInterval(checkOutput);
+          resolve();
+        }
+      }, 50);
+    });
+
+    return { processId: process.id, output: process.getOutputBuffer() };
+  }
+
+  /**
    * Get PTY instance
    */
   public getPty(processId: string): PtyProcess | undefined {
