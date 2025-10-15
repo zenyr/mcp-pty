@@ -258,9 +258,9 @@ test("PtyProcess writeInput rejects sudo commands without consent", () => {
 test("PtyProcess onOutput registers callback", () => {
   const pty = new PtyProcess("cat");
   ptys.push(pty);
-  let callbackInvoked = false;
+  let _callbackInvoked = false;
   pty.onOutput(() => {
-    callbackInvoked = true;
+    _callbackInvoked = true;
   });
   pty.process.write("test\n");
   // Callback will trigger asynchronously during output processing

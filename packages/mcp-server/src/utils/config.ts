@@ -59,7 +59,7 @@ export const loadConfig = async (): Promise<McpPtyConfig> => {
       const config = await file.json();
       // logger.info(`Loaded config from ${configPath}`);
       return config;
-    } catch (error) {
+    } catch (_error) {
       // logger.warn(`Failed to parse config file: ${configPath}`, error);
     }
   }
