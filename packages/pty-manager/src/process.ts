@@ -4,8 +4,7 @@ import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
 import stripAnsi from "strip-ansi";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
-import { parseCommand } from "./utils/command";
-import { checkExecutablePermission, checkSudoPermission } from "./utils/safety";
+import { checkSudoPermission } from "./utils/safety";
 
 const logger = createLogger("pty-process");
 
@@ -25,15 +24,18 @@ export class PtyProcess {
   private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
 
   constructor(commandOrOptions: string | PtyOptions) {
-    const options = parseCommand(commandOrOptions);
+    const options =
+      typeof commandOrOptions === "string"
+        ? { command: commandOrOptions }
+        : commandOrOptions;
 
     this.id = nanoid();
     this.createdAt = new Date();
     this.lastActivity = new Date();
     this.options = options;
 
-    // Security check: Verify if executable is sudo
-    checkExecutablePermission(options.executable);
+    // Security check: Verify if command contains sudo
+    checkSudoPermission(options.command);
 
     // Initialize xterm headless
     this.terminal = new Terminal({
@@ -42,22 +44,10 @@ export class PtyProcess {
       allowTransparency: false,
     });
 
-    // Create bun-pty process
-    let executable = options.executable;
-    let args = options.args || [];
-
-    if (options.shellMode) {
-      // Execute via interactive shell for better PTY compatibility
-      // bash -c doesn't flush stdout for builtin commands in PTY mode
-      const shell = "/bin/bash";
-      executable = shell;
-      args = ["--norc", "--noprofile"];
-      // Store command to send after shell starts
-      (this as { _pendingCommand?: string })._pendingCommand = [
-        options.executable,
-        ...(options.args || []),
-      ].join(" ");
-    }
+    // Always execute through shell for security and predictability
+    const shell = Bun.env.SHELL || "/bin/sh";
+    const executable = shell;
+    const args = ["-c", options.command];
 
     this.process = spawn(executable, args, {
       name: "xterm-256color",
@@ -81,23 +71,9 @@ export class PtyProcess {
       this.updateActivity();
     });
 
-    const pendingCommand = (this as { _pendingCommand?: string })
-      ._pendingCommand;
-
     // Process output -> terminal
     this.process.onData((data: string) => {
       this.terminal.write(data);
-
-      if (pendingCommand) {
-        // Send command on first data chunk (shell is ready)
-        if (!this.outputBuffer) {
-          setTimeout(() => {
-            this.process.write(`${pendingCommand}; exit\n`);
-          }, 50);
-        }
-      }
-
-      // Add all output without filtering
       this.outputBuffer += data;
       this.notifyOutput(data);
       this.updateActivity();

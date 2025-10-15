@@ -31,18 +31,14 @@ export interface TerminalOutput {
  * PtyProcess creation options interface
  */
 export interface PtyOptions {
-  /** Program to execute (e.g., "vi", "bash") */
-  executable: string;
-  /** Arguments to pass to program */
-  args?: string[];
+  /** Shell command to execute (e.g., "ls -la", "echo hello && pwd") */
+  command: string;
   /** Working directory */
   cwd?: string;
   /** Environment variable overrides */
   env?: Record<string, string>;
   /** Whether to auto-dispose on program exit (for interactive programs) */
   autoDisposeOnExit?: boolean;
-  /** Whether to execute via system shell (inherits shell environment) */
-  shellMode?: boolean;
   /** Whether to strip ANSI escape sequences from output */
   ansiStrip?: boolean;
 }

@@ -57,18 +57,11 @@ type ToolResult = {
  */
 export const createToolHandlers = (server: McpServer) => {
   return {
-    start: async ({
-      command,
-      shellMode,
-    }: {
-      command: string;
-      shellMode?: boolean;
-    }): Promise<ToolResult> => {
+    start: async ({ command }: { command: string }): Promise<ToolResult> => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
-      const options = shellMode ? { executable: command, shellMode } : command;
-      const { processId, output } = await ptyManager.createPty(options);
+      const { processId, output } = await ptyManager.createPty(command);
       sessionManager.addPty(sessionId, processId);
       return {
         content: [
@@ -136,7 +129,7 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Start PTY",
       description:
-        "Create new PTY instance. Use shellMode=true to inherit system shell environment. Returns processId and initial output.",
+        "Create new PTY instance with shell execution (using $SHELL or /bin/sh). Returns processId and initial output.",
       inputSchema: StartPtyInputSchema.shape,
       outputSchema: StartPtyOutputSchema.shape,
     },

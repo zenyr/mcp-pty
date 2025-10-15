@@ -13,10 +13,7 @@ export interface McpServerConfig {
  * PTY tool input schemas
  * sessionId is optional - automatically resolved from transport connection
  */
-export const StartPtyInputSchema = z.object({
-  command: z.string(),
-  shellMode: z.boolean().optional(),
-});
+export const StartPtyInputSchema = z.object({ command: z.string() });
 
 export const KillPtyInputSchema = z.object({ processId: z.string() });
 
