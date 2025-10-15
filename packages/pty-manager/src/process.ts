@@ -22,6 +22,8 @@ export class PtyProcess {
 
   private outputBuffer: string = "";
   private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
+  private outputMarkerStart: string = "";
+  private outputMarkerEnd: string = "";
 
   constructor(commandOrOptions: string | PtyOptions) {
     const options =
@@ -45,10 +47,9 @@ export class PtyProcess {
       allowProposedApi: true,
     });
 
-    // Always execute through shell for security and predictability
-    const shell = Bun.env.SHELL || "/bin/sh";
-    const executable = shell;
-    const args = ["-c", options.command];
+    // Always use /bin/sh for predictable behavior
+    const executable = "/bin/sh";
+    const args: string[] = [];
 
     this.process = spawn(executable, args, {
       name: "xterm-256color",
@@ -59,7 +60,41 @@ export class PtyProcess {
     });
 
     this.setupStreams();
+
+    // Store markers for output extraction
+    this.outputMarkerStart = `__MCP_START_${this.id}__`;
+    this.outputMarkerEnd = `__MCP_END_${this.id}__`;
+
+    // Setup shell and inject command asynchronously
+    this.initializeShellCommand(options).catch((err) => {
+      logger.error(`Failed to initialize shell command: ${err}`);
+      this.status = "terminated";
+    });
+
     this.status = "active";
+  }
+
+  /**
+   * Initialize shell and inject command
+   */
+  private async initializeShellCommand(options: PtyOptions): Promise<void> {
+    // Setup clean shell environment
+    this.process.write(`PS1=''\n`);
+    await Bun.sleep(150);
+
+    // Inject command with markers
+    this.process.write(`echo ${this.outputMarkerStart}\n`);
+    await Bun.sleep(100);
+
+    this.process.write(`${options.command}\n`);
+    await Bun.sleep(100);
+
+    this.process.write(`echo ${this.outputMarkerEnd}\n`);
+
+    if (options.autoDisposeOnExit) {
+      await Bun.sleep(100);
+      this.process.write(`exit\n`);
+    }
   }
 
   /**
@@ -130,8 +165,8 @@ export class PtyProcess {
     // Security check
     checkSudoPermission(data);
 
-    // Write to terminal (terminal.onData will forward to process)
-    this.terminal.write(data);
+    // Write directly to process (not terminal)
+    this.process.write(data);
     this.updateActivity();
 
     // Wait for output or early return on exit
@@ -218,6 +253,36 @@ export class PtyProcess {
    */
   public getOutputBuffer(): string {
     return this.outputBuffer;
+  }
+
+  /**
+   * Get clean output (extract content between markers)
+   */
+  public getCleanOutput(): string {
+    if (!this.outputMarkerStart || !this.outputMarkerEnd) {
+      return this.outputBuffer;
+    }
+
+    const lines = this.outputBuffer.split(/\r?\n/);
+
+    // Find lines that are EXACTLY the markers (outputs, not commands)
+    const startOutputIdx = lines.findIndex(
+      (l) => l.trim() === this.outputMarkerStart,
+    );
+    const endOutputIdx = lines.findIndex(
+      (l) => l.trim() === this.outputMarkerEnd,
+    );
+
+    if (startOutputIdx === -1 || endOutputIdx === -1) {
+      return this.outputBuffer;
+    }
+
+    // Extract lines between marker outputs
+    const outputLines = lines.slice(startOutputIdx + 1, endOutputIdx);
+    // Filter out command echoes
+    const cleanLines = outputLines.filter((l) => !l.startsWith("echo "));
+
+    return cleanLines.join("\n");
   }
 
   /**

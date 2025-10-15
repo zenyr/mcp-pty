@@ -372,7 +372,8 @@ test("checkExecutablePermission allows sudo executable with consent", () => {
 test("PtyProcess autoDisposeOnExit triggers cleanup on process exit", async () => {
   const pty = new PtyProcess({ command: "true", autoDisposeOnExit: true });
   expect(pty.status).toBe("active");
-  await Bun.sleep(100);
+  // Wait for initializeShellCommand (450ms) + command execution
+  await Bun.sleep(600);
   expect(["terminated", "terminating"]).toContain(pty.status);
 });
 
