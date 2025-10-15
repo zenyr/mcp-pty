@@ -11,24 +11,18 @@ export interface McpServerConfig {
 
 /**
  * PTY tool input schemas
+ * sessionId is optional - automatically resolved from transport connection
  */
 export const StartPtyInputSchema = z.object({
-  sessionId: z.string(),
   command: z.string(),
   shellMode: z.boolean().optional(),
 });
 
-export const KillPtyInputSchema = z.object({
-  sessionId: z.string(),
-  processId: z.string(),
-});
+export const KillPtyInputSchema = z.object({ processId: z.string() });
 
-export const ListPtyInputSchema = z.object({ sessionId: z.string() });
+export const ListPtyInputSchema = z.object({});
 
-export const ReadPtyInputSchema = z.object({
-  sessionId: z.string(),
-  processId: z.string(),
-});
+export const ReadPtyInputSchema = z.object({ processId: z.string() });
 
 /**
  * PTY tool output schemas

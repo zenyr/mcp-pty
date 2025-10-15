@@ -12,6 +12,36 @@ import {
 } from "../types";
 
 /**
+ * Session context holder for bound session ID
+ * Maps server instance to its bound session ID
+ */
+const sessionContext = new WeakMap<McpServer, string>();
+
+/**
+ * Bind session ID to server instance
+ * Called by transport layer after session creation
+ */
+export const bindSessionToServer = (
+  server: McpServer,
+  sessionId: string,
+): void => {
+  sessionContext.set(server, sessionId);
+};
+
+/**
+ * Get bound session ID from server instance
+ */
+const getBoundSessionId = (server: McpServer): string => {
+  const sessionId = sessionContext.get(server);
+  if (!sessionId) {
+    throw new Error(
+      "No session bound to server - transport initialization failed",
+    );
+  }
+  return sessionId;
+};
+
+/**
  * Register PTY tools to the server
  * @param server McpServer instance
  */
@@ -26,7 +56,14 @@ export const registerPtyTools = (server: McpServer): void => {
       inputSchema: StartPtyInputSchema.shape,
       outputSchema: StartPtyOutputSchema.shape,
     },
-    async ({ sessionId, command, shellMode }) => {
+    async ({
+      command,
+      shellMode,
+    }: {
+      command: string;
+      shellMode?: boolean;
+    }) => {
+      const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
       const options = shellMode ? { executable: command, shellMode } : command;
@@ -48,7 +85,8 @@ export const registerPtyTools = (server: McpServer): void => {
       inputSchema: KillPtyInputSchema.shape,
       outputSchema: KillPtyOutputSchema.shape,
     },
-    async ({ sessionId, processId }) => {
+    async ({ processId }) => {
+      const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
       const success = ptyManager.removePty(processId);
@@ -69,7 +107,8 @@ export const registerPtyTools = (server: McpServer): void => {
       inputSchema: ListPtyInputSchema.shape,
       outputSchema: ListPtyOutputSchema.shape,
     },
-    async ({ sessionId }) => {
+    async (_input: Record<string, never>) => {
+      const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
       const ptys = ptyManager
@@ -96,7 +135,8 @@ export const registerPtyTools = (server: McpServer): void => {
       inputSchema: ReadPtyInputSchema.shape,
       outputSchema: ReadPtyOutputSchema.shape,
     },
-    async ({ sessionId, processId }) => {
+    async ({ processId }) => {
+      const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
       const pty = ptyManager.getPty(processId);

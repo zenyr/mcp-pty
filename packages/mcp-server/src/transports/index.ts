@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { sessionManager } from "@pkgs/session-manager";
 import { toReqRes } from "fetch-to-node";
 import { Hono } from "hono";
+import { bindSessionToServer } from "../tools";
 import { logError, logServer } from "../utils";
 
 /**
@@ -13,6 +14,7 @@ import { logError, logServer } from "../utils";
 export const startStdioServer = async (server: McpServer): Promise<void> => {
   const sessionId = sessionManager.createSession();
   try {
+    bindSessionToServer(server, sessionId);
     const transport = new StdioServerTransport();
     await server.connect(transport);
     sessionManager.updateStatus(sessionId, "active");
@@ -37,28 +39,30 @@ export const startHttpServer = async (
   const transports = new Map<string, StreamableHTTPServerTransport>();
 
   app.post("/mcp", async (c) => {
-    const sessionId = c.req.header("mcp-session-id");
+    const sessionHeader = c.req.header("mcp-session-id");
     let transport: StreamableHTTPServerTransport;
+    let sessionId: string;
 
-    if (sessionId && transports.has(sessionId)) {
-      const existingTransport = transports.get(sessionId);
+    if (sessionHeader && transports.has(sessionHeader)) {
+      const existingTransport = transports.get(sessionHeader);
       if (!existingTransport) {
-        throw new Error(`Transport not found for session: ${sessionId}`);
+        throw new Error(`Transport not found for session: ${sessionHeader}`);
       }
       transport = existingTransport;
+      sessionId = sessionHeader;
     } else {
-      // New session
-      const newSessionId = sessionManager.createSession();
+      // New session - create session first, then bind to server
+      sessionId = sessionManager.createSession();
       transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => newSessionId,
+        sessionIdGenerator: () => sessionId,
         enableJsonResponse: true,
         onsessioninitialized: (id) => {
           transports.set(id, transport);
         },
       });
-      const newServer = server; // TODO: Create new server instance per session if needed
-      await newServer.connect(transport);
-      sessionManager.updateStatus(newSessionId, "active");
+      bindSessionToServer(server, sessionId);
+      await server.connect(transport);
+      sessionManager.updateStatus(sessionId, "active");
     }
 
     const { req, res } = toReqRes(c.req.raw);

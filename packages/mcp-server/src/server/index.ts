@@ -25,11 +25,11 @@ export class McpServerFactory {
       capabilities: { resources: {}, tools: {} },
     });
 
-    if (this.config.deactivateResources) {
-      this.registerTools(server);
-    }
+    this.registerTools(server);
 
-    this.registerResources(server);
+    if (!this.config.deactivateResources) {
+      this.registerResources(server);
+    }
 
     return server;
   }
