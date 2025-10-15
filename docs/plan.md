@@ -20,6 +20,7 @@
 - ✅ Process isolation with nanoid-based instance IDs
 - ✅ Command execution & stream processing (stdin/stdout/stderr)
 - ✅ PtyManager class with sessionId-based lifecycle management
+- ✅ System shell environment inheritance (shellMode with PATH preservation)
 - ✅ ANSI sequence capture & strip options
 - ✅ Graceful shutdown (SIGTERM → SIGKILL with 3s grace period)
 - ✅ Unit & integration tests
@@ -44,7 +45,7 @@
 - ✅ Core server setup with MCP SDK, dual transports (stdio/HTTP), detection logic
 - ✅ Session integration with client connection mapping and cleanup
 - ✅ MCP resources: status, sessions/list, session/{id}/output, session/{id}/status
-- ✅ MCP tools: start_pty, kill_pty, list_pty, read_pty, activate_pty_tools
+- ✅ MCP tools: start_pty (with shellMode), kill_pty, list_pty, read_pty, activate_pty_tools
 - ✅ Integration layer wiring SessionManager + PtyManager
 - ✅ Error handling, logging, and MCP responses
 - ✅ Testing & quality assurance (unit, integration, type checks)
@@ -116,10 +117,10 @@
 - ✅ Configuration cascade system (CLI > XDG > env > defaults)
 - ✅ `bunx mcp-pty` command support
 - [ ] ANSI strip 옵션 구현 (pty-manager/process.ts)
-- [ ] PTY 스키마 개선 (mcp-server/types/index.ts, tools/index.ts - z.any() 제거)
-- [ ] PTY 출력 가져오기 구현 (mcp-server/tools/index.ts, resources/index.ts)
-- [ ] PTY 개수 계산 (mcp-server/resources/index.ts)
-- [ ] 세션 생성 시간 관리 (pty-manager/manager.ts)
+- ✅ PTY 스키마 개선 (mcp-server/types/index.ts, tools/index.ts - z.any() 제거)
+- ✅ PTY 출력 가져오기 구현 (mcp-server/tools/index.ts, resources/index.ts)
+- ✅ PTY 개수 계산 (mcp-server/resources/index.ts)
+- ✅ 세션 생성 시간 관리 (pty-manager/manager.ts)
 - [ ] PTY 인스턴스 정리 로직 (session-manager/index.ts)
 - [ ] 세션별 서버 인스턴스 생성 검토 (mcp-server/transports/index.ts)
 
@@ -212,10 +213,15 @@ Phase 1 (Infrastructure)
 - ✅ **XDG Config System** - `~/.config/mcp-pty/config.json` support
 - ✅ **Configuration Priority** - CLI args > XDG config > env vars > defaults
 - ✅ **5.1 User Documentation** - README with XDG config guide
+- ✅ **PTY Schema Improvements** - Removed z.any() usage in types and tools
+- ✅ **PTY Output Retrieval** - Implemented in tools and resources
+- ✅ **PTY Count Calculation** - Added to status resource
+- ✅ **Session Creation Time Management** - Added to PtyManager
+- ✅ **System Shell Environment Inheritance** - shellMode with PATH preservation
 
 ### In Progress
 
-- **4.7 Implementation Refinements** - addressing remaining TODO comments
+- **4.7 Implementation Refinements** - remaining TODO items: ANSI strip, PTY cleanup, server instance review
 
 ### Suggested Implementation Order
 
@@ -227,7 +233,5 @@ Phase 1 (Infrastructure)
 ### Next Steps
 
 1. Complete ANSI strip options implementation
-2. Improve PTY schema (remove z.any() usage)
-3. Implement PTY output retrieval features
-4. Add session/process count tracking
-5. Review session-specific server instance requirements
+2. Add PTY instance cleanup logic in session termination
+3. Review session-specific server instance requirements
