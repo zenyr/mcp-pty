@@ -3,6 +3,9 @@
   "workspaces": {
     "": {
       "name": "mcp-pty",
+      "dependencies": {
+        "bun-pty": "^0.3.2",
+      },
       "devDependencies": {
         "@biomejs/biome": "2.2.5",
         "@types/bun": "latest",

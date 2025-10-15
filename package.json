@@ -1,9 +1,6 @@
 {
   "name": "mcp-pty",
   "version": "0.1.0",
-  "bin": {
-    "mcp-pty": "./packages/mcp-server/src/index.ts"
-  },
   "devDependencies": {
     "@biomejs/biome": "2.2.5",
     "@types/bun": "latest",
@@ -12,6 +9,9 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "bin": {
+    "mcp-pty": "./packages/mcp-server/src/index.ts"
   },
   "private": true,
   "scripts": {
@@ -29,5 +29,8 @@
   "type": "module",
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "bun-pty": "^0.3.2"
+  }
 }
