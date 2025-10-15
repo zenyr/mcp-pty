@@ -1,9 +1,12 @@
+import { createLogger } from "@pkgs/logger";
 import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
 import { parseCommand } from "./utils/command";
 import { checkExecutablePermission, checkSudoPermission } from "./utils/safety";
+
+const logger = createLogger("pty-process");
 
 /**
  * Individual PTY process management class
@@ -38,8 +41,29 @@ export class PtyProcess {
       allowTransparency: false,
     });
 
-    // Create bun-pty process (direct program execution)
-    this.process = spawn(options.executable, options.args || [], {
+    // Create bun-pty process
+    let executable = options.executable;
+    let args = options.args || [];
+
+    if (options.shellMode ?? true) {
+      // Execute via system shell to inherit environment
+      const shell = process.env.SHELL || "bash";
+      const command = [options.executable, ...(options.args || [])].join(" ");
+      executable = shell;
+
+      // Prevent shell rc loading to avoid overhead
+      if (shell.includes("bash")) {
+        args = ["--noprofile", "--norc", "-c", command];
+      } else if (shell.includes("zsh")) {
+        // zsh -c doesn't load rc by default
+        args = ["-c", command];
+      } else {
+        // Fallback for other shells
+        args = ["-c", command];
+      }
+    }
+
+    this.process = spawn(executable, args, {
       name: "xterm-256color",
       cols: 80,
       rows: 24,
@@ -72,12 +96,12 @@ export class PtyProcess {
     // Process exit handling: Trigger dispose based on autoDisposeOnExit option
     this.process.onExit(({ exitCode, signal }) => {
       this.status = "terminated";
-      console.log(
+      logger.info(
         `PTY ${this.id} exited with code ${exitCode}, signal ${signal}`,
       );
 
       if (this.options.autoDisposeOnExit) {
-        this.dispose("SIGTERM").catch(console.error); // Automatic cleanup
+        this.dispose("SIGTERM").catch(logger.error); // Automatic cleanup
       }
     });
   }
@@ -168,6 +192,6 @@ export class PtyProcess {
     this.outputCallbacks = [];
     this.status = "terminated";
 
-    console.log(`PTY ${this.id} disposed successfully`);
+    logger.info(`PTY ${this.id} disposed successfully`);
   }
 }

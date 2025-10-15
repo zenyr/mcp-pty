@@ -41,4 +41,6 @@ export interface PtyOptions {
   env?: Record<string, string>;
   /** Whether to auto-dispose on program exit (for interactive programs) */
   autoDisposeOnExit?: boolean;
+  /** Whether to execute via system shell (inherits shell environment) */
+  shellMode?: boolean;
 }

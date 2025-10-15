@@ -25,5 +25,5 @@ export const parseCommand = (
   const executable = parts[0];
   const args = parts.length > 1 ? parts.slice(1) : [];
 
-  return { executable, args };
+  return { executable, args, shellMode: true };
 };

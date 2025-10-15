@@ -1,5 +1,9 @@
+import { createLogger } from "@pkgs/logger";
 import { PtyProcess } from "./process";
+import type { PtyOptions } from "./types";
 import { checkRootPermission } from "./utils/safety";
+
+const logger = createLogger("pty-manager");
 
 /**
  * PTY Manager class
@@ -20,8 +24,8 @@ export class PtyManager {
   /**
    * Create new PTY instance
    */
-  public createPty(command: string): string {
-    const process = new PtyProcess(command);
+  public createPty(commandOrOptions: string | PtyOptions): string {
+    const process = new PtyProcess(commandOrOptions);
     this.instances.set(process.id, process);
     return process.id;
   }
@@ -46,7 +50,7 @@ export class PtyManager {
   public removePty(processId: string): boolean {
     const process = this.instances.get(processId);
     if (process) {
-      process.dispose().catch(console.error);
+      process.dispose().catch(logger.error);
       return this.instances.delete(processId);
     }
     return false;
@@ -68,7 +72,7 @@ export class PtyManager {
    */
   public dispose(): void {
     for (const process of this.instances.values()) {
-      process.dispose().catch(console.error);
+      process.dispose().catch(logger.error);
     }
     this.instances.clear();
   }
