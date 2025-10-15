@@ -45,22 +45,17 @@ export class PtyProcess {
     let executable = options.executable;
     let args = options.args || [];
 
-    if (options.shellMode ?? true) {
-      // Execute via system shell to inherit environment
-      const shell = process.env.SHELL || "bash";
-      const command = [options.executable, ...(options.args || [])].join(" ");
+    if (options.shellMode) {
+      // Execute via interactive shell for better PTY compatibility
+      // bash -c doesn't flush stdout for builtin commands in PTY mode
+      const shell = "/bin/bash";
       executable = shell;
-
-      // Prevent shell rc loading to avoid overhead
-      if (shell.includes("bash")) {
-        args = ["--noprofile", "--norc", "-c", command];
-      } else if (shell.includes("zsh")) {
-        // zsh -c doesn't load rc by default
-        args = ["-c", command];
-      } else {
-        // Fallback for other shells
-        args = ["-c", command];
-      }
+      args = ["--norc", "--noprofile"];
+      // Store command to send after shell starts
+      (this as { _pendingCommand?: string })._pendingCommand = [
+        options.executable,
+        ...(options.args || []),
+      ].join(" ");
     }
 
     this.process = spawn(executable, args, {
@@ -85,9 +80,23 @@ export class PtyProcess {
       this.updateActivity();
     });
 
+    const pendingCommand = (this as { _pendingCommand?: string })
+      ._pendingCommand;
+
     // Process output -> terminal
     this.process.onData((data: string) => {
       this.terminal.write(data);
+
+      if (pendingCommand) {
+        // Send command on first data chunk (shell is ready)
+        if (!this.outputBuffer) {
+          setTimeout(() => {
+            this.process.write(`${pendingCommand}; exit\n`);
+          }, 50);
+        }
+      }
+
+      // Add all output without filtering
       this.outputBuffer += data;
       this.notifyOutput(data);
       this.updateActivity();
