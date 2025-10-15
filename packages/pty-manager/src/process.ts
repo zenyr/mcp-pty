@@ -42,6 +42,7 @@ export class PtyProcess {
       cols: 80,
       rows: 24,
       allowTransparency: false,
+      allowProposedApi: true,
     });
 
     // Always execute through shell for security and predictability
@@ -106,6 +107,77 @@ export class PtyProcess {
 
     this.terminal.write(`${input}\n`); // Simulate enter with \n (suitable for interactive)
     this.updateActivity();
+  }
+
+  /**
+   * Write data to PTY and return terminal state after waiting
+   * @param data - Raw input data (supports text, multiline, ANSI codes like \x03 for Ctrl+C)
+   * @param waitMs - Wait time for output in milliseconds (default: 1000)
+   * @returns Terminal screen content, cursor position, and exit code
+   */
+  public async write(
+    data: string,
+    waitMs = 1000,
+  ): Promise<{
+    screen: string;
+    cursor: { x: number; y: number };
+    exitCode: number | null;
+  }> {
+    if (this.status !== "active") {
+      throw new Error(`PTY ${this.id} is not active`);
+    }
+
+    // Security check
+    checkSudoPermission(data);
+
+    // Write to terminal (terminal.onData will forward to process)
+    this.terminal.write(data);
+    this.updateActivity();
+
+    // Wait for output or early return on exit
+    let exitCode: number | null = null;
+    await Promise.race([
+      Bun.sleep(waitMs),
+      new Promise<void>((resolve) => {
+        this.process.onExit((event) => {
+          exitCode = event.exitCode;
+          resolve();
+        });
+      }),
+    ]);
+
+    return {
+      screen: this.getScreenContent(),
+      cursor: this.getCursorPosition(),
+      exitCode: exitCode ?? (this.status === "terminated" ? 0 : null),
+    };
+  }
+
+  /**
+   * Extract current screen content from terminal buffer
+   */
+  private getScreenContent(): string {
+    const buffer = this.terminal.buffer.active;
+    const lines: string[] = [];
+
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        lines.push(line.translateToString(true)); // trimRight=true
+      }
+    }
+
+    return lines.join("\n").trimEnd();
+  }
+
+  /**
+   * Get current cursor position
+   */
+  private getCursorPosition(): { x: number; y: number } {
+    return {
+      x: this.terminal.buffer.active.cursorX,
+      y: this.terminal.buffer.active.cursorY,
+    };
   }
 
   /**

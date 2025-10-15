@@ -3,6 +3,8 @@
  * Pure PTY management types without MCP protocol dependencies
  */
 
+import { z } from "zod";
+
 /**
  * PTY process status
  */
@@ -42,3 +44,36 @@ export interface PtyOptions {
   /** Whether to strip ANSI escape sequences from output */
   ansiStrip?: boolean;
 }
+
+/**
+ * Terminal write response interface
+ */
+export interface TerminalWriteResponse {
+  /** Current terminal screen content (visible rows) */
+  screen: string;
+  /** Cursor position */
+  cursor: { x: number; y: number };
+  /** Process exit code (null if still running) */
+  exitCode: number | null;
+}
+
+/**
+ * Terminal write input schema
+ */
+export const TerminalWriteInputSchema = z.object({
+  /** Raw input data (supports text, multiline, ANSI codes like \x03 for Ctrl+C) */
+  data: z
+    .string()
+    .describe(
+      "Input data. Examples: 'ls\\n', 'hello\\nworld', '\\x03' (Ctrl+C), '안녕하세요 👋'",
+    ),
+  /** Wait time for output in milliseconds */
+  waitMs: z
+    .number()
+    .int()
+    .positive()
+    .default(1000)
+    .describe("Wait time for output (ms)"),
+});
+
+export type TerminalWriteInput = z.infer<typeof TerminalWriteInputSchema>;
