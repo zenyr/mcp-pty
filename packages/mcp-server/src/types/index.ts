@@ -21,6 +21,21 @@ export const ListPtyInputSchema = z.object({});
 
 export const ReadPtyInputSchema = z.object({ processId: z.string() });
 
+export const WriteInputSchema = z.object({
+  processId: z.string(),
+  data: z
+    .string()
+    .describe(
+      "Input data. Examples: 'ls\\n', 'hello\\nworld', '\\x03' (Ctrl+C), '안녕하세요 👋'",
+    ),
+  waitMs: z
+    .number()
+    .int()
+    .positive()
+    .default(1000)
+    .describe("Wait time for output (ms)"),
+});
+
 /**
  * PTY tool output schemas
  */
@@ -41,6 +56,17 @@ export const PtyInfoSchema = z.object({
 export const ListPtyOutputSchema = z.object({ ptys: z.array(PtyInfoSchema) });
 
 export const ReadPtyOutputSchema = z.object({ output: z.string() });
+
+export const WriteInputOutputSchema = z.object({
+  screen: z.string().describe("Current terminal screen content (visible rows)"),
+  cursor: z
+    .object({ x: z.number(), y: z.number() })
+    .describe("Cursor position"),
+  exitCode: z
+    .number()
+    .nullable()
+    .describe("Process exit code (null if still running)"),
+});
 
 /**
  * Transport type

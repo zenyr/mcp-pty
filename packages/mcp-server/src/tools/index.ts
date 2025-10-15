@@ -9,6 +9,8 @@ import {
   ReadPtyOutputSchema,
   StartPtyInputSchema,
   StartPtyOutputSchema,
+  WriteInputOutputSchema,
+  WriteInputSchema,
 } from "../types";
 
 /**
@@ -113,6 +115,27 @@ export const createToolHandlers = (server: McpServer) => {
         structuredContent: { output },
       };
     },
+
+    write_input: async ({
+      processId,
+      data,
+      waitMs = 1000,
+    }: {
+      processId: string;
+      data: string;
+      waitMs?: number;
+    }): Promise<ToolResult> => {
+      const sessionId = getBoundSessionId(server);
+      const ptyManager = sessionManager.getPtyManager(sessionId);
+      if (!ptyManager) throw new Error("Session not found");
+      const pty = ptyManager.getPty(processId);
+      if (!pty) throw new Error("PTY not found");
+      const result = await pty.write(data, waitMs);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result) }],
+        structuredContent: result,
+      };
+    },
   };
 };
 
@@ -170,6 +193,19 @@ export const registerPtyTools = (server: McpServer): void => {
       outputSchema: ReadPtyOutputSchema.shape,
     },
     handlers.read,
+  );
+
+  // Register write_input tool
+  server.registerTool(
+    "write_input",
+    {
+      title: "Write Input to PTY",
+      description:
+        "Write data to PTY stdin and return terminal state. Supports plain text, CJK, Emoji, multiline (\\n), and ANSI control codes (e.g., \\x03 for Ctrl+C).",
+      inputSchema: WriteInputSchema.shape,
+      outputSchema: WriteInputOutputSchema.shape,
+    },
+    handlers.write_input,
   );
 
   // activate_pty_tools: TODO
