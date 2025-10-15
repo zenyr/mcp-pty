@@ -36,21 +36,21 @@ test("PtyManager creates with sessionId", () => {
   expect(manager.getSessionInfo().sessionId).toBe(sessionId);
 });
 
-test("PtyManager creates PTY instance and tracks it", () => {
+test("PtyManager creates PTY instance and tracks it", async () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId = manager.createPty("sh");
+  const { processId } = await manager.createPty("sh");
   expect(processId).toBeDefined();
   expect(typeof processId).toBe("string");
   expect(manager.getAllPtys().length).toBe(1);
 });
 
-test("PtyManager gets PTY instance by ID", () => {
+test("PtyManager gets PTY instance by ID", async () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId = manager.createPty("sh");
+  const { processId } = await manager.createPty("sh");
   const instance = manager.getPty(processId);
   expect(instance).toBeDefined();
   expect(instance?.id).toBe(processId);
@@ -63,23 +63,23 @@ test("PtyManager getPty returns undefined for non-existent ID", () => {
   expect(manager.getPty("non-existent")).toBeUndefined();
 });
 
-test("PtyManager lists all PTYs", () => {
+test("PtyManager lists all PTYs", async () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId1 = manager.createPty("sh");
-  const processId2 = manager.createPty("sh");
+  const { processId: processId1 } = await manager.createPty("sh");
+  const { processId: processId2 } = await manager.createPty("sh");
   const instances = manager.getAllPtys();
   expect(instances.length).toBe(2);
   expect(instances.map((i) => i.id)).toContain(processId1);
   expect(instances.map((i) => i.id)).toContain(processId2);
 });
 
-test("PtyManager removePty cleans up resources", () => {
+test("PtyManager removePty cleans up resources", async () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  const processId = manager.createPty("sh");
+  const { processId } = await manager.createPty("sh");
   expect(manager.getPty(processId)).toBeDefined();
   const removed = manager.removePty(processId);
   expect(removed).toBe(true);
@@ -92,21 +92,21 @@ test("PtyManager removePty returns false for non-existent ID", () => {
   expect(manager.removePty("non-existent")).toBe(false);
 });
 
-test("PtyManager returns session info", () => {
+test("PtyManager returns session info", async () => {
   const sessionId = "test-session-ulid";
   const manager = new PtyManager(sessionId);
   managers.push(manager);
-  manager.createPty("sh");
+  await manager.createPty("sh");
   const info = manager.getSessionInfo();
   expect(info.sessionId).toBe(sessionId);
   expect(info.processCount).toBe(1);
   expect(info.createdAt).toBeInstanceOf(Date);
 });
 
-test("PtyManager dispose cleans up all PTYs", () => {
+test("PtyManager dispose cleans up all PTYs", async () => {
   const manager = new PtyManager("test");
-  manager.createPty("sh");
-  manager.createPty("sh");
+  await manager.createPty("sh");
+  await manager.createPty("sh");
   expect(manager.getAllPtys().length).toBe(2);
   manager.dispose();
   expect(manager.getAllPtys().length).toBe(0);
@@ -356,7 +356,7 @@ test("PtyManager tracks process lifecycle through status updates", async () => {
   const manager = new PtyManager("lifecycle-test");
   managers.push(manager);
 
-  const processId = manager.createPty("echo");
+  const { processId } = await manager.createPty("sleep 1");
   const instance = manager.getPty(processId);
   expect(instance?.status).toBe("active");
 

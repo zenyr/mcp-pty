@@ -42,33 +42,33 @@ const getBoundSessionId = (server: McpServer): string => {
 };
 
 /**
- * Register PTY tools to the server
- * @param server McpServer instance
+ * Tool handler return type
  */
-export const registerPtyTools = (server: McpServer): void => {
-  // Register start tool
-  server.registerTool(
-    "start",
-    {
-      title: "Start PTY",
-      description:
-        "Create new PTY instance. Use shellMode=true to inherit system shell environment. Returns processId and initial output.",
-      inputSchema: StartPtyInputSchema.shape,
-      outputSchema: StartPtyOutputSchema.shape,
-    },
-    async ({
+type ToolResult = {
+  content: Array<{ type: "text"; text: string }>;
+  structuredContent?: Record<string, unknown>;
+  isError?: boolean;
+};
+
+/**
+ * Create tool handlers bound to server instance
+ * @param server McpServer instance
+ * @returns Tool handler functions
+ */
+export const createToolHandlers = (server: McpServer) => {
+  return {
+    start: async ({
       command,
       shellMode,
     }: {
       command: string;
       shellMode?: boolean;
-    }) => {
+    }): Promise<ToolResult> => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
       const options = shellMode ? { executable: command, shellMode } : command;
-      const { processId, output } =
-        await ptyManager.createPtyWithOutput(options);
+      const { processId, output } = await ptyManager.createPty(options);
       sessionManager.addPty(sessionId, processId);
       return {
         content: [
@@ -77,18 +77,8 @@ export const registerPtyTools = (server: McpServer): void => {
         structuredContent: { processId, output },
       };
     },
-  );
 
-  // Register kill tool
-  server.registerTool(
-    "kill",
-    {
-      title: "Kill PTY",
-      description: "Terminate PTY instance",
-      inputSchema: KillPtyInputSchema.shape,
-      outputSchema: KillPtyOutputSchema.shape,
-    },
-    async ({ processId }) => {
+    kill: async ({ processId }: { processId: string }): Promise<ToolResult> => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
@@ -99,18 +89,8 @@ export const registerPtyTools = (server: McpServer): void => {
         structuredContent: { success },
       };
     },
-  );
 
-  // Register list tool
-  server.registerTool(
-    "list",
-    {
-      title: "List PTY",
-      description: "List PTY processes",
-      inputSchema: ListPtyInputSchema.shape,
-      outputSchema: ListPtyOutputSchema.shape,
-    },
-    async (_input: Record<string, never>) => {
+    list: async (_input: Record<string, never>): Promise<ToolResult> => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
@@ -127,18 +107,8 @@ export const registerPtyTools = (server: McpServer): void => {
         structuredContent: { ptys },
       };
     },
-  );
 
-  // Register read tool
-  server.registerTool(
-    "read",
-    {
-      title: "Read PTY",
-      description: "Read PTY output",
-      inputSchema: ReadPtyInputSchema.shape,
-      outputSchema: ReadPtyOutputSchema.shape,
-    },
-    async ({ processId }) => {
+    read: async ({ processId }: { processId: string }): Promise<ToolResult> => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
@@ -150,6 +120,63 @@ export const registerPtyTools = (server: McpServer): void => {
         structuredContent: { output },
       };
     },
+  };
+};
+
+/**
+ * Register PTY tools to the server
+ * @param server McpServer instance
+ */
+export const registerPtyTools = (server: McpServer): void => {
+  const handlers = createToolHandlers(server);
+
+  // Register start tool
+  server.registerTool(
+    "start",
+    {
+      title: "Start PTY",
+      description:
+        "Create new PTY instance. Use shellMode=true to inherit system shell environment. Returns processId and initial output.",
+      inputSchema: StartPtyInputSchema.shape,
+      outputSchema: StartPtyOutputSchema.shape,
+    },
+    handlers.start,
+  );
+
+  // Register kill tool
+  server.registerTool(
+    "kill",
+    {
+      title: "Kill PTY",
+      description: "Terminate PTY instance",
+      inputSchema: KillPtyInputSchema.shape,
+      outputSchema: KillPtyOutputSchema.shape,
+    },
+    handlers.kill,
+  );
+
+  // Register list tool
+  server.registerTool(
+    "list",
+    {
+      title: "List PTY",
+      description: "List PTY processes",
+      inputSchema: ListPtyInputSchema.shape,
+      outputSchema: ListPtyOutputSchema.shape,
+    },
+    handlers.list,
+  );
+
+  // Register read tool
+  server.registerTool(
+    "read",
+    {
+      title: "Read PTY",
+      description: "Read PTY output",
+      inputSchema: ReadPtyInputSchema.shape,
+      outputSchema: ReadPtyOutputSchema.shape,
+    },
+    handlers.read,
   );
 
   // activate_pty_tools: TODO

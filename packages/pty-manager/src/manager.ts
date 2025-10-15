@@ -22,23 +22,14 @@ export class PtyManager {
   }
 
   /**
-   * Create new PTY instance
-   */
-  public createPty(commandOrOptions: string | PtyOptions): string {
-    const process = new PtyProcess(commandOrOptions);
-    this.instances.set(process.id, process);
-    return process.id;
-  }
-
-  /**
    * Create new PTY instance and wait for initial output
    * @param commandOrOptions - Command string or PtyOptions
-   * @param timeoutMs - Timeout in milliseconds (default: 500ms)
+   * @param timeoutMs - Timeout in milliseconds (default: 100ms)
    * @returns Object with processId and initial output
    */
-  public async createPtyWithOutput(
+  public async createPty(
     commandOrOptions: string | PtyOptions,
-    timeoutMs = 500,
+    timeoutMs = 100,
   ): Promise<{ processId: string; output: string }> {
     const process = new PtyProcess(commandOrOptions);
     this.instances.set(process.id, process);
@@ -52,7 +43,7 @@ export class PtyManager {
           clearInterval(checkOutput);
           resolve();
         }
-      }, 50);
+      }, 10);
     });
 
     return { processId: process.id, output: process.getOutputBuffer() };

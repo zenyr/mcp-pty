@@ -4,6 +4,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { sessionManager } from "@pkgs/session-manager";
 import { toReqRes } from "fetch-to-node";
 import { Hono } from "hono";
+import { bindSessionToServerResources } from "../resources";
 import { bindSessionToServer } from "../tools";
 import { logError, logServer } from "../utils";
 
@@ -15,6 +16,7 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
   const sessionId = sessionManager.createSession();
   try {
     bindSessionToServer(server, sessionId);
+    bindSessionToServerResources(server, sessionId);
     const transport = new StdioServerTransport();
     await server.connect(transport);
     sessionManager.updateStatus(sessionId, "active");
@@ -61,6 +63,7 @@ export const startHttpServer = async (
         },
       });
       bindSessionToServer(server, sessionId);
+      bindSessionToServerResources(server, sessionId);
       await server.connect(transport);
       sessionManager.updateStatus(sessionId, "active");
     }
