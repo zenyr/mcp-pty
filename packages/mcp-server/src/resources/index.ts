@@ -38,7 +38,7 @@ export const registerPtyResources = (server: McpServer): void => {
   // Register list resource
   server.registerResource(
     "list",
-    new ResourceTemplate("pty://list", { list: undefined }),
+    "pty://list",
     { title: "Sessions List", description: "List of all sessions" },
     async () => ({
       contents: [
