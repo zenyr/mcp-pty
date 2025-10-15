@@ -17,10 +17,12 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
+    "@pkgs/logger": "workspace:*",
     "@pkgs/pty-manager": "workspace:*",
     "@pkgs/session-manager": "workspace:*",
     "consola": "^3.4.2",
     "fetch-to-node": "^2.1.0",
-    "hono": "^4.9.10"
+    "hono": "^4.9.10",
+    "zod": "^3.24.1"
   }
 }

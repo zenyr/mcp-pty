@@ -43,4 +43,6 @@ export interface PtyOptions {
   autoDisposeOnExit?: boolean;
   /** Whether to execute via system shell (inherits shell environment) */
   shellMode?: boolean;
+  /** Whether to strip ANSI escape sequences from output */
+  ansiStrip?: boolean;
 }

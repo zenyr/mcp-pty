@@ -2,6 +2,7 @@ import { createLogger } from "@pkgs/logger";
 import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
+import stripAnsi from "strip-ansi";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
 import { parseCommand } from "./utils/command";
 import { checkExecutablePermission, checkSudoPermission } from "./utils/safety";
@@ -142,10 +143,13 @@ export class PtyProcess {
    * Notify output
    */
   private notifyOutput(output: string): void {
+    const ansiStripped = this.options.ansiStrip ?? false;
+    const processedOutput = ansiStripped ? stripAnsi(output) : output;
+
     const terminalOutput: TerminalOutput = {
       processId: this.id,
-      output,
-      ansiStripped: false, // TODO: ANSI strip option
+      output: processedOutput,
+      ansiStripped,
       timestamp: new Date(),
     };
     this.outputCallbacks.forEach((cb) => void cb(terminalOutput));

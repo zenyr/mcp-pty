@@ -11,10 +11,12 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@pkgs/logger": "workspace:*",
     "@xterm/headless": "^5.5.0",
     "bun-pty": "^0.3.2",
     "consola": "^3.4.2",
-    "nanoid": "^5.1.6"
+    "nanoid": "^5.1.6",
+    "strip-ansi": "^7.1.2"
   },
   "peerDependencies": {
     "typescript": "^5"
