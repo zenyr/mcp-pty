@@ -1,4 +1,5 @@
 import { createLogger } from "@pkgs/logger";
+import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
 import { EventEmitter } from "node:events";
 import { nanoid } from "nanoid";
@@ -17,7 +18,7 @@ interface Subscription {
 }
 
 /**
- * Individual PTY process management class (bun-pty exclusive)
+ * Individual PTY process management class (bun-pty + xterm/headless)
  *
  * Spawn.ts 패턴 적용:
  * - EventEmitter 기반 이벤트 관리
@@ -27,10 +28,15 @@ interface Subscription {
  * - Detach 지원 (백그라운드 실행)
  * - Resize 지원
  * - 안전한 dispose 처리
+ *
+ * xterm/headless 사용:
+ * - 터미널 버퍼 관리 및 커서 위치 추적
+ * - 화면 상태 정확한 캡처
  */
 export class PtyProcess {
   public readonly id: string;
   public status: PtyStatus = "initializing";
+  public readonly terminal: Terminal;
   public readonly process: ReturnType<typeof spawn>;
   public readonly createdAt: Date;
   public lastActivity: Date;
@@ -43,8 +49,6 @@ export class PtyProcess {
   private emitter = new EventEmitter();
   private cleanupCallbacks: Array<() => void> = [];
   private exitCode: number | null = null;
-  private readonly cols: number;
-  private readonly rows: number;
 
   constructor(commandOrOptions: string | PtyOptions) {
     const options =
@@ -56,11 +60,17 @@ export class PtyProcess {
     this.createdAt = new Date();
     this.lastActivity = new Date();
     this.options = options;
-    this.cols = 80;
-    this.rows = 24;
 
     // Security check
     checkSudoPermission(options.command);
+
+    // Initialize xterm headless terminal
+    this.terminal = new Terminal({
+      cols: 80,
+      rows: 24,
+      allowTransparency: false,
+      allowProposedApi: true,
+    });
 
     // Spawn PTY process with /bin/sh
     const executable = "/bin/sh";
@@ -68,8 +78,8 @@ export class PtyProcess {
 
     this.process = spawn(executable, args, {
       name: "xterm-256color",
-      cols: this.cols,
-      rows: this.rows,
+      cols: 80,
+      rows: 24,
       cwd: options.cwd || process.cwd(),
       env: { ...process.env, ...options.env } as Record<string, string>,
     });
@@ -98,14 +108,11 @@ export class PtyProcess {
     this.process.write(`PS1=''\n`);
     await Bun.sleep(150);
 
-    // Inject command with markers
-    this.process.write(`echo ${this.outputMarkerStart}\n`);
-    await Bun.sleep(100);
-
-    this.process.write(`${options.command}\n`);
-    await Bun.sleep(100);
-
-    this.process.write(`echo ${this.outputMarkerEnd}\n`);
+    // Inject command with markers in a single line to ensure proper sequencing
+    // Using ; to chain commands ensures END marker appears only after command completes
+    this.process.write(
+      `echo ${this.outputMarkerStart}; ${options.command}; echo ${this.outputMarkerEnd}\n`,
+    );
 
     if (options.autoDisposeOnExit) {
       await Bun.sleep(100);
@@ -117,8 +124,15 @@ export class PtyProcess {
    * Setup streams (inspired by Spawn.ts)
    */
   private setupStreams(): void {
-    // Process output handling
+    // Terminal input -> process
+    this.terminal.onData((data) => {
+      this.process.write(data);
+      this.updateActivity();
+    });
+
+    // Process output -> terminal + buffer
     this.process.onData((data: string) => {
+      this.terminal.write(data); // Write to terminal for screen state
       this.outputBuffer += data;
       this.notifyOutput(data);
       this.emitter.emit("data", data);
@@ -178,19 +192,42 @@ export class PtyProcess {
       }),
     ]);
 
-    // Return simplified screen (output buffer) and mock cursor
-    const output = this.outputBuffer;
-    const processedOutput = this.options.ansiStrip ? stripAnsi(output) : output;
-
     return {
-      screen: processedOutput,
-      cursor: { x: 0, y: 0 }, // Simplified cursor (bun-pty doesn't expose cursor position)
+      screen: this.getScreenContent(),
+      cursor: this.getCursorPosition(),
       exitCode: capturedExitCode ?? this.exitCode,
     };
   }
 
   /**
-   * Write interactive input (legacy method for backward compatibility)
+   * Extract current screen content from terminal buffer
+   */
+  private getScreenContent(): string {
+    const buffer = this.terminal.buffer.active;
+    const lines: string[] = [];
+
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        lines.push(line.translateToString(true)); // trimRight=true
+      }
+    }
+
+    return lines.join("\n").trimEnd();
+  }
+
+  /**
+   * Get current cursor position
+   */
+  private getCursorPosition(): { x: number; y: number } {
+    return {
+      x: this.terminal.buffer.active.cursorX,
+      y: this.terminal.buffer.active.cursorY,
+    };
+  }
+
+  /**
+   * Write interactive input (sends to terminal, which forwards to process)
    */
   public writeInput(input: string): void {
     if (this.status === "terminated" || this.status === "terminating") {
@@ -200,7 +237,7 @@ export class PtyProcess {
     // Check sudo-related input (security)
     checkSudoPermission(input);
 
-    this.process.write(`${input}\n`);
+    this.terminal.write(`${input}\n`);
     this.updateActivity();
   }
 
@@ -378,6 +415,7 @@ export class PtyProcess {
       throw new Error(`PTY ${this.id} is not active`);
     }
 
+    this.terminal.resize(cols, rows);
     this.process.resize(cols, rows);
     this.updateActivity();
   }
@@ -420,6 +458,7 @@ export class PtyProcess {
     await killPromise;
 
     // Additional cleanup
+    this.terminal.dispose();
     this.outputBuffer = "";
     this.outputCallbacks = [];
     this.cleanupCallbacks = [];
