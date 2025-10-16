@@ -41,7 +41,7 @@ export const WriteInputSchema = z.object({
  */
 export const StartPtyOutputSchema = z.object({
   processId: z.string(),
-  output: z.string(),
+  screen: z.string().describe("Initial terminal screen content"),
 });
 
 export const KillPtyOutputSchema = z.object({ success: z.boolean() });
@@ -55,7 +55,9 @@ export const PtyInfoSchema = z.object({
 
 export const ListPtyOutputSchema = z.object({ ptys: z.array(PtyInfoSchema) });
 
-export const ReadPtyOutputSchema = z.object({ output: z.string() });
+export const ReadPtyOutputSchema = z.object({
+  screen: z.string().describe("Current terminal screen content (ANSI-parsed)"),
+});
 
 export const WriteInputOutputSchema = z.object({
   screen: z.string().describe("Current terminal screen content (visible rows)"),

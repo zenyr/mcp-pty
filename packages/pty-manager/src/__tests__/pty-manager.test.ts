@@ -235,24 +235,25 @@ test("PtyProcess creates with command string", () => {
   expect(pty.status).toBe("active");
 });
 
-test("PtyProcess writeInput sends data to terminal", () => {
+test("PtyProcess write sends data to terminal", async () => {
   const pty = new PtyProcess("cat");
   ptys.push(pty);
-  expect(() => pty.writeInput("test input")).not.toThrow();
+  const result = await pty.write("test input\n");
+  expect(result.screen).toContain("test input");
   expect(pty.status).toBe("active");
 });
 
-test("PtyProcess writeInput throws when PTY is not active", async () => {
+test("PtyProcess write throws when PTY is not active", async () => {
   const pty = new PtyProcess("cat");
   await pty.dispose();
-  expect(() => pty.writeInput("test")).toThrow(/is not active/);
+  await expect(pty.write("test")).rejects.toThrow(/is not active/);
 });
 
-test("PtyProcess writeInput rejects sudo commands without consent", () => {
-  const pty = new PtyProcess("sh");
+test("PtyProcess write rejects sudo commands without consent", async () => {
+  const pty = new PtyProcess("echo hello");
   ptys.push(pty);
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
-  expect(() => pty.writeInput("sudo ls")).toThrow(/sudo command/);
+  await expect(pty.write("sudo ls\n")).rejects.toThrow(/sudo command/);
 });
 
 test("PtyProcess onOutput registers callback", () => {

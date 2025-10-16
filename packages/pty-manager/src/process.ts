@@ -1,7 +1,7 @@
+import { EventEmitter } from "node:events";
 import { createLogger } from "@pkgs/logger";
 import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
-import { EventEmitter } from "node:events";
 import { nanoid } from "nanoid";
 import stripAnsi from "strip-ansi";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
@@ -18,9 +18,40 @@ interface Subscription {
 }
 
 /**
+ * PTY 프로세스 에러 (exitCode 포함)
+ */
+interface PtyError extends Error {
+  exitCode: number;
+  code: number;
+}
+
+/**
+ * Type guard for PtyError
+ */
+const isPtyError = (error: unknown): error is PtyError => {
+  return (
+    error instanceof Error &&
+    "exitCode" in error &&
+    typeof (error as PtyError).exitCode === "number"
+  );
+};
+
+/**
+ * Create PtyError
+ */
+const createPtyError = (message: string, exitCode: number): PtyError => {
+  const error = new Error(message) as PtyError;
+  error.exitCode = exitCode;
+  error.code = exitCode;
+  return error;
+};
+
+/**
  * Individual PTY process management class (bun-pty + xterm/headless)
  *
- * Spawn.ts 패턴 적용:
+ * spawn2.ts 패턴 완전 적용:
+ * - PS1/마커 클렌징 로직 제거 (롱러닝 프로세스 부적합)
+ * - 순수 PTY 입출력 스트림 기반
  * - EventEmitter 기반 이벤트 관리
  * - Subscribe/Unsubscribe 메모리 누수 방지
  * - Promise 변환 (toPromise)
@@ -32,6 +63,7 @@ interface Subscription {
  * xterm/headless 사용:
  * - 터미널 버퍼 관리 및 커서 위치 추적
  * - 화면 상태 정확한 캡처
+ * - TUI 프로그램 지원 (vi, man, htop 등)
  */
 export class PtyProcess {
   public readonly id: string;
@@ -44,8 +76,6 @@ export class PtyProcess {
 
   private outputBuffer: string = "";
   private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
-  private outputMarkerStart: string = "";
-  private outputMarkerEnd: string = "";
   private emitter = new EventEmitter();
   private cleanupCallbacks: Array<() => void> = [];
   private exitCode: number | null = null;
@@ -72,11 +102,9 @@ export class PtyProcess {
       allowProposedApi: true,
     });
 
-    // Spawn PTY process with /bin/sh
-    const executable = "/bin/sh";
-    const args: string[] = [];
-
-    this.process = spawn(executable, args, {
+    // Spawn interactive PTY shell for session management
+    // Commands are written via .write() after shell initialization
+    this.process = spawn("/bin/sh", [], {
       name: "xterm-256color",
       cols: 80,
       rows: 24,
@@ -85,43 +113,35 @@ export class PtyProcess {
     });
 
     this.setupStreams();
+    this.status = "active";
 
-    // Store markers for output extraction
-    this.outputMarkerStart = `__MCP_START_${this.id}__`;
-    this.outputMarkerEnd = `__MCP_END_${this.id}__`;
-
-    // Setup shell and inject command asynchronously
-    this.initializeShellCommand(options).catch((err) => {
-      logger.error(`Failed to initialize shell command: ${err}`);
+    // Initialize shell and execute command asynchronously
+    this.initializeShell(options).catch((err) => {
+      logger.error(`Failed to initialize shell: ${err}`);
       this.emitter.emit("error", err);
       this.status = "terminated";
     });
-
-    this.status = "active";
   }
 
   /**
-   * Initialize shell and inject command
+   * Initialize shell and execute initial command
    */
-  private async initializeShellCommand(options: PtyOptions): Promise<void> {
-    // Setup clean shell environment
-    this.process.write(`PS1=''\n`);
-    await Bun.sleep(150);
+  private async initializeShell(options: PtyOptions): Promise<void> {
+    // Wait for shell prompt
+    await Bun.sleep(100);
 
-    // Inject command with markers in a single line to ensure proper sequencing
-    // Using ; to chain commands ensures END marker appears only after command completes
-    this.process.write(
-      `echo ${this.outputMarkerStart}; ${options.command}; echo ${this.outputMarkerEnd}\n`,
-    );
+    // Execute command
+    this.process.write(`${options.command}\n`);
 
+    // Auto-exit if requested
     if (options.autoDisposeOnExit) {
-      await Bun.sleep(100);
-      this.process.write(`exit\n`);
+      await Bun.sleep(50);
+      this.process.write("exit\n");
     }
   }
 
   /**
-   * Setup streams (inspired by Spawn.ts)
+   * Setup streams (spawn2.ts pattern)
    */
   private setupStreams(): void {
     // Terminal input -> process
@@ -227,18 +247,21 @@ export class PtyProcess {
   }
 
   /**
-   * Write interactive input (sends to terminal, which forwards to process)
+   * Capture current terminal buffer (TUI mode)
+   * @returns Array of lines from terminal buffer
    */
-  public writeInput(input: string): void {
-    if (this.status === "terminated" || this.status === "terminating") {
-      throw new Error(`PTY ${this.id} is not active`);
+  public captureBuffer(): string[] {
+    const buffer = this.terminal.buffer.active;
+    const lines: string[] = [];
+
+    for (let i = 0; i < buffer.length; i++) {
+      const line = buffer.getLine(i);
+      if (line) {
+        lines.push(line.translateToString());
+      }
     }
 
-    // Check sudo-related input (security)
-    checkSudoPermission(input);
-
-    this.terminal.write(`${input}\n`);
-    this.updateActivity();
+    return lines;
   }
 
   /**
@@ -275,37 +298,10 @@ export class PtyProcess {
   }
 
   /**
-   * Get output buffer
+   * Get raw output buffer (all data received)
    */
   public getOutputBuffer(): string {
     return this.outputBuffer;
-  }
-
-  /**
-   * Get clean output (extract content between markers)
-   */
-  public getCleanOutput(): string {
-    if (!this.outputMarkerStart || !this.outputMarkerEnd) {
-      return this.outputBuffer;
-    }
-
-    const lines = this.outputBuffer.split(/\r?\n/);
-
-    const startOutputIdx = lines.findIndex(
-      (l) => l.trim() === this.outputMarkerStart,
-    );
-    const endOutputIdx = lines.findIndex(
-      (l) => l.trim() === this.outputMarkerEnd,
-    );
-
-    if (startOutputIdx === -1 || endOutputIdx === -1) {
-      return this.outputBuffer;
-    }
-
-    const outputLines = lines.slice(startOutputIdx + 1, endOutputIdx);
-    const cleanLines = outputLines.filter((l) => !l.startsWith("echo "));
-
-    return cleanLines.join("\n");
   }
 
   /**
@@ -337,7 +333,7 @@ export class PtyProcess {
 
   /**
    * Convert to Promise (captures all output as a single string)
-   * Similar to Spawn.toPromise()
+   * Similar to Spawn2.toPromise()
    */
   public toPromise(): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -348,16 +344,24 @@ export class PtyProcess {
           output += data;
         },
         (error) => {
-          reject(new Error(`${output}\n${error.message}`));
+          if (isPtyError(error)) {
+            const err = createPtyError(
+              `${output}\n${error.message}`,
+              error.exitCode,
+            );
+            reject(err);
+          } else {
+            reject(new Error(`${output}\n${error.message}`));
+          }
         },
         (exitCode) => {
           if (exitCode === 0 || exitCode === 143) {
             resolve(output);
           } else {
-            const error = new Error(
+            const error = createPtyError(
               `Process failed with exit code: ${exitCode}`,
-            ) as Error & { exitCode: number };
-            error.exitCode = exitCode;
+              exitCode,
+            );
             reject(error);
           }
         },
@@ -424,7 +428,7 @@ export class PtyProcess {
    * Dispose resources (includes graceful shutdown)
    * @param signal - Termination signal (default: SIGTERM). Switches to SIGKILL after 3 seconds if no response.
    */
-  public async dispose(signal: string = "SIGTERM"): Promise<void> {
+  public async dispose(signal = "SIGTERM"): Promise<void> {
     if (this.status === "terminated") return;
 
     this.status = "terminating";

@@ -63,13 +63,13 @@ export const createToolHandlers = (server: McpServer) => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
-      const { processId, output } = await ptyManager.createPty(command);
+      const { processId, screen } = await ptyManager.createPty(command);
       sessionManager.addPty(sessionId, processId);
       return {
         content: [
-          { type: "text", text: JSON.stringify({ processId, output }) },
+          { type: "text", text: JSON.stringify({ processId, screen }) },
         ],
-        structuredContent: { processId, output },
+        structuredContent: { processId, screen },
       };
     },
 
@@ -109,10 +109,10 @@ export const createToolHandlers = (server: McpServer) => {
       if (!ptyManager) throw new Error("Session not found");
       const pty = ptyManager.getPty(processId);
       if (!pty) throw new Error("PTY not found");
-      const output = pty.getOutputBuffer();
+      const screen = pty.captureBuffer().join("\n").trimEnd();
       return {
-        content: [{ type: "text", text: JSON.stringify({ output }) }],
-        structuredContent: { output },
+        content: [{ type: "text", text: JSON.stringify({ screen }) }],
+        structuredContent: { screen },
       };
     },
 
