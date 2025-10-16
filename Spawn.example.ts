@@ -19,28 +19,28 @@ const colors = {
   red: "\x1b[31m",
 };
 
-function log(title: string, message: string) {
+const log = (title: string, message: string) => {
   console.log(
     `${colors.cyan}${colors.bright}[${title}]${colors.reset} ${message}`,
   );
-}
+};
 
-function success(message: string) {
+const success = (message: string) => {
   console.log(`${colors.green}✓${colors.reset} ${message}`);
-}
+};
 
-function error(message: string) {
+const error = (message: string) => {
   console.log(`${colors.red}✗${colors.reset} ${message}`);
-}
+};
 
-function separator() {
+const separator = () => {
   console.log(`${colors.dim}${"─".repeat(60)}${colors.reset}\n`);
-}
+};
 
 // ============================================================================
 // Example 1: 기본 Subscribe 패턴
 // ============================================================================
-async function example1_basicSubscribe() {
+const example1_basicSubscribe = async () => {
   log("Example 1", "기본 Subscribe 패턴");
 
   const spawn = Spawn.spawn("echo", ["Hello, World!"]);
@@ -61,12 +61,12 @@ async function example1_basicSubscribe() {
       },
     );
   });
-}
+};
 
 // ============================================================================
 // Example 2: Promise 패턴 (가장 간단)
 // ============================================================================
-async function example2_promisePattern() {
+const example2_promisePattern = async () => {
   log("Example 2", "Promise 패턴");
 
   try {
@@ -77,12 +77,12 @@ async function example2_promisePattern() {
   } catch (err) {
     error(`에러: ${err instanceof Error ? err.message : String(err)}`);
   }
-}
+};
 
 // ============================================================================
 // Example 3: Split 모드 (stdout/stderr 분리)
 // ============================================================================
-async function example3_splitMode() {
+const example3_splitMode = async () => {
   log("Example 3", "Split 모드 - stdout/stderr 분리");
 
   const spawn = Spawn.spawnSplit("sh", [
@@ -114,12 +114,12 @@ async function example3_splitMode() {
       },
     );
   });
-}
+};
 
 // ============================================================================
 // Example 4: Split Promise 패턴
 // ============================================================================
-async function example4_splitPromise() {
+const example4_splitPromise = async () => {
   log("Example 4", "Split Promise 패턴");
 
   const spawn = Spawn.spawnSplit("sh", [
@@ -135,21 +135,21 @@ async function example4_splitPromise() {
   } catch (err) {
     error(`에러: ${err instanceof Error ? err.message : String(err)}`);
   }
-}
+};
 
 // ============================================================================
 // Example 5: stdin 입력
 // ============================================================================
-async function example5_stdinInput() {
+const example5_stdinInput = async () => {
   log("Example 5", "stdin 입력");
 
   // 비동기 제너레이터로 stdin 데이터 생성
-  async function* generateInput() {
+  const generateInput = async function* () {
     yield "Hello\n";
     yield "World\n";
     yield "From\n";
     yield "Spawn\n";
-  }
+  };
 
   const spawn = Spawn.spawn("cat", [], { stdin: generateInput() });
 
@@ -165,12 +165,12 @@ async function example5_stdinInput() {
   } catch (err) {
     error(`에러: ${err instanceof Error ? err.message : String(err)}`);
   }
-}
+};
 
 // ============================================================================
 // Example 6: 에러 핸들링 (exit code !== 0)
 // ============================================================================
-async function example6_errorHandling() {
+const example6_errorHandling = async () => {
   log("Example 6", "에러 핸들링 (exit code !== 0)");
 
   try {
@@ -193,12 +193,12 @@ async function example6_errorHandling() {
       error("예상치 못한 에러 타입");
     }
   }
-}
+};
 
 // ============================================================================
 // Example 7: Echo Output (실시간 출력)
 // ============================================================================
-async function example7_echoOutput() {
+const example7_echoOutput = async () => {
   log("Example 7", "Echo Output - 실시간 콘솔 출력");
 
   console.log(`  ${colors.dim}실시간 출력 시작...${colors.reset}`);
@@ -213,12 +213,12 @@ async function example7_echoOutput() {
   } catch (err) {
     error(`에러: ${err instanceof Error ? err.message : String(err)}`);
   }
-}
+};
 
 // ============================================================================
 // Example 8: Cleanup 콜백
 // ============================================================================
-async function example8_cleanupCallback() {
+const example8_cleanupCallback = async () => {
   log("Example 8", "Cleanup 콜백");
 
   const spawn = Spawn.spawn("sleep", ["1"]);
@@ -252,12 +252,49 @@ async function example8_cleanupCallback() {
       resolve();
     }, 500);
   });
-}
+};
+
+// ============================================================================
+// Example 15: PTY 모드 - 기본 명령어 테스트
+// ============================================================================
+const example15_ptyPython = async () => {
+  log("Example 15", "PTY 모드 - 기본 명령어 테스트");
+
+  const spawn = Spawn.spawnPty("echo", ["Hello", "from", "PTY"]);
+
+  console.log(`  ${colors.dim}PTY 모드로 echo 실행 중...${colors.reset}`);
+
+  return new Promise<void>((resolve) => {
+    const timeout = setTimeout(() => {
+      success("PTY echo 실행 완료 (timeout)");
+      resolve();
+    }, 1000);
+
+    spawn.subscribe(
+      (data) => {
+        const trimmed = data.trim();
+        if (trimmed) {
+          console.log(`  PTY 출력: ${trimmed}`);
+        }
+      },
+      (err) => {
+        clearTimeout(timeout);
+        error(`에러: ${err.message}`);
+        resolve();
+      },
+      () => {
+        clearTimeout(timeout);
+        success("PTY echo 실행 완료");
+        resolve();
+      },
+    );
+  });
+};
 
 // ============================================================================
 // Example 9: 여러 프로세스 병렬 실행
 // ============================================================================
-async function example9_parallelExecution() {
+const example9_parallelExecution = async () => {
   log("Example 9", "여러 프로세스 병렬 실행");
 
   const commands = [
@@ -281,12 +318,12 @@ async function example9_parallelExecution() {
   } catch (err) {
     error(`에러: ${err instanceof Error ? err.message : String(err)}`);
   }
-}
+};
 
 // ============================================================================
 // Example 10: 복잡한 파이프라인 시뮬레이션
 // ============================================================================
-async function example10_pipelineSimulation() {
+const example10_pipelineSimulation = async () => {
   log("Example 10", "복잡한 파이프라인 시뮬레이션");
 
   // Step 1: 데이터 생성
@@ -297,9 +334,9 @@ async function example10_pipelineSimulation() {
 
   // Step 2: 정렬 (stdin 사용)
   console.log(`  ${colors.dim}Step 2: 정렬${colors.reset}`);
-  async function* inputStep2() {
+  const inputStep2 = async function* () {
     yield step1;
-  }
+  };
   const spawn2 = Spawn.spawn("sort", [], { stdin: inputStep2() });
   const step2 = await spawn2.toPromise();
 
@@ -317,12 +354,12 @@ async function example10_pipelineSimulation() {
   console.log(`  ${colors.green}총 라인 수:${colors.reset} ${lineCount}`);
 
   success("파이프라인 시뮬레이션 완료");
-}
+};
 
 // ============================================================================
 // Example 11: 타입 안정성 데모
 // ============================================================================
-async function example11_typeSafety() {
+const example11_typeSafety = async () => {
   log("Example 11", "타입 안정성 데모");
 
   // spawn() - Spawn<string> 반환
@@ -345,12 +382,12 @@ async function example11_typeSafety() {
   await new Promise((resolve) => setTimeout(resolve, 100));
 
   success("타입 안정성 검증 완료");
-}
+};
 
 // ============================================================================
 // Example 12: 인코딩 지정
 // ============================================================================
-async function example12_encoding() {
+const example12_encoding = async () => {
   log("Example 12", "인코딩 지정");
 
   try {
@@ -363,12 +400,12 @@ async function example12_encoding() {
   } catch (err) {
     error(`에러: ${err instanceof Error ? err.message : String(err)}`);
   }
-}
+};
 
 // ============================================================================
 // Example 13: 동적 stdin 입력 (write 메서드)
 // ============================================================================
-async function example13_dynamicStdin() {
+const example13_dynamicStdin = async () => {
   log("Example 13", "동적 stdin 입력 (write 메서드)");
 
   const spawn = Spawn.spawn("cat", []);
@@ -410,12 +447,12 @@ async function example13_dynamicStdin() {
       resolve();
     })();
   });
-}
+};
 
 // ============================================================================
 // Example 14: 프로세스 상태 확인
 // ============================================================================
-async function example14_processStatus() {
+const example14_processStatus = async () => {
   log("Example 14", "프로세스 상태 확인");
 
   const spawn = Spawn.spawn("sleep", ["1"]);
@@ -439,61 +476,38 @@ async function example14_processStatus() {
       },
     );
   });
-}
-
-// ============================================================================
-// Example 15: PTY 모드 - Python REPL
-// ============================================================================
-async function example15_ptyPython() {
-  log("Example 15", "PTY 모드 - Python REPL");
-
-  const spawn = Spawn.spawnPty("python3", ["-c", "print('Hello from Python'); import sys; sys.exit(0)"]);
-
-  console.log(`  ${colors.dim}PTY 모드로 Python 실행 중...${colors.reset}`);
-
-  return new Promise<void>((resolve) => {
-    spawn.subscribe(
-      (data) => {
-        const trimmed = data.trim();
-        if (trimmed) {
-          console.log(`  Python 출력: ${trimmed}`);
-        }
-      },
-      (err) => {
-        error(`에러: ${err.message}`);
-        resolve();
-      },
-      () => {
-        success("PTY Python 실행 완료");
-        resolve();
-      },
-    );
-  });
-}
+};
 
 // ============================================================================
 // Example 16: PTY 모드 확인
 // ============================================================================
-async function example16_ptyModeCheck() {
+const example16_ptyModeCheck = async () => {
   log("Example 16", "PTY 모드 확인");
 
   const spawn1 = Spawn.spawn("echo", ["Standard mode"]);
-  console.log(`  ${colors.blue}Standard spawn:${colors.reset} isPtyMode() = ${spawn1.isPtyMode()}`);
-
   const spawn2 = Spawn.spawnPty("echo", ["PTY mode"]);
-  console.log(`  ${colors.magenta}PTY spawn:${colors.reset} isPtyMode() = ${spawn2.isPtyMode()}`);
 
   await Promise.all([
     new Promise<void>((resolve) => {
       spawn1.subscribe(
-        () => {},
+        () => {
+          // Check after process starts
+          console.log(
+            `  ${colors.blue}Standard spawn:${colors.reset} isPtyMode() = ${spawn1.isPtyMode()}`,
+          );
+        },
         () => resolve(),
         () => resolve(),
       );
     }),
     new Promise<void>((resolve) => {
       const sub2 = spawn2.subscribe(
-        () => {},
+        () => {
+          // Check after process starts
+          console.log(
+            `  ${colors.magenta}PTY spawn:${colors.reset} isPtyMode() = ${spawn2.isPtyMode()}`,
+          );
+        },
         () => resolve(),
         () => resolve(),
       );
@@ -506,12 +520,12 @@ async function example16_ptyModeCheck() {
   ]);
 
   success("PTY 모드 확인 완료");
-}
+};
 
 // ============================================================================
 // Example 17: 프로세스 Detach
 // ============================================================================
-async function example17_detach() {
+const example17_detach = async () => {
   log("Example 17", "프로세스 Detach");
 
   const spawn = Spawn.spawn("sleep", ["2"]);
@@ -526,26 +540,76 @@ async function example17_detach() {
   const subprocess = spawn.detach();
 
   if (subprocess) {
-    console.log(`  ${colors.green}Detached!${colors.reset} 프로세스는 백그라운드에서 계속 실행됩니다.`);
+    console.log(
+      `  ${colors.green}Detached!${colors.reset} 프로세스는 백그라운드에서 계속 실행됩니다.`,
+    );
     console.log(`  프로세스 PID: ${subprocess.pid}`);
 
     // Kill the detached process to prevent hanging
     console.log(`  ${colors.dim}프로세스 정리 중...${colors.reset}`);
     try {
       subprocess.kill();
-      await subprocess.exited;
+      // Wait for process exit only for standard subprocess
+      if ("exited" in subprocess) {
+        await subprocess.exited;
+      }
     } catch (_err) {
       // Ignore SIGTERM exit code (143)
     }
   }
 
   success("Detach 완료");
-}
+};
+
+// ============================================================================
+// Example 18: PTY 모드에서 write 테스트
+// ============================================================================
+const example18_ptyWrite = async () => {
+  log("Example 18", "PTY 모드에서 동적 write 테스트");
+
+  const spawn = Spawn.spawnPty("cat", []);
+
+  return new Promise<void>((resolve) => {
+    const subscription = spawn.subscribe(
+      (data) => {
+        const trimmed = data.trim();
+        if (trimmed) {
+          console.log(`  PTY Cat 출력: ${trimmed}`);
+        }
+      },
+      (err) => {
+        console.error(`  에러: ${err.message}`);
+        resolve();
+      },
+      () => {
+        success("PTY write 완료");
+        resolve();
+      },
+    );
+
+    (async () => {
+      await Bun.sleep(100);
+      console.log(`  ${colors.dim}PTY 입력 1 전송...${colors.reset}`);
+      await spawn.write("First PTY line\n");
+      await Bun.sleep(100);
+
+      console.log(`  ${colors.dim}PTY 입력 2 전송...${colors.reset}`);
+      await spawn.write("Second PTY line\n");
+      await Bun.sleep(100);
+
+      console.log(`  ${colors.dim}PTY 프로세스 종료...${colors.reset}`);
+      subscription.unsubscribe();
+      success("PTY write 완료");
+      await Bun.sleep(100);
+      resolve();
+    })();
+  });
+};
 
 // ============================================================================
 // Main Runner
 // ============================================================================
-async function main() {
+const main = async () => {
   console.log(
     `\n${colors.bright}${colors.magenta}═══════════════════════════════════════════════════════════${colors.reset}`,
   );
@@ -574,6 +638,7 @@ async function main() {
     example15_ptyPython,
     example16_ptyModeCheck,
     example17_detach,
+    example18_ptyWrite,
   ];
 
   for (const example of examples) {
@@ -591,7 +656,7 @@ async function main() {
   console.log(
     `${colors.bright}${colors.green}모든 예제 실행 완료!${colors.reset}\n`,
   );
-}
+};
 
 // Run all examples
 main().catch((err) => {

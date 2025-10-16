@@ -1,5 +1,5 @@
-import { spawn as ptySpawn } from "bun-pty";
 import { EventEmitter } from "node:events";
+import { spawn as ptySpawn } from "bun-pty";
 
 interface OutputEvent {
   source: "stdout" | "stderr";
@@ -224,7 +224,7 @@ export class Spawn<T = OutputEvent | string> {
       if (usePty) {
         // Use bun-pty for PTY mode
         this.isPty = true;
-        await this.startPtyProcess(encoding, echoOutput, split, cols, rows);
+        await this.startPtyProcess(echoOutput, split, cols, rows);
       } else {
         // Use standard Bun.spawn
         this.isPty = false;
@@ -239,7 +239,6 @@ export class Spawn<T = OutputEvent | string> {
    * Start PTY process using bun-pty
    */
   private async startPtyProcess(
-    encoding: string,
     echoOutput: boolean,
     split: boolean,
     cols: number,
@@ -279,7 +278,7 @@ export class Spawn<T = OutputEvent | string> {
     });
 
     // Handle PTY exit
-    ptyProcess.onExit(({ exitCode, signal }) => {
+    ptyProcess.onExit(({ exitCode }) => {
       this.exitCode = exitCode;
       this.stdoutClosed = true;
       this.stderrClosed = true; // PTY doesn't have separate stderr
