@@ -4,6 +4,7 @@
     "": {
       "name": "mcp-pty",
       "dependencies": {
+        "@xterm/headless": "^5.5.0",
         "bun-pty": "^0.3.2",
         "strip-ansi": "^7.1.2",
       },
