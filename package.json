@@ -31,6 +31,7 @@
     "packages/*"
   ],
   "dependencies": {
-    "bun-pty": "^0.3.2"
+    "bun-pty": "^0.3.2",
+    "strip-ansi": "^7.1.2"
   }
 }

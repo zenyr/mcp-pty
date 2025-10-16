@@ -1,6 +1,6 @@
 import { createLogger } from "@pkgs/logger";
-import { Terminal } from "@xterm/headless";
 import { spawn } from "bun-pty";
+import { EventEmitter } from "node:events";
 import { nanoid } from "nanoid";
 import stripAnsi from "strip-ansi";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
@@ -8,13 +8,29 @@ import { checkSudoPermission } from "./utils/safety";
 
 const logger = createLogger("pty-process");
 
+type DataListener = (data: string) => void;
+type ErrorListener = (error: Error) => void;
+type ExitListener = (exitCode: number) => void;
+
+interface Subscription {
+  unsubscribe: () => void;
+}
+
 /**
- * Individual PTY process management class
+ * Individual PTY process management class (bun-pty exclusive)
+ *
+ * Spawn.ts 패턴 적용:
+ * - EventEmitter 기반 이벤트 관리
+ * - Subscribe/Unsubscribe 메모리 누수 방지
+ * - Promise 변환 (toPromise)
+ * - Cleanup callbacks
+ * - Detach 지원 (백그라운드 실행)
+ * - Resize 지원
+ * - 안전한 dispose 처리
  */
 export class PtyProcess {
   public readonly id: string;
   public status: PtyStatus = "initializing";
-  public readonly terminal: Terminal;
   public readonly process: ReturnType<typeof spawn>;
   public readonly createdAt: Date;
   public lastActivity: Date;
@@ -24,6 +40,11 @@ export class PtyProcess {
   private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
   private outputMarkerStart: string = "";
   private outputMarkerEnd: string = "";
+  private emitter = new EventEmitter();
+  private cleanupCallbacks: Array<() => void> = [];
+  private exitCode: number | null = null;
+  private readonly cols: number;
+  private readonly rows: number;
 
   constructor(commandOrOptions: string | PtyOptions) {
     const options =
@@ -35,26 +56,20 @@ export class PtyProcess {
     this.createdAt = new Date();
     this.lastActivity = new Date();
     this.options = options;
+    this.cols = 80;
+    this.rows = 24;
 
-    // Security check: Verify if command contains sudo
+    // Security check
     checkSudoPermission(options.command);
 
-    // Initialize xterm headless
-    this.terminal = new Terminal({
-      cols: 80,
-      rows: 24,
-      allowTransparency: false,
-      allowProposedApi: true,
-    });
-
-    // Always use /bin/sh for predictable behavior
+    // Spawn PTY process with /bin/sh
     const executable = "/bin/sh";
     const args: string[] = [];
 
     this.process = spawn(executable, args, {
       name: "xterm-256color",
-      cols: 80,
-      rows: 24,
+      cols: this.cols,
+      rows: this.rows,
       cwd: options.cwd || process.cwd(),
       env: { ...process.env, ...options.env } as Record<string, string>,
     });
@@ -68,6 +83,7 @@ export class PtyProcess {
     // Setup shell and inject command asynchronously
     this.initializeShellCommand(options).catch((err) => {
       logger.error(`Failed to initialize shell command: ${err}`);
+      this.emitter.emit("error", err);
       this.status = "terminated";
     });
 
@@ -98,57 +114,37 @@ export class PtyProcess {
   }
 
   /**
-   * Setup streams
+   * Setup streams (inspired by Spawn.ts)
    */
   private setupStreams(): void {
-    // Terminal input -> process
-    this.terminal.onData((data) => {
-      this.process.write(data);
-      this.updateActivity();
-    });
-
-    // Process output -> terminal
+    // Process output handling
     this.process.onData((data: string) => {
-      this.terminal.write(data);
       this.outputBuffer += data;
       this.notifyOutput(data);
+      this.emitter.emit("data", data);
       this.updateActivity();
     });
 
-    // Process exit handling: Trigger dispose based on autoDisposeOnExit option
+    // Process exit handling
     this.process.onExit(({ exitCode, signal }) => {
+      this.exitCode = exitCode;
       this.status = "terminated";
       logger.info(
         `PTY ${this.id} exited with code ${exitCode}, signal ${signal}`,
       );
 
+      this.emitter.emit("exit", exitCode);
+
       if (this.options.autoDisposeOnExit) {
-        this.dispose("SIGTERM").catch(logger.error); // Automatic cleanup
+        this.dispose("SIGTERM").catch(logger.error);
       }
     });
   }
 
   /**
-   * Write interactive input or command (pass directly to program without shell prompt)
-   * @param input - Key input or command string (e.g., 'i' in vi mode or full command)
-   */
-  public writeInput(input: string): void {
-    if (this.status !== "active") {
-      throw new Error(`PTY ${this.id} is not active`);
-    }
-
-    // Check sudo-related input (security)
-    checkSudoPermission(input); // Reuse existing function (when input contains "sudo")
-
-    this.terminal.write(`${input}\n`); // Simulate enter with \n (suitable for interactive)
-    this.updateActivity();
-  }
-
-  /**
-   * Write data to PTY and return terminal state after waiting
-   * @param data - Raw input data (supports text, multiline, ANSI codes like \x03 for Ctrl+C)
+   * Write data to PTY (raw input)
+   * @param data - Raw input data (supports text, multiline, ANSI codes)
    * @param waitMs - Wait time for output in milliseconds (default: 1000)
-   * @returns Terminal screen content, cursor position, and exit code
    */
   public async write(
     data: string,
@@ -158,61 +154,54 @@ export class PtyProcess {
     cursor: { x: number; y: number };
     exitCode: number | null;
   }> {
-    if (this.status !== "active") {
+    if (this.status === "terminated" || this.status === "terminating") {
       throw new Error(`PTY ${this.id} is not active`);
     }
 
     // Security check
     checkSudoPermission(data);
 
-    // Write directly to process (not terminal)
+    // Write directly to process
     this.process.write(data);
     this.updateActivity();
 
     // Wait for output or early return on exit
-    let exitCode: number | null = null;
+    let capturedExitCode: number | null = null;
     await Promise.race([
       Bun.sleep(waitMs),
       new Promise<void>((resolve) => {
-        this.process.onExit((event) => {
-          exitCode = event.exitCode;
+        const handler = (event: { exitCode: number }) => {
+          capturedExitCode = event.exitCode;
           resolve();
-        });
+        };
+        this.process.onExit(handler);
       }),
     ]);
 
+    // Return simplified screen (output buffer) and mock cursor
+    const output = this.outputBuffer;
+    const processedOutput = this.options.ansiStrip ? stripAnsi(output) : output;
+
     return {
-      screen: this.getScreenContent(),
-      cursor: this.getCursorPosition(),
-      exitCode: exitCode ?? (this.status === "terminated" ? 0 : null),
+      screen: processedOutput,
+      cursor: { x: 0, y: 0 }, // Simplified cursor (bun-pty doesn't expose cursor position)
+      exitCode: capturedExitCode ?? this.exitCode,
     };
   }
 
   /**
-   * Extract current screen content from terminal buffer
+   * Write interactive input (legacy method for backward compatibility)
    */
-  private getScreenContent(): string {
-    const buffer = this.terminal.buffer.active;
-    const lines: string[] = [];
-
-    for (let i = 0; i < buffer.length; i++) {
-      const line = buffer.getLine(i);
-      if (line) {
-        lines.push(line.translateToString(true)); // trimRight=true
-      }
+  public writeInput(input: string): void {
+    if (this.status === "terminated" || this.status === "terminating") {
+      throw new Error(`PTY ${this.id} is not active`);
     }
 
-    return lines.join("\n").trimEnd();
-  }
+    // Check sudo-related input (security)
+    checkSudoPermission(input);
 
-  /**
-   * Get current cursor position
-   */
-  private getCursorPosition(): { x: number; y: number } {
-    return {
-      x: this.terminal.buffer.active.cursorX,
-      y: this.terminal.buffer.active.cursorY,
-    };
+    this.process.write(`${input}\n`);
+    this.updateActivity();
   }
 
   /**
@@ -223,7 +212,7 @@ export class PtyProcess {
   }
 
   /**
-   * Notify output
+   * Notify output to callbacks
    */
   private notifyOutput(output: string): void {
     const ansiStripped = this.options.ansiStrip ?? false;
@@ -265,7 +254,6 @@ export class PtyProcess {
 
     const lines = this.outputBuffer.split(/\r?\n/);
 
-    // Find lines that are EXACTLY the markers (outputs, not commands)
     const startOutputIdx = lines.findIndex(
       (l) => l.trim() === this.outputMarkerStart,
     );
@@ -277,12 +265,121 @@ export class PtyProcess {
       return this.outputBuffer;
     }
 
-    // Extract lines between marker outputs
     const outputLines = lines.slice(startOutputIdx + 1, endOutputIdx);
-    // Filter out command echoes
     const cleanLines = outputLines.filter((l) => !l.startsWith("echo "));
 
     return cleanLines.join("\n");
+  }
+
+  /**
+   * Subscribe to process events (data, error, exit)
+   * RxJS-like pattern for better event management
+   */
+  public subscribe(
+    onData?: DataListener,
+    onError?: ErrorListener,
+    onExit?: ExitListener,
+  ): Subscription {
+    if (onData) this.emitter.on("data", onData);
+    if (onError) this.emitter.on("error", onError);
+    if (onExit) this.emitter.on("exit", onExit);
+
+    return {
+      unsubscribe: () => {
+        if (onData) this.emitter.off("data", onData);
+        if (onError) this.emitter.off("error", onError);
+        if (onExit) this.emitter.off("exit", onExit);
+
+        // Cleanup if no more listeners
+        if (this.emitter.listenerCount("data") === 0) {
+          this.dispose("SIGTERM").catch(logger.error);
+        }
+      },
+    };
+  }
+
+  /**
+   * Convert to Promise (captures all output as a single string)
+   * Similar to Spawn.toPromise()
+   */
+  public toPromise(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      let output = "";
+
+      this.subscribe(
+        (data: string) => {
+          output += data;
+        },
+        (error) => {
+          reject(new Error(`${output}\n${error.message}`));
+        },
+        (exitCode) => {
+          if (exitCode === 0 || exitCode === 143) {
+            resolve(output);
+          } else {
+            const error = new Error(
+              `Process failed with exit code: ${exitCode}`,
+            ) as Error & { exitCode: number };
+            error.exitCode = exitCode;
+            reject(error);
+          }
+        },
+      );
+    });
+  }
+
+  /**
+   * Add cleanup callback (executed on dispose)
+   */
+  public onCleanup(callback: () => void): void {
+    this.cleanupCallbacks.push(callback);
+  }
+
+  /**
+   * Detach from the process while keeping it running
+   * This removes all listeners and returns the process
+   */
+  public detach(): ReturnType<typeof spawn> {
+    if (this.status === "terminated" || this.status === "terminating") {
+      throw new Error(`PTY ${this.id} already terminated`);
+    }
+
+    // Remove all event listeners
+    this.emitter.removeAllListeners();
+
+    // Clear callbacks
+    this.outputCallbacks = [];
+    this.cleanupCallbacks = [];
+
+    logger.info(`PTY ${this.id} detached`);
+
+    return this.process;
+  }
+
+  /**
+   * Check if the process is still running
+   */
+  public isRunning(): boolean {
+    return this.status !== "terminated" && this.status !== "terminating";
+  }
+
+  /**
+   * Get the exit code if process has exited
+   */
+  public getExitCode(): number | null {
+    return this.exitCode;
+  }
+
+  /**
+   * Resize terminal
+   */
+  public resize(cols: number, rows: number): void {
+    if (!this.isRunning()) {
+      throw new Error(`PTY ${this.id} is not active`);
+    }
+
+    this.process.resize(cols, rows);
+    this.updateActivity();
   }
 
   /**
@@ -294,10 +391,20 @@ export class PtyProcess {
 
     this.status = "terminating";
 
+    // Run cleanup callbacks
+    for (const callback of this.cleanupCallbacks) {
+      try {
+        callback();
+      } catch (err) {
+        logger.error(`Cleanup callback error: ${err}`);
+      }
+    }
+
     // Graceful shutdown: Timeout 3 seconds after SIGTERM
     const timeout = 3000;
     const killPromise = new Promise<void>((resolve) => {
       const timer = setTimeout(() => {
+        logger.warn(`PTY ${this.id} did not exit gracefully, sending SIGKILL`);
         this.process.kill("SIGKILL");
         resolve();
       }, timeout);
@@ -313,9 +420,10 @@ export class PtyProcess {
     await killPromise;
 
     // Additional cleanup
-    this.terminal.dispose();
     this.outputBuffer = "";
     this.outputCallbacks = [];
+    this.cleanupCallbacks = [];
+    this.emitter.removeAllListeners();
     this.status = "terminated";
 
     logger.info(`PTY ${this.id} disposed successfully`);

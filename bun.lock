@@ -5,6 +5,7 @@
       "name": "mcp-pty",
       "dependencies": {
         "bun-pty": "^0.3.2",
+        "strip-ansi": "^7.1.2",
       },
       "devDependencies": {
         "@biomejs/biome": "2.2.5",
