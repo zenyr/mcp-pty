@@ -1,7 +1,7 @@
 import { appendFile } from "node:fs/promises";
 import { Terminal } from "@xterm/headless";
-import type { IPty } from "bun-pty";
-import { spawn } from "bun-pty";
+import type { IPty } from "@zenyr/bun-pty";
+import { spawn } from "@zenyr/bun-pty";
 
 /**
  * Helper function to log to file

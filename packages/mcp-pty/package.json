@@ -52,13 +52,12 @@
     "@pkgs/pty-manager": "workspace:*",
     "@pkgs/session-manager": "workspace:*",
     "@xterm/headless": "^5.5.0",
-    "bun-pty": "github:zenyr/bun-pty#merged",
+    "@zenyr/bun-pty": "^0.4.1",
     "consola": "^3.4.2",
     "fetch-to-node": "^2.1.0",
     "hono": "^4.9.10",
     "nanoid": "^5.1.6",
     "strip-ansi": "^7.1.2",
     "zod": "^3.24.1"
-  },
-  "trustedDependencies": ["bun-pty"]
+  }
 }

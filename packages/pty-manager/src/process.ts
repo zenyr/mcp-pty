@@ -1,7 +1,7 @@
 import { createLogger } from "@pkgs/logger";
 import { Terminal } from "@xterm/headless";
-import type { IExitEvent, IPty } from "bun-pty";
-import { spawn } from "bun-pty";
+import type { IExitEvent, IPty } from "@zenyr/bun-pty";
+import { spawn } from "@zenyr/bun-pty";
 import { nanoid } from "nanoid";
 import stripAnsi from "strip-ansi";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";

@@ -8,7 +8,6 @@ dist
 
 # npm pack test
 *.tgz
-mcp-pty-server-*.tgz
 
 # code coverage
 coverage

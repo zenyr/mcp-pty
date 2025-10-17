@@ -3,8 +3,8 @@ import { stripVTControlCharacters } from "node:util";
 import { isNumber } from "@sindresorhus/is";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { Terminal } from "@xterm/headless";
+import { type IPtyForkOptions, spawn as ptySpawn } from "@zenyr/bun-pty";
 import { $ } from "bun";
-import { type IPtyForkOptions, spawn as ptySpawn } from "bun-pty";
 
 const XTERM_DEFAULT_OPTIONS = {
   allowProposedApi: true,
