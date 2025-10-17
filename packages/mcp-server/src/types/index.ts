@@ -42,6 +42,12 @@ export const WriteInputSchema = z.object({
 export const StartPtyOutputSchema = z.object({
   processId: z.string(),
   screen: z.string().describe("Initial terminal screen content"),
+  exitCode: z
+    .number()
+    .nullable()
+    .describe(
+      "Process exit code (null if still running, non-null if already terminated)",
+    ),
 });
 
 export const KillPtyOutputSchema = z.object({ success: z.boolean() });

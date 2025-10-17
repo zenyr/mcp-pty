@@ -263,7 +263,7 @@ describe("MCP Server", () => {
     test("start tool handler creates PTY", async () => {
       const { start } = createToolHandlers(server);
 
-      const result = await start({ command: "echo test", shellMode: false });
+      const result = await start({ command: "echo test" });
 
       expect(result).toBeDefined();
       expect(result.content).toBeDefined();
@@ -271,11 +271,15 @@ describe("MCP Server", () => {
 
       const structured = result.structuredContent as {
         processId: string;
-        output: string;
+        screen: string;
+        exitCode: number | null;
       };
       expect(structured.processId).toBeDefined();
       expect(typeof structured.processId).toBe("string");
-      expect(typeof structured.output).toBe("string");
+      expect(typeof structured.screen).toBe("string");
+      expect(
+        structured.exitCode === null || typeof structured.exitCode === "number",
+      ).toBe(true);
 
       // Verify PTY was created
       const pty = ptyManager.getPty(structured.processId);
@@ -291,9 +295,9 @@ describe("MCP Server", () => {
       const unboundServer = factory.createServer();
       const { start } = createToolHandlers(unboundServer);
 
-      await expect(
-        start({ command: "echo test", shellMode: false }),
-      ).rejects.toThrow("No session bound to server");
+      await expect(start({ command: "echo test" })).rejects.toThrow(
+        "No session bound to server",
+      );
     });
 
     test("kill tool handler removes PTY", async () => {
@@ -355,8 +359,8 @@ describe("MCP Server", () => {
       const { read } = createToolHandlers(server);
       const result = await read({ processId });
 
-      const structured = result.structuredContent as { output: string };
-      expect(typeof structured.output).toBe("string");
+      const structured = result.structuredContent as { screen: string };
+      expect(typeof structured.screen).toBe("string");
     });
 
     test("read tool handler throws for non-existent PTY", async () => {

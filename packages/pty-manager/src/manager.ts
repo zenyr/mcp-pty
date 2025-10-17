@@ -25,12 +25,12 @@ export class PtyManager {
    * Create new PTY instance and wait for initial output
    * @param commandOrOptions - Command string or PtyOptions
    * @param timeoutMs - Timeout in milliseconds (default: 500ms for command execution + output capture)
-   * @returns Object with processId and initial screen content
+   * @returns Object with processId, initial screen content, and exitCode
    */
   public async createPty(
     commandOrOptions: string | PtyOptions,
     timeoutMs = 500,
-  ): Promise<{ processId: string; screen: string }> {
+  ): Promise<{ processId: string; screen: string; exitCode: number | null }> {
     const process = new PtyProcess(commandOrOptions);
     this.instances.set(process.id, process);
 
@@ -56,6 +56,7 @@ export class PtyManager {
     return {
       processId: process.id,
       screen: process.captureBuffer().join("\n").trimEnd(),
+      exitCode: process.getExitCode(),
     };
   }
 
