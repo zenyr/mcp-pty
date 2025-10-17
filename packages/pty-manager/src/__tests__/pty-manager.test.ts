@@ -256,14 +256,14 @@ test("PtyProcess write rejects sudo commands without consent", async () => {
   await expect(pty.write("sudo ls\n")).rejects.toThrow(/sudo command/);
 });
 
-test("PtyProcess onOutput registers callback", () => {
+test("PtyProcess onOutput registers callback", async () => {
   const pty = new PtyProcess("cat");
   ptys.push(pty);
   let _callbackInvoked = false;
   pty.onOutput(() => {
     _callbackInvoked = true;
   });
-  pty.process.write("test\n");
+  await pty.write("test\n");
   // Callback will trigger asynchronously during output processing
 });
 
