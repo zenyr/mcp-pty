@@ -1,6 +1,6 @@
-import { EventEmitter } from "node:events";
 import { createLogger } from "@pkgs/logger";
 import { Terminal } from "@xterm/headless";
+import type { IExitEvent, IPty } from "bun-pty";
 import { spawn } from "bun-pty";
 import { nanoid } from "nanoid";
 import stripAnsi from "strip-ansi";
@@ -9,76 +9,39 @@ import { checkSudoPermission } from "./utils/safety";
 
 const logger = createLogger("pty-process");
 
-type DataListener = (data: string) => void;
-type ErrorListener = (error: Error) => void;
-type ExitListener = (exitCode: number) => void;
-
 interface Subscription {
   unsubscribe: () => void;
 }
 
 /**
- * PTY 프로세스 에러 (exitCode 포함)
- */
-interface PtyError extends Error {
-  exitCode: number;
-  code: number;
-}
-
-/**
- * Type guard for PtyError
- */
-const isPtyError = (error: unknown): error is PtyError => {
-  return (
-    error instanceof Error &&
-    "exitCode" in error &&
-    typeof (error as PtyError).exitCode === "number"
-  );
-};
-
-/**
- * Create PtyError
- */
-const createPtyError = (message: string, exitCode: number): PtyError => {
-  const error = new Error(message) as PtyError;
-  error.exitCode = exitCode;
-  error.code = exitCode;
-  return error;
-};
-
-/**
  * Individual PTY process management class (bun-pty + xterm/headless)
  *
- * spawn2.ts 패턴 완전 적용:
- * - PS1/마커 클렌징 로직 제거 (롱러닝 프로세스 부적합)
- * - 순수 PTY 입출력 스트림 기반
- * - EventEmitter 기반 이벤트 관리
- * - Subscribe/Unsubscribe 메모리 누수 방지
+ * spawn.ts 기반 완전 재작성:
+ * - IPty + xterm/headless 통합
+ * - Subscribe 패턴으로 이벤트 관리
  * - Promise 변환 (toPromise)
- * - Cleanup callbacks
- * - Detach 지원 (백그라운드 실행)
- * - Resize 지원
+ * - 터미널 버퍼 캡처 (captureBuffer)
+ * - 리사이즈 지원 (resize)
  * - 안전한 dispose 처리
- *
- * xterm/headless 사용:
- * - 터미널 버퍼 관리 및 커서 위치 추적
- * - 화면 상태 정확한 캡처
- * - TUI 프로그램 지원 (vi, man, htop 등)
  */
 export class PtyProcess {
   public readonly id: string;
   public status: PtyStatus = "initializing";
   public readonly terminal: Terminal;
-  public readonly process: ReturnType<typeof spawn>;
   public readonly createdAt: Date;
   public lastActivity: Date;
   public readonly options: PtyOptions;
 
-  private outputBuffer: string = "";
-  private outputCallbacks: ((output: TerminalOutput) => void)[] = [];
-  private emitter = new EventEmitter();
-  private cleanupCallbacks: Array<() => void> = [];
+  private pty: IPty | null = null;
   private exitCode: number | null = null;
+  private outputBuffer = "";
+  private subscribers: Array<{
+    onData: (data: string) => void;
+    onError: (error: Error) => void;
+    onComplete: () => void;
+  }> = [];
+  private initPromise: Promise<void>;
+  private isDisposed = false;
 
   constructor(commandOrOptions: string | PtyOptions) {
     const options =
@@ -98,81 +61,61 @@ export class PtyProcess {
     this.terminal = new Terminal({
       cols: 80,
       rows: 24,
-      allowTransparency: false,
+      convertEol: true,
       allowProposedApi: true,
     });
 
-    // Spawn interactive PTY shell for session management
-    // Commands are written via .write() after shell initialization
-    this.process = spawn("/bin/sh", [], {
+    this.initPromise = this.init();
+  }
+
+  private async init(): Promise<void> {
+    const cmdParts = this.options.command.split(" ");
+    const command = cmdParts[0] ?? this.options.command;
+    const args = cmdParts.slice(1);
+
+    this.pty = spawn(command, args, {
       name: "xterm-256color",
-      cols: 80,
-      rows: 24,
-      cwd: options.cwd || process.cwd(),
-      env: { ...process.env, ...options.env } as Record<string, string>,
+      cols: this.terminal.cols,
+      rows: this.terminal.rows,
+      cwd: this.options.cwd || process.cwd(),
+      env: { ...process.env, ...this.options.env } as Record<string, string>,
     });
 
-    this.setupStreams();
-    this.status = "active";
-
-    // Initialize shell and execute command asynchronously
-    this.initializeShell(options).catch((err) => {
-      logger.error(`Failed to initialize shell: ${err}`);
-      this.emitter.emit("error", err);
-      this.status = "terminated";
-    });
-  }
-
-  /**
-   * Initialize shell and execute initial command
-   */
-  private async initializeShell(options: PtyOptions): Promise<void> {
-    // Wait for shell prompt
-    await Bun.sleep(100);
-
-    // Execute command
-    this.process.write(`${options.command}\n`);
-
-    // Auto-exit if requested
-    if (options.autoDisposeOnExit) {
-      await Bun.sleep(50);
-      this.process.write("exit\n");
-    }
-  }
-
-  /**
-   * Setup streams (spawn2.ts pattern)
-   */
-  private setupStreams(): void {
-    // Terminal input -> process
-    this.terminal.onData((data) => {
-      this.process.write(data);
-      this.updateActivity();
-    });
-
-    // Process output -> terminal + buffer
-    this.process.onData((data: string) => {
-      this.terminal.write(data); // Write to terminal for screen state
+    // PTY output -> xterm and subscribers
+    this.pty.onData((data: string) => {
       this.outputBuffer += data;
-      this.notifyOutput(data);
-      this.emitter.emit("data", data);
+      this.terminal.write(data);
       this.updateActivity();
+
+      // Notify subscribers with processed output
+      const processedData = this.options.ansiStrip ? stripAnsi(data) : data;
+      this.subscribers.forEach((sub) => void sub.onData(processedData));
     });
 
-    // Process exit handling
-    this.process.onExit(({ exitCode, signal }) => {
-      this.exitCode = exitCode;
+    // PTY exit
+    this.pty.onExit((event: IExitEvent) => {
+      this.exitCode = event.exitCode;
       this.status = "terminated";
-      logger.info(
-        `PTY ${this.id} exited with code ${exitCode}, signal ${signal}`,
-      );
+      logger.info(`PTY ${this.id} exited with code ${event.exitCode}`);
 
-      this.emitter.emit("exit", exitCode);
+      this.subscribers.forEach((sub) => void sub.onComplete());
 
       if (this.options.autoDisposeOnExit) {
-        this.dispose("SIGTERM").catch(logger.error);
+        void this.dispose();
       }
     });
+
+    // xterm -> PTY stdin
+    this.terminal.onData((data: string) => {
+      this.pty?.write(data);
+      this.updateActivity();
+    });
+
+    this.status = "active";
+  }
+
+  async ready(): Promise<void> {
+    await this.initPromise;
   }
 
   /**
@@ -180,7 +123,7 @@ export class PtyProcess {
    * @param data - Raw input data (supports text, multiline, ANSI codes)
    * @param waitMs - Wait time for output in milliseconds (default: 1000)
    */
-  public async write(
+  async write(
     data: string,
     waitMs = 1000,
   ): Promise<{
@@ -195,27 +138,16 @@ export class PtyProcess {
     // Security check
     checkSudoPermission(data);
 
-    // Write directly to process
-    this.process.write(data);
+    this.pty?.write(data);
     this.updateActivity();
 
-    // Wait for output or early return on exit
-    let capturedExitCode: number | null = null;
-    await Promise.race([
-      Bun.sleep(waitMs),
-      new Promise<void>((resolve) => {
-        const handler = (event: { exitCode: number }) => {
-          capturedExitCode = event.exitCode;
-          resolve();
-        };
-        this.process.onExit(handler);
-      }),
-    ]);
+    // Wait for output
+    await Bun.sleep(waitMs);
 
     return {
       screen: this.getScreenContent(),
       cursor: this.getCursorPosition(),
-      exitCode: capturedExitCode ?? this.exitCode,
+      exitCode: this.exitCode,
     };
   }
 
@@ -229,7 +161,7 @@ export class PtyProcess {
     for (let i = 0; i < buffer.length; i++) {
       const line = buffer.getLine(i);
       if (line) {
-        lines.push(line.translateToString(true)); // trimRight=true
+        lines.push(line.translateToString(true));
       }
     }
 
@@ -247,10 +179,9 @@ export class PtyProcess {
   }
 
   /**
-   * Capture current terminal buffer (TUI mode)
-   * @returns Array of lines from terminal buffer
+   * Capture current terminal buffer
    */
-  public captureBuffer(): string[] {
+  captureBuffer(): string[] {
     const buffer = this.terminal.buffer.active;
     const lines: string[] = [];
 
@@ -265,26 +196,96 @@ export class PtyProcess {
   }
 
   /**
-   * Register output callback
+   * Get raw output buffer
    */
-  public onOutput(callback: (output: TerminalOutput) => void): void {
-    this.outputCallbacks.push(callback);
+  getOutputBuffer(): string {
+    return this.outputBuffer;
   }
 
   /**
-   * Notify output to callbacks
+   * Get exit code
    */
-  private notifyOutput(output: string): void {
-    const ansiStripped = this.options.ansiStrip ?? false;
-    const processedOutput = ansiStripped ? stripAnsi(output) : output;
+  getExitCode(): number | null {
+    return this.exitCode;
+  }
 
-    const terminalOutput: TerminalOutput = {
-      processId: this.id,
-      output: processedOutput,
-      ansiStripped,
-      timestamp: new Date(),
+  /**
+   * Check if running
+   */
+  isRunning(): boolean {
+    return this.status !== "terminated" && this.status !== "terminating";
+  }
+
+  /**
+   * Subscribe to process events
+   */
+  subscribe(params: {
+    onData: (data: string) => void;
+    onError: (error: Error) => void;
+    onComplete: () => void;
+  }): Subscription {
+    const subscriber = {
+      onData: params.onData,
+      onError: params.onError,
+      onComplete: params.onComplete,
     };
-    this.outputCallbacks.forEach((cb) => void cb(terminalOutput));
+    this.subscribers.push(subscriber);
+
+    return {
+      unsubscribe: () => {
+        const index = this.subscribers.indexOf(subscriber);
+        if (index > -1) {
+          this.subscribers.splice(index, 1);
+        }
+      },
+    };
+  }
+
+  /**
+   * Convert to Promise
+   */
+  async toPromise(): Promise<string> {
+    await this.ready();
+    return new Promise<string>((resolve, reject) => {
+      const _sub = this.subscribe({
+        onData: () => {}, // data는 outputBuffer에 누적
+        onError: (err) => {
+          this.dispose();
+          reject(err);
+        },
+        onComplete: () => {
+          this.dispose();
+          if (this.exitCode !== null && this.exitCode !== 0) {
+            const error = new Error(
+              `Process exited with code ${this.exitCode}`,
+            ) as Error & { exitCode: number };
+            error.exitCode = this.exitCode;
+            reject(error);
+          } else {
+            resolve(this.outputBuffer);
+          }
+        },
+      });
+    });
+  }
+
+  /**
+   * Register output callback
+   */
+  onOutput(callback: (output: TerminalOutput) => void): void {
+    this.subscribe({
+      onData: (data) => {
+        const terminalOutput: TerminalOutput = {
+          processId: this.id,
+          output: data,
+          ansiStripped: this.options.ansiStrip ?? false,
+          timestamp: new Date(),
+        };
+        callback(terminalOutput);
+      },
+      onError: () => {},
+      onComplete: () => {},
+    });
   }
 
   /**
@@ -298,177 +299,60 @@ export class PtyProcess {
   }
 
   /**
-   * Get raw output buffer (all data received)
-   */
-  public getOutputBuffer(): string {
-    return this.outputBuffer;
-  }
-
-  /**
-   * Subscribe to process events (data, error, exit)
-   * RxJS-like pattern for better event management
-   */
-  public subscribe(
-    onData?: DataListener,
-    onError?: ErrorListener,
-    onExit?: ExitListener,
-  ): Subscription {
-    if (onData) this.emitter.on("data", onData);
-    if (onError) this.emitter.on("error", onError);
-    if (onExit) this.emitter.on("exit", onExit);
-
-    return {
-      unsubscribe: () => {
-        if (onData) this.emitter.off("data", onData);
-        if (onError) this.emitter.off("error", onError);
-        if (onExit) this.emitter.off("exit", onExit);
-
-        // Cleanup if no more listeners
-        if (this.emitter.listenerCount("data") === 0) {
-          this.dispose("SIGTERM").catch(logger.error);
-        }
-      },
-    };
-  }
-
-  /**
-   * Convert to Promise (captures all output as a single string)
-   * Similar to Spawn2.toPromise()
-   */
-  public toPromise(): Promise<string> {
-    return new Promise((resolve, reject) => {
-      let output = "";
-
-      this.subscribe(
-        (data: string) => {
-          output += data;
-        },
-        (error) => {
-          if (isPtyError(error)) {
-            const err = createPtyError(
-              `${output}\n${error.message}`,
-              error.exitCode,
-            );
-            reject(err);
-          } else {
-            reject(new Error(`${output}\n${error.message}`));
-          }
-        },
-        (exitCode) => {
-          if (exitCode === 0 || exitCode === 143) {
-            resolve(output);
-          } else {
-            const error = createPtyError(
-              `Process failed with exit code: ${exitCode}`,
-              exitCode,
-            );
-            reject(error);
-          }
-        },
-      );
-    });
-  }
-
-  /**
-   * Add cleanup callback (executed on dispose)
-   */
-  public onCleanup(callback: () => void): void {
-    this.cleanupCallbacks.push(callback);
-  }
-
-  /**
-   * Detach from the process while keeping it running
-   * This removes all listeners and returns the process
-   */
-  public detach(): ReturnType<typeof spawn> {
-    if (this.status === "terminated" || this.status === "terminating") {
-      throw new Error(`PTY ${this.id} already terminated`);
-    }
-
-    // Remove all event listeners
-    this.emitter.removeAllListeners();
-
-    // Clear callbacks
-    this.outputCallbacks = [];
-    this.cleanupCallbacks = [];
-
-    logger.info(`PTY ${this.id} detached`);
-
-    return this.process;
-  }
-
-  /**
-   * Check if the process is still running
-   */
-  public isRunning(): boolean {
-    return this.status !== "terminated" && this.status !== "terminating";
-  }
-
-  /**
-   * Get the exit code if process has exited
-   */
-  public getExitCode(): number | null {
-    return this.exitCode;
-  }
-
-  /**
    * Resize terminal
    */
-  public resize(cols: number, rows: number): void {
+  resize(cols: number, rows: number): void {
     if (!this.isRunning()) {
       throw new Error(`PTY ${this.id} is not active`);
     }
 
     this.terminal.resize(cols, rows);
-    this.process.resize(cols, rows);
+    this.pty?.resize(cols, rows);
     this.updateActivity();
   }
 
   /**
-   * Dispose resources (includes graceful shutdown)
-   * @param signal - Termination signal (default: SIGTERM). Switches to SIGKILL after 3 seconds if no response.
+   * Dispose resources
    */
-  public async dispose(signal = "SIGTERM"): Promise<void> {
-    if (this.status === "terminated") return;
+  async dispose(signal = "SIGTERM"): Promise<void> {
+    if (this.isDisposed) return;
 
+    this.isDisposed = true;
     this.status = "terminating";
+    this.subscribers = [];
 
-    // Run cleanup callbacks
-    for (const callback of this.cleanupCallbacks) {
-      try {
-        callback();
-      } catch (err) {
-        logger.error(`Cleanup callback error: ${err}`);
+    if (this.pty) {
+      // Only kill if process is still running
+      if (this.exitCode === null) {
+        try {
+          this.pty.kill(signal);
+
+          // Wait for graceful exit or force kill after 3s
+          await Promise.race([
+            new Promise<void>((resolve) => {
+              this.pty?.onExit(() => resolve());
+            }),
+            Bun.sleep(3000).then(() => {
+              logger.warn(
+                `PTY ${this.id} did not exit gracefully, sending SIGKILL`,
+              );
+              this.pty?.kill("SIGKILL");
+            }),
+          ]);
+        } catch {
+          // Ignore errors
+        }
       }
+      this.pty = null;
     }
 
-    // Graceful shutdown: Timeout 3 seconds after SIGTERM
-    const timeout = 3000;
-    const killPromise = new Promise<void>((resolve) => {
-      const timer = setTimeout(() => {
-        logger.warn(`PTY ${this.id} did not exit gracefully, sending SIGKILL`);
-        this.process.kill("SIGKILL");
-        resolve();
-      }, timeout);
+    try {
+      this.terminal.dispose();
+    } catch {
+      // Ignore errors during terminal disposal
+    }
 
-      this.process.onExit(() => {
-        clearTimeout(timer);
-        resolve();
-      });
-
-      this.process.kill(signal);
-    });
-
-    await killPromise;
-
-    // Additional cleanup
-    this.terminal.dispose();
-    this.outputBuffer = "";
-    this.outputCallbacks = [];
-    this.cleanupCallbacks = [];
-    this.emitter.removeAllListeners();
     this.status = "terminated";
-
     logger.info(`PTY ${this.id} disposed successfully`);
   }
 }
