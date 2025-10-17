@@ -150,21 +150,85 @@ export class SessionManager {
   }
 
   /**
-   * Terminate session. Change to terminating status then terminated.
+   * Gracefully dispose session with SIGTERM and timeout fallback.
+   * - Sends SIGTERM to all PTY processes
+   * - Waits up to 3s for graceful exit
+   * - Falls back to terminateSession() if timeout
+   * - Cleans up session from memory
    */
-  terminateSession(id: SessionId): boolean {
+  async disposeSession(id: SessionId): Promise<boolean> {
     const session = this.sessions.get(id);
-    if (!session || session.status === "terminated") return false;
+    if (!session) return false;
 
     this.updateStatus(id, "terminating");
-    // TODO: Add PTY instance cleanup logic (when integrating pty-manager)
-    this.updateStatus(id, "terminated");
+    logger.info(`Disposing session gracefully: ${id}`);
+
+    const ptyManager = this.ptyManagers.get(id);
+    if (ptyManager) {
+      const ptys = ptyManager.getAllPtys();
+      const gracefulTimeout = 3000;
+
+      try {
+        // Try graceful disposal (SIGTERM)
+        await Promise.race([
+          Promise.all(ptys.map((pty) => pty.dispose("SIGTERM"))),
+          Bun.sleep(gracefulTimeout).then(() => {
+            logger.warn(
+              `Session ${id} graceful disposal timeout, forcing termination`,
+            );
+            return this.terminateSession(id);
+          }),
+        ]);
+      } catch (error) {
+        logger.error(`Error during graceful disposal of session ${id}:`, error);
+        return this.terminateSession(id);
+      }
+
+      this.ptyManagers.delete(id);
+    }
+
+    this.sessions.delete(id);
+    this.emitEvent({ type: "terminated", sessionId: id });
+    logger.info(`Session disposed: ${id}`);
 
     return true;
   }
 
   /**
-   * Monitor idle sessions and terminate after 5 minutes.
+   * Forcefully terminate session immediately with SIGKILL.
+   * - Sends SIGKILL to all PTY processes (no graceful exit)
+   * - Immediately cleans up all resources
+   * - Use when disposeSession() fails or immediate cleanup needed
+   */
+  terminateSession(id: SessionId): boolean {
+    const session = this.sessions.get(id);
+    if (!session) return false;
+
+    logger.warn(`Force terminating session: ${id}`);
+    this.updateStatus(id, "terminating");
+
+    const ptyManager = this.ptyManagers.get(id);
+    if (ptyManager) {
+      const ptys = ptyManager.getAllPtys();
+      // Force kill all PTYs synchronously
+      for (const pty of ptys) {
+        pty.dispose("SIGKILL").catch(() => {
+          // Ignore errors during force kill
+        });
+      }
+      this.ptyManagers.delete(id);
+    }
+
+    this.sessions.delete(id);
+    this.updateStatus(id, "terminated");
+    this.emitEvent({ type: "terminated", sessionId: id });
+    logger.info(`Session terminated forcefully: ${id}`);
+
+    return true;
+  }
+
+  /**
+   * Monitor idle sessions and dispose after 5 minutes.
    */
   monitorIdleSessions(): void {
     const now = Date.now();
@@ -175,7 +239,7 @@ export class SessionManager {
         session.status === "idle" &&
         now - session.lastActivity.getTime() > idleTimeout
       ) {
-        this.terminateSession(session.id);
+        void this.disposeSession(session.id);
       }
     }
   }
@@ -201,25 +265,6 @@ export class SessionManager {
       this.monitorInterval = undefined;
       logger.info("Session monitoring stopped");
     }
-  }
-
-  /**
-   * Clean up all sessions and stop monitoring.
-   * Used for graceful shutdown.
-   */
-  cleanup(): void {
-    this.stopMonitoring();
-
-    for (const session of this.sessions.values()) {
-      if (session.status !== "terminated") {
-        this.terminateSession(session.id);
-      }
-    }
-
-    this.sessions.clear();
-    this.ptyManagers.clear();
-    this.eventListeners.clear();
-    logger.info("Session manager cleanup completed");
   }
 
   /**

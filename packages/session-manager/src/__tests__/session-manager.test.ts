@@ -95,16 +95,25 @@ describe("SessionManager", () => {
     expect(manager.getSessionCount()).toBe(1);
   });
 
-  it("should terminate a session", () => {
+  it("should terminate a session forcefully", () => {
     const sessionId = manager.createSession();
     const success = manager.terminateSession(sessionId);
     expect(success).toBe(true);
 
     const session = manager.getSession(sessionId);
-    expect(session?.status).toBe("terminated");
+    expect(session).toBeUndefined(); // Session is deleted after terminate
   });
 
-  it("should monitor idle sessions", () => {
+  it("should dispose a session gracefully", async () => {
+    const sessionId = manager.createSession();
+    const success = await manager.disposeSession(sessionId);
+    expect(success).toBe(true);
+
+    const session = manager.getSession(sessionId);
+    expect(session).toBeUndefined(); // Session is deleted after dispose
+  });
+
+  it("should monitor idle sessions", async () => {
     const sessionId = manager.createSession();
     manager.updateStatus(sessionId, "idle");
 
@@ -116,8 +125,11 @@ describe("SessionManager", () => {
 
     manager.monitorIdleSessions();
 
+    // Wait for async dispose
+    await Bun.sleep(100);
+
     const updatedSession = manager.getSession(sessionId);
-    expect(updatedSession?.status).toBe("terminated");
+    expect(updatedSession).toBeUndefined(); // Session is deleted after dispose
   });
 
   it("should start and stop monitoring", () => {
@@ -128,13 +140,13 @@ describe("SessionManager", () => {
     // Monitoring is stopped (cannot access private field directly)
   });
 
-  it("should cleanup all sessions", () => {
-    manager.createSession();
-    manager.createSession();
+  it("should dispose all sessions individually", async () => {
+    const id1 = manager.createSession();
+    const id2 = manager.createSession();
 
-    manager.cleanup();
+    await manager.disposeSession(id1);
+    await manager.disposeSession(id2);
 
     expect(manager.getSessionCount()).toBe(0);
-    // Monitoring is stopped after cleanup
   });
 });
