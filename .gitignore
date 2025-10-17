@@ -6,6 +6,10 @@ out
 dist
 *.tgz
 
+# npm pack test
+*.tgz
+mcp-pty-server-*.tgz
+
 # code coverage
 coverage
 *.lcov

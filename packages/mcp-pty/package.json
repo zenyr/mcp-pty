@@ -1,0 +1,61 @@
+{
+  "name": "mcp-pty",
+  "version": "0.1.0",
+  "description": "MCP server for PTY session management with Bun runtime",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "bin": {
+    "mcp-pty": "dist/index.js"
+  },
+  "files": [
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "src/**/*.ts",
+    "!src/**/*.test.ts",
+    "!src/**/__tests__/**"
+  ],
+  "exports": {
+    ".": {
+      "bun": "./src/index.ts",
+      "import": "./dist/index.js",
+      "types": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "dev": "bun run --watch src/index.ts",
+    "test": "bun test",
+    "check": "tsc --noEmit",
+    "lint": "eslint src",
+    "format": "prettier --write src",
+    "build": "bun build src/index.ts --outdir dist --target bun --format esm --sourcemap=external",
+    "prepublishOnly": "bun run check && bun test && bun run build"
+  },
+  "keywords": [
+    "mcp",
+    "pty",
+    "terminal",
+    "bun",
+    "shell",
+    "session-management"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "@xterm/headless": "^5.5.0",
+    "bun-pty": "github:zenyr/bun-pty#merged",
+    "consola": "^3.4.2",
+    "fetch-to-node": "^2.1.0",
+    "hono": "^4.9.10",
+    "nanoid": "^5.1.6",
+    "strip-ansi": "^7.1.2",
+    "zod": "^3.24.1"
+  },
+  "trustedDependencies": ["bun-pty"]
+}

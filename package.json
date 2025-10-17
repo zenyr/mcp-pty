@@ -1,9 +1,9 @@
 {
-  "name": "mcp-pty",
+  "name": "@zenyr/mcp-pty",
   "version": "0.1.0",
   "devDependencies": {
     "@biomejs/biome": "2.2.5",
-    "@types/bun": "latest",
+    "@types/bun": "1.3.0",
     "husky": "^9.1.7",
     "typescript": "^5.0.0"
   },
@@ -24,7 +24,8 @@
     "format": "biome format --write",
     "lint": "biome lint --write",
     "dev": "bun --filter=\"@pkgs/*\" run dev",
-    "start": "bun --filter=\"@pkgs/mcp-server\" run start",
+    "start": "bun --filter=\"mcp-pty\" run start",
+    "publish": "bun --filter=\"mcp-pty\" run prepublishOnly && cd packages/mcp-pty && npm publish",
     "prepare": "husky"
   },
   "type": "module",

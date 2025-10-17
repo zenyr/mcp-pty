@@ -1,0 +1,31 @@
+# Development files
+__tests__/
+*.test.ts
+*.spec.ts
+tsconfig.json
+.eslintrc*
+.prettierrc*
+
+# Documentation (keep README.md)
+docs/
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+
+# Build artifacts
+*.tsbuildinfo
+.cache/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Source (keep types for IDE support)
+# src/
+# !src/**/*.d.ts
