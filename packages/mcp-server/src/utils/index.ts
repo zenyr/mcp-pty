@@ -58,8 +58,14 @@ export const initializeServer = (): void => {
  * Setup graceful shutdown
  */
 export const setupGracefulShutdown = (): void => {
-  const cleanup = () => {
-    sessionManager.cleanup();
+  const cleanup = async () => {
+    const sessions = sessionManager.getAllSessions();
+    const cleanupPromise = Promise.allSettled(
+      sessions.map((session) => sessionManager.disposeSession(session.id)),
+    );
+    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 5000));
+
+    await Promise.race([cleanupPromise, timeoutPromise]);
     process.exit(0);
   };
 

@@ -51,9 +51,11 @@ describe("MCP Server", () => {
       ptyManager = currentPtyManager;
     });
 
-    afterEach(() => {
+    afterEach(async () => {
       ptyManager?.dispose();
-      sessionManager.cleanup();
+      if (sessionId) {
+        await sessionManager.disposeSession(sessionId);
+      }
     });
 
     test("createSession creates session with ptyManager", () => {
@@ -138,9 +140,11 @@ describe("MCP Server", () => {
       bindSessionToServerResources(server, sessionId);
     });
 
-    afterEach(() => {
+    afterEach(async () => {
       ptyManager?.dispose();
-      sessionManager.cleanup();
+      if (sessionId) {
+        await sessionManager.disposeSession(sessionId);
+      }
     });
 
     test("pty://status returns global server status", async () => {
@@ -255,9 +259,11 @@ describe("MCP Server", () => {
       bindSessionToServer(server, sessionId);
     });
 
-    afterEach(() => {
+    afterEach(async () => {
       ptyManager?.dispose();
-      sessionManager.cleanup();
+      if (sessionId) {
+        await sessionManager.disposeSession(sessionId);
+      }
     });
 
     test("start tool handler creates PTY", async () => {
