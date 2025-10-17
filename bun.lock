@@ -5,7 +5,8 @@
       "name": "mcp-pty",
       "dependencies": {
         "@xterm/headless": "^5.5.0",
-        "bun-pty": "^0.3.2",
+        "@xterm/xterm": "^5.5.0",
+        "bun-pty": "github:zenyr/bun-pty#merged",
         "strip-ansi": "^7.1.2",
       },
       "devDependencies": {
@@ -26,7 +27,7 @@
         "@sindresorhus/is": "^7.1.0",
         "@xterm/addon-serialize": "^0.13.0",
         "@xterm/headless": "^5.5.0",
-        "bun-pty": "^0.3.2",
+        "bun-pty": "github:zenyr/bun-pty#merged",
         "consola": "^3.4.2",
       },
       "peerDependencies": {
@@ -66,7 +67,7 @@
       "dependencies": {
         "@pkgs/logger": "workspace:*",
         "@xterm/headless": "^5.5.0",
-        "bun-pty": "^0.3.2",
+        "bun-pty": "github:zenyr/bun-pty#merged",
         "consola": "^3.4.2",
         "nanoid": "^5.1.6",
         "strip-ansi": "^7.1.2",
@@ -90,6 +91,9 @@
       },
     },
   },
+  "trustedDependencies": [
+    "bun-pty",
+  ],
   "packages": {
     "@biomejs/biome": ["@biomejs/biome@2.2.5", "", { "optionalDependencies": { "@biomejs/cli-darwin-arm64": "2.2.5", "@biomejs/cli-darwin-x64": "2.2.5", "@biomejs/cli-linux-arm64": "2.2.5", "@biomejs/cli-linux-arm64-musl": "2.2.5", "@biomejs/cli-linux-x64": "2.2.5", "@biomejs/cli-linux-x64-musl": "2.2.5", "@biomejs/cli-win32-arm64": "2.2.5", "@biomejs/cli-win32-x64": "2.2.5" }, "bin": { "biome": "bin/biome" } }, "sha512-zcIi+163Rc3HtyHbEO7CjeHq8DjQRs40HsGbW6vx2WI0tg8mYQOPouhvHSyEnCBAorfYNnKdR64/IxO7xQ5faw=="],
 
@@ -145,7 +149,7 @@
 
     "body-parser": ["body-parser@2.2.0", "", { "dependencies": { "bytes": "^3.1.2", "content-type": "^1.0.5", "debug": "^4.4.0", "http-errors": "^2.0.0", "iconv-lite": "^0.6.3", "on-finished": "^2.4.1", "qs": "^6.14.0", "raw-body": "^3.0.0", "type-is": "^2.0.0" } }, "sha512-02qvAaxv8tp7fBa/mw1ga98OGm+eCbqzJOKoRt70sLmfEEi+jyBYVTDGfCL/k06/4EMk/z01gCe7HoCH/f2LTg=="],
 
-    "bun-pty": ["bun-pty@0.3.2", "", {}, "sha512-ZDNs03VX7uUzTTFgymM9m3nWvPNYkeWWHj7+aweI3O1F/5uu8yqdQ9HhGXjbcW8UDjVzNvVFg8UaPEvaQsEjLg=="],
+    "bun-pty": ["bun-pty@github:zenyr/bun-pty#ef207a9", {}, "zenyr-bun-pty-ef207a9"],
 
     "bun-types": ["bun-types@1.2.22", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-hwaAu8tct/Zn6Zft4U9BsZcXkYomzpHJX28ofvx7k0Zz2HNz54n1n+tDgxoWFGB4PcFvJXJQloPhaV2eP3Q6EA=="],
 

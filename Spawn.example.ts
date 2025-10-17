@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
+
 /**
- * Spawn.ts 사용 예제
- * 실행 방법: bun run Spawn.example.ts
+ * Spawn.ts 사용 예제 - bun-pty + xterm/headless 기반
+ * 실행 방법: bun run spawn.example.ts
  */
 
-import { Spawn } from "./Spawn";
 import stripAnsi from "strip-ansi";
+import { Spawn } from "./spawn";
 
 // 색상 출력 헬퍼
 const colors = {
@@ -39,17 +40,20 @@ const separator = () => {
 };
 
 // ============================================================================
-// Example 1: 기본 Subscribe 패턴
+// Example 1: 기본 PTY 모드
 // ============================================================================
-const example1_basicSubscribe = async () => {
-  log("Example 1", "기본 Subscribe 패턴");
+const example1_basicPty = async () => {
+  log("Example 1", "기본 PTY 모드");
 
-  const spawn = Spawn.spawn("echo", ["Hello, World!"]);
+  const spawn = await Spawn.spawn("echo", ["Hello, Spawn!"]);
 
   return new Promise<void>((resolve) => {
     const subscription = spawn.subscribe(
       (data) => {
-        console.log(`  출력: ${data.trim()}`);
+        const trimmed = data.trim();
+        if (trimmed) {
+          console.log(`  출력: ${trimmed}`);
+        }
       },
       (err) => {
         error(`에러 발생: ${err.message}`);
@@ -58,6 +62,7 @@ const example1_basicSubscribe = async () => {
       () => {
         success("프로세스 완료");
         subscription.unsubscribe();
+        spawn.dispose();
         resolve();
       },
     );
@@ -65,13 +70,14 @@ const example1_basicSubscribe = async () => {
 };
 
 // ============================================================================
-// Example 2: Promise 패턴 (가장 간단)
+// Example 2: Promise 패턴
 // ============================================================================
 const example2_promisePattern = async () => {
   log("Example 2", "Promise 패턴");
 
   try {
-    const output = await Spawn.spawnPromise("ls", ["-la"]);
+    const spawn = await Spawn.spawn("ls", ["-la"]);
+    const output = await spawn.toPromise();
     console.log(`  총 출력 길이: ${output.length} bytes`);
     console.log(`  첫 줄: ${output.split("\n")[0]}`);
     success("Promise 패턴 성공");
@@ -81,68 +87,10 @@ const example2_promisePattern = async () => {
 };
 
 // ============================================================================
-// Example 3: Split 모드 (stdout/stderr 분리)
+// Example 3: stdin 입력
 // ============================================================================
-const example3_splitMode = async () => {
-  log("Example 3", "Split 모드 - stdout/stderr 분리");
-
-  const spawn = Spawn.spawnSplit("sh", [
-    "-c",
-    'echo "stdout output" && echo "stderr output" >&2',
-  ]);
-
-  return new Promise<void>((resolve) => {
-    const subscription = spawn.subscribe(
-      (data) => {
-        if (data.source === "stdout") {
-          console.log(
-            `  ${colors.green}[stdout]${colors.reset} ${data.text.trim()}`,
-          );
-        } else {
-          console.log(
-            `  ${colors.yellow}[stderr]${colors.reset} ${data.text.trim()}`,
-          );
-        }
-      },
-      (err) => {
-        error(`에러: ${err.message}`);
-        resolve();
-      },
-      () => {
-        success("Split 모드 완료");
-        subscription.unsubscribe();
-        resolve();
-      },
-    );
-  });
-};
-
-// ============================================================================
-// Example 4: Split Promise 패턴
-// ============================================================================
-const example4_splitPromise = async () => {
-  log("Example 4", "Split Promise 패턴");
-
-  const spawn = Spawn.spawnSplit("sh", [
-    "-c",
-    'echo "Line 1 to stdout" && echo "Line 1 to stderr" >&2 && echo "Line 2 to stdout"',
-  ]);
-
-  try {
-    const { stdout, stderr } = await spawn.toSplitPromise();
-    console.log(`  ${colors.green}stdout:${colors.reset} ${stdout.trim()}`);
-    console.log(`  ${colors.yellow}stderr:${colors.reset} ${stderr.trim()}`);
-    success("Split Promise 완료");
-  } catch (err) {
-    error(`에러: ${err instanceof Error ? err.message : String(err)}`);
-  }
-};
-
-// ============================================================================
-// Example 5: stdin 입력
-// ============================================================================
-const example5_stdinInput = async () => {
-  log("Example 5", "stdin 입력");
+const example3_stdinInput = async () => {
+  log("Example 3", "stdin 입력");
 
   // 비동기 제너레이터로 stdin 데이터 생성
   const generateInput = async function* () {
@@ -152,7 +100,10 @@ const example5_stdinInput = async () => {
     yield "Spawn\n";
   };
 
-  const spawn = Spawn.spawn("cat", [], { stdin: generateInput() });
+  const spawn = await Spawn.spawn("cat", [], {
+    stdin: generateInput(),
+    sendEof: true,
+  });
 
   try {
     const output = await spawn.toPromise();
@@ -163,253 +114,19 @@ const example5_stdinInput = async () => {
         .join("\n")}`,
     );
     success("stdin 입력 완료");
+    spawn.dispose();
   } catch (err) {
     error(`에러: ${err instanceof Error ? err.message : String(err)}`);
   }
 };
 
 // ============================================================================
-// Example 6: 에러 핸들링 (exit code !== 0)
+// Example 4: 동적 stdin 입력 (write 메서드)
 // ============================================================================
-const example6_errorHandling = async () => {
-  log("Example 6", "에러 핸들링 (exit code !== 0)");
+const example4_dynamicStdin = async () => {
+  log("Example 4", "동적 stdin 입력 (write 메서드)");
 
-  try {
-    // 존재하지 않는 파일 읽기 시도
-    await Spawn.spawnPromise("cat", ["/nonexistent/file.txt"]);
-  } catch (err) {
-    if (
-      err instanceof Error &&
-      "exitCode" in err &&
-      typeof err.exitCode === "number"
-    ) {
-      console.log(
-        `  ${colors.yellow}Exit Code:${colors.reset} ${err.exitCode}`,
-      );
-      console.log(
-        `  ${colors.yellow}Error:${colors.reset} ${err.message.split("\n")[0]}`,
-      );
-      success("에러를 올바르게 캐치했습니다");
-    } else {
-      error("예상치 못한 에러 타입");
-    }
-  }
-};
-
-// ============================================================================
-// Example 7: Echo Output (실시간 출력)
-// ============================================================================
-const example7_echoOutput = async () => {
-  log("Example 7", "Echo Output - 실시간 콘솔 출력");
-
-  console.log(`  ${colors.dim}실시간 출력 시작...${colors.reset}`);
-
-  try {
-    await Spawn.spawnPromise(
-      "sh",
-      ["-c", 'for i in 1 2 3; do echo "Count: $i"; sleep 0.1; done'],
-      { echoOutput: true },
-    );
-    success("Echo output 완료");
-  } catch (err) {
-    error(`에러: ${err instanceof Error ? err.message : String(err)}`);
-  }
-};
-
-// ============================================================================
-// Example 8: Cleanup 콜백
-// ============================================================================
-const example8_cleanupCallback = async () => {
-  log("Example 8", "Cleanup 콜백");
-
-  const spawn = Spawn.spawn("sleep", ["1"]);
-
-  // Cleanup 콜백 등록
-  spawn.onCleanup(() => {
-    console.log(`  ${colors.magenta}Cleanup 콜백 실행됨${colors.reset}`);
-  });
-
-  return new Promise<void>((resolve) => {
-    const subscription = spawn.subscribe(
-      (data) => {
-        console.log(`  출력: ${data}`);
-      },
-      (err) => {
-        error(`에러: ${err.message}`);
-        resolve();
-      },
-      () => {
-        success("프로세스 완료");
-        subscription.unsubscribe();
-        resolve();
-      },
-    );
-
-    // 0.5초 후 강제 종료
-    setTimeout(() => {
-      console.log(`  ${colors.yellow}0.5초 후 강제 종료...${colors.reset}`);
-      subscription.unsubscribe(); // 이때 cleanup 콜백이 실행됨
-      success("강제 종료 완료");
-      resolve();
-    }, 500);
-  });
-};
-
-// ============================================================================
-// Example 15: PTY 모드 - 기본 명령어 테스트
-// ============================================================================
-const example15_ptyPython = async () => {
-  log("Example 15", "PTY 모드 - 기본 명령어 테스트");
-
-  const spawn = Spawn.spawnPty("echo", ["Hello", "from", "PTY"]);
-
-  console.log(`  ${colors.dim}PTY 모드로 echo 실행 중...${colors.reset}`);
-
-  return new Promise<void>((resolve) => {
-    const timeout = setTimeout(() => {
-      success("PTY echo 실행 완료 (timeout)");
-      resolve();
-    }, 1000);
-
-    spawn.subscribe(
-      (data) => {
-        const trimmed = data.trim();
-        if (trimmed) {
-          console.log(`  PTY 출력: ${trimmed}`);
-        }
-      },
-      (err) => {
-        clearTimeout(timeout);
-        error(`에러: ${err.message}`);
-        resolve();
-      },
-      () => {
-        clearTimeout(timeout);
-        success("PTY echo 실행 완료");
-        resolve();
-      },
-    );
-  });
-};
-
-// ============================================================================
-// Example 9: 여러 프로세스 병렬 실행
-// ============================================================================
-const example9_parallelExecution = async () => {
-  log("Example 9", "여러 프로세스 병렬 실행");
-
-  const commands = [
-    { cmd: "echo", args: ["Process 1"] },
-    { cmd: "echo", args: ["Process 2"] },
-    { cmd: "echo", args: ["Process 3"] },
-  ];
-
-  try {
-    const results = await Promise.all(
-      commands.map(({ cmd, args }) => Spawn.spawnPromise(cmd, args)),
-    );
-
-    results.forEach((output, index) => {
-      console.log(
-        `  ${colors.blue}[${index + 1}]${colors.reset} ${output.trim()}`,
-      );
-    });
-
-    success(`${results.length}개 프로세스 병렬 실행 완료`);
-  } catch (err) {
-    error(`에러: ${err instanceof Error ? err.message : String(err)}`);
-  }
-};
-
-// ============================================================================
-// Example 10: 복잡한 파이프라인 시뮬레이션
-// ============================================================================
-const example10_pipelineSimulation = async () => {
-  log("Example 10", "복잡한 파이프라인 시뮬레이션");
-
-  // Step 1: 데이터 생성
-  console.log(`  ${colors.dim}Step 1: 데이터 생성${colors.reset}`);
-  const step1 = await Spawn.spawnPromise("echo", [
-    "apple\nbanana\ncherry\ndate",
-  ]);
-
-  // Step 2: 정렬 (stdin 사용)
-  console.log(`  ${colors.dim}Step 2: 정렬${colors.reset}`);
-  const inputStep2 = async function* () {
-    yield step1;
-  };
-  const spawn2 = Spawn.spawn("sort", [], { stdin: inputStep2() });
-  const step2 = await spawn2.toPromise();
-
-  // Step 3: 카운트
-  console.log(`  ${colors.dim}Step 3: 라인 수 계산${colors.reset}`);
-  const lineCount = step2.trim().split("\n").length;
-
-  console.log(`  ${colors.green}정렬된 결과:${colors.reset}`);
-  step2
-    .trim()
-    .split("\n")
-    .forEach((line, i) => {
-      console.log(`    ${i + 1}. ${line}`);
-    });
-  console.log(`  ${colors.green}총 라인 수:${colors.reset} ${lineCount}`);
-
-  success("파이프라인 시뮬레이션 완료");
-};
-
-// ============================================================================
-// Example 11: 타입 안정성 데모
-// ============================================================================
-const example11_typeSafety = async () => {
-  log("Example 11", "타입 안정성 데모");
-
-  // spawn() - Spawn<string> 반환
-  const normalSpawn = Spawn.spawn("echo", ["test"]);
-  normalSpawn.subscribe((data: string) => {
-    console.log(`  일반 모드 - 타입: ${typeof data}, 값: ${data.trim()}`);
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  // spawnSplit() - Spawn<OutputEvent> 반환
-  const splitSpawn = Spawn.spawnSplit("echo", ["test"]);
-  splitSpawn.subscribe((data) => {
-    // data는 OutputEvent 타입이 보장됨
-    console.log(
-      `  Split 모드 - source: ${data.source}, text: ${data.text.trim()}`,
-    );
-  });
-
-  await new Promise((resolve) => setTimeout(resolve, 100));
-
-  success("타입 안정성 검증 완료");
-};
-
-// ============================================================================
-// Example 12: 인코딩 지정
-// ============================================================================
-const example12_encoding = async () => {
-  log("Example 12", "인코딩 지정");
-
-  try {
-    // UTF-8 인코딩으로 한글 출력
-    const output = await Spawn.spawnPromise("echo", ["안녕하세요 🚀"], {
-      encoding: "utf8",
-    });
-    console.log(`  출력: ${output.trim()}`);
-    success("인코딩 지정 완료");
-  } catch (err) {
-    error(`에러: ${err instanceof Error ? err.message : String(err)}`);
-  }
-};
-
-// ============================================================================
-// Example 13: 동적 stdin 입력 (write 메서드)
-// ============================================================================
-const example13_dynamicStdin = async () => {
-  log("Example 13", "동적 stdin 입력 (write 메서드)");
-
-  const spawn = Spawn.spawn("cat", []);
+  const spawn = await Spawn.spawn("cat", []);
 
   return new Promise<void>((resolve) => {
     const subscription = spawn.subscribe(
@@ -425,11 +142,11 @@ const example13_dynamicStdin = async () => {
       },
       () => {
         success("동적 stdin 입력 완료");
+        spawn.dispose();
         resolve();
       },
     );
 
-    // Send input asynchronously with timeout
     (async () => {
       await Bun.sleep(100);
       console.log(`  ${colors.dim}입력 1 전송...${colors.reset}`);
@@ -441,197 +158,84 @@ const example13_dynamicStdin = async () => {
       await Bun.sleep(100);
 
       console.log(`  ${colors.dim}프로세스 종료...${colors.reset}`);
-      // Instead of EOF, just unsubscribe to kill the process
       subscription.unsubscribe();
       await Bun.sleep(100);
       success("동적 stdin 입력 완료");
+      spawn.dispose();
       resolve();
     })();
   });
 };
 
 // ============================================================================
-// Example 14: 프로세스 상태 확인
+// Example 5: TUI 모드 활성화 (xterm/headless)
 // ============================================================================
-const example14_processStatus = async () => {
-  log("Example 14", "프로세스 상태 확인");
+const example5_tuiMode = async () => {
+  log("Example 5", "TUI 모드 활성화 (xterm/headless)");
 
-  const spawn = Spawn.spawn("sleep", ["1"]);
-
-  console.log(`  ${colors.green}시작 시:${colors.reset}`);
-  console.log(`    - isRunning(): ${spawn.isRunning()}`);
-  console.log(`    - isPtyMode(): ${spawn.isPtyMode()}`);
+  const spawn = await Spawn.spawn("echo", ["Hello from TUI"], {
+    enableTui: true,
+  });
 
   return new Promise<void>((resolve) => {
     spawn.subscribe(
-      (data) => console.log(data),
+      (_data) => {
+        // TUI 모드에서는 터미널 버퍼를 통해 데이터 접근
+      },
       (err) => {
         error(`에러: ${err.message}`);
         resolve();
       },
       () => {
-        console.log(`  ${colors.yellow}완료 후:${colors.reset}`);
-        console.log(`    - isRunning(): ${spawn.isRunning()}`);
-        success("상태 확인 완료");
-        resolve();
-      },
-    );
-  });
-};
-
-// ============================================================================
-// Example 16: PTY 모드 확인
-// ============================================================================
-const example16_ptyModeCheck = async () => {
-  log("Example 16", "PTY 모드 확인");
-
-  const spawn1 = Spawn.spawn("echo", ["Standard mode"]);
-  const spawn2 = Spawn.spawnPty("echo", ["PTY mode"]);
-
-  await Promise.all([
-    new Promise<void>((resolve) => {
-      spawn1.subscribe(
-        () => {
-          // Check after process starts
-          console.log(
-            `  ${colors.blue}Standard spawn:${colors.reset} isPtyMode() = ${spawn1.isPtyMode()}`,
+        // 터미널 버퍼 캡처
+        try {
+          const buffer = spawn.captureBuffer();
+          console.log(`  ${colors.green}터미널 버퍼 캡처:${colors.reset}`);
+          buffer.slice(0, 5).forEach((line, i) => {
+            const trimmed = line.trim();
+            if (trimmed) {
+              console.log(`    [${i}] ${trimmed}`);
+            }
+          });
+          success("TUI 모드 완료");
+          spawn.dispose();
+        } catch (err) {
+          error(
+            `버퍼 캡처 에러: ${err instanceof Error ? err.message : String(err)}`,
           );
-        },
-        () => resolve(),
-        () => resolve(),
-      );
-    }),
-    new Promise<void>((resolve) => {
-      const sub2 = spawn2.subscribe(
-        () => {
-          // Check after process starts
-          console.log(
-            `  ${colors.magenta}PTY spawn:${colors.reset} isPtyMode() = ${spawn2.isPtyMode()}`,
-          );
-        },
-        () => resolve(),
-        () => resolve(),
-      );
-      // PTY 프로세스는 자동으로 종료되지 않을 수 있으므로 타임아웃 추가
-      setTimeout(() => {
-        sub2.unsubscribe();
-        resolve();
-      }, 1000);
-    }),
-  ]);
-
-  success("PTY 모드 확인 완료");
-};
-
-// ============================================================================
-// Example 17: 프로세스 Detach
-// ============================================================================
-const example17_detach = async () => {
-  log("Example 17", "프로세스 Detach");
-
-  const spawn = Spawn.spawn("sleep", ["2"]);
-
-  spawn.subscribe((data) => {
-    console.log(`  출력: ${data}`);
-  });
-
-  await Bun.sleep(500);
-
-  console.log(`  ${colors.yellow}0.5초 후 detach 실행...${colors.reset}`);
-  const subprocess = spawn.detach();
-
-  if (subprocess) {
-    console.log(
-      `  ${colors.green}Detached!${colors.reset} 프로세스는 백그라운드에서 계속 실행됩니다.`,
-    );
-    console.log(`  프로세스 PID: ${subprocess.pid}`);
-
-    // Kill the detached process to prevent hanging
-    console.log(`  ${colors.dim}프로세스 정리 중...${colors.reset}`);
-    try {
-      subprocess.kill();
-      // Wait for process exit only for standard subprocess
-      if ("exited" in subprocess) {
-        await subprocess.exited;
-      }
-    } catch (_err) {
-      // Ignore SIGTERM exit code (143)
-    }
-  }
-
-  success("Detach 완료");
-};
-
-// ============================================================================
-// Example 18: PTY 모드에서 write 테스트
-// ============================================================================
-const example18_ptyWrite = async () => {
-  log("Example 18", "PTY 모드에서 동적 write 테스트");
-
-  const spawn = Spawn.spawnPty("cat", []);
-
-  return new Promise<void>((resolve) => {
-    const subscription = spawn.subscribe(
-      (data) => {
-        const trimmed = data.trim();
-        if (trimmed) {
-          console.log(`  PTY Cat 출력: ${trimmed}`);
         }
-      },
-      (err) => {
-        console.error(`  에러: ${err.message}`);
-        resolve();
-      },
-      () => {
-        success("PTY write 완료");
         resolve();
       },
     );
-
-    (async () => {
-      await Bun.sleep(100);
-      console.log(`  ${colors.dim}PTY 입력 1 전송...${colors.reset}`);
-      await spawn.write("First PTY line\n");
-      await Bun.sleep(100);
-
-      console.log(`  ${colors.dim}PTY 입력 2 전송...${colors.reset}`);
-      await spawn.write("Second PTY line\n");
-      await Bun.sleep(100);
-
-      console.log(`  ${colors.dim}PTY 프로세스 종료...${colors.reset}`);
-      subscription.unsubscribe();
-      success("PTY write 완료");
-      await Bun.sleep(100);
-      resolve();
-    })();
   });
 };
 
 // ============================================================================
-// Example 19: PTY 모드에서 vi 같은 TUI 에디터 입력 시퀀스
+// Example 6: vi 같은 TUI 에디터 (xterm 통합)
 // ============================================================================
-const example19_viTuiInput = async () => {
-  log("Example 19", "PTY 모드에서 vi 같은 TUI 에디터 입력 시퀀스");
+const example6_viTui = async () => {
+  log("Example 6", "vi 같은 TUI 에디터 (xterm 통합)");
 
-  // 임시 파일 생성
-  const tempFile = `/tmp/pty-vi-test-${Date.now()}.txt`;
+  const tempFile = `/tmp/spawn3-vi-test-${Date.now()}.txt`;
 
-  const spawn = Spawn.spawnPty("vi", [tempFile]);
+  const spawn = await Spawn.spawn("vi", [tempFile], {
+    enableTui: true,
+    cols: 80,
+    rows: 24,
+  });
 
   return new Promise<void>((resolve) => {
     const subscription = spawn.subscribe(
       (data) => {
-        // vi 출력은 복잡하므로 간단히 표시 (ANSI 코드 제거)
+        // vi 출력은 복잡하므로 간단히 표시
         const stripped = stripAnsi(data);
         const trimmed = stripped.trim();
-        if (trimmed && trimmed.length < 200) {
-          // 너무 긴 출력은 생략
+        if (trimmed && trimmed.length < 100) {
           console.log(`  VI 출력: ${trimmed.replace(/\n/g, "\\n")}`);
         }
       },
       (err) => {
         console.error(`  에러: ${err.message}`);
-        // 임시 파일 정리
         Bun.file(tempFile)
           .delete()
           .catch(() => {});
@@ -649,7 +253,6 @@ const example19_viTuiInput = async () => {
             console.log(`  ${colors.yellow}파일 읽기 실패${colors.reset}`);
           })
           .finally(() => {
-            // 임시 파일 제거
             Bun.file(tempFile)
               .delete()
               .then(() => {
@@ -664,6 +267,7 @@ const example19_viTuiInput = async () => {
               })
               .finally(() => {
                 success("VI 입력 시퀀스 완료");
+                spawn.dispose();
                 resolve();
               });
           });
@@ -671,28 +275,26 @@ const example19_viTuiInput = async () => {
     );
 
     (async () => {
-      // vi 시작 대기
       await Bun.sleep(500);
 
       console.log(`  ${colors.dim}Insert 모드 진입 (i)...${colors.reset}`);
-      await spawn.write("i"); // Insert 모드
+      await spawn.write("i");
       await Bun.sleep(100);
 
       console.log(`  ${colors.dim}텍스트 입력...${colors.reset}`);
-      await spawn.write("Hello from PTY!\n");
-      await spawn.write("This is a test file.\n");
-      await spawn.write("Generated by Spawn.ts example.\n");
+      await spawn.write("Hello from Spawn!\n");
+      await spawn.write("This is a TUI test file.\n");
+      await spawn.write("Generated with bun-pty + xterm/headless.\n");
       await Bun.sleep(200);
 
       console.log(`  ${colors.dim}Normal 모드로 전환 (ESC)...${colors.reset}`);
-      await spawn.write("\x1b"); // ESC 키
+      await spawn.write("\x1b");
       await Bun.sleep(100);
 
       console.log(`  ${colors.dim}저장 및 종료 (:wq)...${colors.reset}`);
       await spawn.write(":wq\n");
       await Bun.sleep(500);
 
-      // 프로세스 종료 대기
       setTimeout(() => {
         subscription.unsubscribe();
         resolve();
@@ -702,47 +304,366 @@ const example19_viTuiInput = async () => {
 };
 
 // ============================================================================
+// Example 7: man 페이지 TUI 테스트
+// ============================================================================
+const example7_manTui = async () => {
+  log("Example 7", "man 페이지 TUI 테스트");
+
+  const spawn = await Spawn.spawn("man", ["ls"], {
+    enableTui: true,
+    cols: 80,
+    rows: 24,
+  });
+
+  return new Promise<void>((resolve) => {
+    const subscription = spawn.subscribe(
+      (_data) => {
+        // man 출력은 xterm 버퍼를 통해 처리
+      },
+      (err) => {
+        error(`에러: ${err.message}`);
+        resolve();
+      },
+      () => {
+        success("man 페이지 TUI 완료");
+        spawn.dispose();
+        resolve();
+      },
+    );
+
+    (async () => {
+      // man 페이지 로딩 대기
+      await Bun.sleep(1000);
+
+      // 첫 화면 캡처
+      try {
+        const buffer1 = spawn.captureBuffer();
+        console.log(`  ${colors.green}첫 화면 (라인 0-5):${colors.reset}`);
+        buffer1.slice(0, 5).forEach((line, i) => {
+          const trimmed = line.trim();
+          if (trimmed) {
+            console.log(`    [${i}] ${trimmed.substring(0, 60)}...`);
+          }
+        });
+      } catch (err) {
+        error(
+          `버퍼 캡처 실패: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+
+      // /SYNOPSIS 검색
+      console.log(`  ${colors.dim}검색: /SYNOPSIS${colors.reset}`);
+      await spawn.write("/SYNOPSIS\n");
+      await Bun.sleep(800);
+
+      // 검색 후 화면 캡처
+      try {
+        const buffer2 = spawn.captureBuffer();
+        console.log(`  ${colors.green}검색 후 화면 (라인 0-5):${colors.reset}`);
+        buffer2.slice(0, 5).forEach((line, i) => {
+          const trimmed = line.trim();
+          if (trimmed) {
+            console.log(`    [${i}] ${trimmed.substring(0, 60)}...`);
+          }
+        });
+      } catch (err) {
+        error(
+          `버퍼 캡처 실패: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+
+      // 종료
+      console.log(`  ${colors.dim}종료 (q)${colors.reset}`);
+      await spawn.write("q");
+      await Bun.sleep(500);
+
+      subscription.unsubscribe();
+      resolve();
+    })();
+  });
+};
+
+// ============================================================================
+// Example 8: 터미널 리사이즈
+// ============================================================================
+const example8_resize = async () => {
+  log("Example 8", "터미널 리사이즈");
+
+  const spawn = await Spawn.spawn("echo", ["Resize test"], {
+    enableTui: true,
+    cols: 80,
+    rows: 24,
+  });
+
+  return new Promise<void>((resolve) => {
+    spawn.subscribe(
+      (_data) => {
+        // 리사이즈 테스트
+      },
+      (err) => {
+        error(`에러: ${err.message}`);
+        resolve();
+      },
+      () => {
+        try {
+          console.log(`  ${colors.dim}리사이즈 전: 80x24${colors.reset}`);
+          spawn.resize(120, 40);
+          console.log(`  ${colors.dim}리사이즈 후: 120x40${colors.reset}`);
+          const terminal = spawn.getTerminal();
+          if (terminal) {
+            console.log(
+              `  ${colors.green}터미널 크기:${colors.reset} ${terminal.cols}x${terminal.rows}`,
+            );
+          }
+          success("터미널 리사이즈 완료");
+          spawn.dispose();
+        } catch (err) {
+          error(
+            `리사이즈 에러: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
+        resolve();
+      },
+    );
+  });
+};
+
+// ============================================================================
+// Example 9: 에러 출력 확인 및 exit code 체크
+// ============================================================================
+const example9_errorHandling = async () => {
+  log("Example 9", "에러 출력 확인 및 exit code 체크");
+
+  const spawn = await Spawn.spawn("cat", ["/nonexistent/file.txt"]);
+
+  try {
+    const output = await spawn.toPromise();
+    console.log(`  ${colors.yellow}출력:${colors.reset} ${output.trim()}`);
+    console.log(
+      `  ${colors.yellow}Exit Code:${colors.reset} ${spawn.getExitCode()}`,
+    );
+
+    if (output.includes("No such file")) {
+      success("에러 메시지를 올바르게 감지했습니다");
+    } else {
+      error("예상치 못한 출력");
+    }
+  } catch (err) {
+    console.log(
+      `  ${colors.yellow}에러:${colors.reset} ${err instanceof Error ? err.message : String(err)}`,
+    );
+    console.log(
+      `  ${colors.yellow}Exit Code:${colors.reset} ${spawn.getExitCode()}`,
+    );
+
+    if (spawn.getExitCode() !== 0) {
+      success("Exit code non-zero를 올바르게 처리했습니다");
+    } else {
+      error("예상치 못한 에러");
+    }
+  }
+};
+
+// ============================================================================
+// Example 10: 프로세스 Dispose
+// ============================================================================
+const example10_dispose = async () => {
+  log("Example 10", "프로세스 Dispose");
+
+  const spawn = await Spawn.spawn("sleep", ["10"]);
+
+  spawn.subscribe(
+    (data) => {
+      console.log(`  출력: ${data}`);
+    },
+    (err) => {
+      error(`에러: ${err.message}`);
+    },
+    () => {
+      console.log(`  ${colors.dim}프로세스 완료됨${colors.reset}`);
+    },
+  );
+
+  await Bun.sleep(500);
+
+  console.log(`  ${colors.yellow}0.5초 후 dispose 실행...${colors.reset}`);
+  spawn.dispose();
+  console.log(
+    `  ${colors.green}Disposed!${colors.reset} 프로세스가 종료되고 리소스가 정리되었습니다.`,
+  );
+
+  success("Dispose 완료");
+};
+
+// top 입력 제너레이터 (공통 사용)
+const topInputGenerator = async function* () {
+  // 1초 후 'q' 전송
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  yield "q";
+};
+
+// ============================================================================
+// Example 11: top 인터랙티브 프로그램 (q로 종료)
+// ============================================================================
+const example11_topInteractive = async () => {
+  log("Example 11", "top 인터랙티브 프로그램 (q로 종료)");
+
+  const spawn = await Spawn.spawn("top", ["-l", "3"], {
+    stdin: topInputGenerator(),
+    enableTui: true,
+  });
+
+  return new Promise<void>((resolve) => {
+    const timeout = setTimeout(() => {
+      error("Timeout - top이 종료되지 않음");
+      spawn.dispose();
+      resolve();
+    }, 5000);
+
+    spawn.subscribe(
+      (_data) => {
+        // top 출력 무시
+      },
+      (err) => {
+        clearTimeout(timeout);
+        error(`에러: ${err.message}`);
+        resolve();
+      },
+      () => {
+        clearTimeout(timeout);
+        success("top이 'q' 입력으로 정상 종료됨 (EOF 없이)");
+        spawn.dispose();
+        resolve();
+      },
+    );
+  });
+};
+
+// ============================================================================
+// Example 12: btop TUI 테스트
+// ============================================================================
+const example12_btopTui = async () => {
+  log("Example 12", "btop TUI 테스트");
+
+  const BTOP_TIMEOUT_MS = 10000;
+  const BTOP_CAPTURE_INTERVAL_MS = 2000;
+  const BTOP_INITIAL_LOAD_MS = 2000;
+  const BTOP_RUN_DURATION_MS = 5000;
+
+  const spawn = await Spawn.spawn("btop", [], {
+    enableTui: true,
+    cols: 120,
+    rows: 40,
+  });
+
+  return new Promise<void>((resolve) => {
+    const timeout = setTimeout(() => {
+      error("Timeout - btop이 종료되지 않음");
+      spawn.dispose();
+      resolve();
+    }, BTOP_TIMEOUT_MS);
+
+    // 주기적 버퍼 캡처
+    const interval = setInterval(() => {
+      try {
+        const buffer = spawn.captureBuffer();
+        console.log(
+          `  ${colors.green}btop 화면 캡처 (라인 0-5):${colors.reset}`,
+        );
+        buffer.slice(0, 5).forEach((line, i) => {
+          const trimmed = line.trim();
+          if (trimmed) {
+            console.log(`    [${i}] ${trimmed.substring(0, 80)}...`);
+          }
+        });
+      } catch (err) {
+        // 캡처 실패 무시
+      }
+    }, BTOP_CAPTURE_INTERVAL_MS);
+
+    spawn.subscribe(
+      (_data) => {
+        // btop 출력은 버퍼를 통해 처리
+      },
+      (err) => {
+        clearTimeout(timeout);
+        clearInterval(interval);
+        error(`에러: ${err.message}`);
+        resolve();
+      },
+      () => {
+        clearTimeout(timeout);
+        clearInterval(interval);
+        success("btop TUI 테스트 완료");
+        spawn.dispose();
+        resolve();
+      },
+    );
+
+    (async () => {
+      // btop 로딩 대기
+      await Bun.sleep(BTOP_INITIAL_LOAD_MS);
+
+      // 첫 캡처 (로딩 후)
+      try {
+        const buffer = spawn.captureBuffer();
+        console.log(
+          `  ${colors.green}btop 초기 화면 캡처 (전체 버퍼 라인 수: ${buffer.length}):${colors.reset}`,
+        );
+        buffer.slice(0, 10).forEach((line, i) => {
+          const trimmed = line.trim();
+          console.log(
+            `    [${i}] ${trimmed.length > 0 ? trimmed.substring(0, 100) : "(empty)"}`,
+          );
+        });
+      } catch (err) {
+        error(
+          `초기 버퍼 캡처 실패: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+
+      // 지정 시간 후 종료
+      await Bun.sleep(BTOP_RUN_DURATION_MS);
+      console.log(`  ${colors.dim}btop 종료 (q)${colors.reset}`);
+      await spawn.write("q");
+    })();
+  });
+};
+
+// ============================================================================
 // Main Runner
 // ============================================================================
 const main = async () => {
-  // 명령줄 인자 파싱
-  const args = Bun.argv.slice(2); // 스크립트 이름 제외
+  const args = Bun.argv.slice(2);
 
   if (args.includes("--help") || args.includes("-h")) {
     console.log(`
 ${colors.bright}${colors.cyan}Spawn.ts 예제 실행기${colors.reset}
 
 ${colors.yellow}사용법:${colors.reset}
-  bun run Spawn.example.ts [예제번호] [--help]
+  bun run spawn.example.ts [예제번호] [--help]
 
 ${colors.yellow}옵션:${colors.reset}
   --help, -h    도움말 표시
 
 ${colors.yellow}예제 번호:${colors.reset}
-  1   기본 Subscribe 패턴
+  1   기본 PTY 모드
   2   Promise 패턴
-  3   Split 모드 - stdout/stderr 분리
-  4   Split Promise 패턴
-  5   stdin 입력
-  6   에러 핸들링 (exit code !== 0)
-  7   Echo Output (실시간 출력)
-  8   Cleanup 콜백
-  9   여러 프로세스 병렬 실행
-  10  복잡한 파이프라인 시뮬레이션
-  11  타입 안정성 데모
-  12  인코딩 지정
-  13  동적 stdin 입력 (write 메서드)
-  14  프로세스 상태 확인
-  15  PTY 모드 - 기본 명령어 테스트
-  16  PTY 모드 확인
-  17  프로세스 Detach
-  18  PTY 모드에서 동적 write 테스트
-  19  PTY 모드에서 vi 같은 TUI 에디터 입력 시퀀스
+  3   stdin 입력
+  4   동적 stdin 입력 (write 메서드)
+  5   TUI 모드 활성화 (xterm/headless)
+  6   vi 같은 TUI 에디터 (xterm 통합)
+  7   man 페이지 TUI 테스트
+  8   터미널 리사이즈
+  9   에러 출력 확인
+  10  프로세스 Dispose
+  11  top 인터랙티브 프로그램 (q로 종료)
+  12  btop TUI 테스트
 
 ${colors.yellow}예시:${colors.reset}
-  bun run Spawn.example.ts          # 모든 예제 실행
-  bun run Spawn.example.ts 13       # 13번 예제만 실행
-  bun run Spawn.example.ts --help   # 도움말 표시
+  bun run spawn.example.ts          # 모든 예제 실행
+  bun run spawn.example.ts 7        # 7번 예제만 실행
+  bun run spawn.example.ts --help   # 도움말 표시
 `);
     return;
   }
@@ -751,37 +672,30 @@ ${colors.yellow}예시:${colors.reset}
     `\n${colors.bright}${colors.magenta}═══════════════════════════════════════════════════════════${colors.reset}`,
   );
   console.log(
-    `${colors.bright}${colors.magenta}  Spawn.ts 사용 예제 모음${colors.reset}`,
+    `${colors.bright}${colors.magenta}  Spawn.ts 사용 예제 모음 (bun-pty + xterm/headless)${colors.reset}`,
   );
   console.log(
     `${colors.bright}${colors.magenta}═══════════════════════════════════════════════════════════${colors.reset}\n`,
   );
 
   const examples = [
-    example1_basicSubscribe,
+    example1_basicPty,
     example2_promisePattern,
-    example3_splitMode,
-    example4_splitPromise,
-    example5_stdinInput,
-    example6_errorHandling,
-    example7_echoOutput,
-    example8_cleanupCallback,
-    example9_parallelExecution,
-    example10_pipelineSimulation,
-    example11_typeSafety,
-    example12_encoding,
-    example13_dynamicStdin,
-    example14_processStatus,
-    example15_ptyPython,
-    example16_ptyModeCheck,
-    example17_detach,
-    example18_ptyWrite,
-    example19_viTuiInput,
+    example3_stdinInput,
+    example4_dynamicStdin,
+    example5_tuiMode,
+    example6_viTui,
+    example7_manTui,
+    example8_resize,
+    example9_errorHandling,
+    example10_dispose,
+    example11_topInteractive,
+    example12_btopTui,
   ];
 
   // 특정 예제 실행
   if (args.length > 0 && args[0] && /^\d+$/.test(args[0])) {
-    const exampleIndex = parseInt(args[0], 10) - 1; // 1-based to 0-based
+    const exampleIndex = parseInt(args[0], 10) - 1;
     if (exampleIndex >= 0 && exampleIndex < examples.length) {
       console.log(
         `\n${colors.bright}${colors.magenta}═══════════════════════════════════════════════════════════${colors.reset}`,
@@ -822,7 +736,7 @@ ${colors.yellow}예시:${colors.reset}
       );
     }
     separator();
-    await new Promise((resolve) => setTimeout(resolve, 200)); // 예제 간 딜레이
+    await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
   console.log(
@@ -830,7 +744,6 @@ ${colors.yellow}예시:${colors.reset}
   );
 };
 
-// Run all examples
 main().catch((err) => {
   console.error("Fatal error:", err);
   process.exit(1);

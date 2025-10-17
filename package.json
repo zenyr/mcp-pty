@@ -16,6 +16,7 @@
   "private": true,
   "scripts": {
     "inspect": "bun x --bun @modelcontextprotocol/inspector mcp-pty",
+    "cli": "bun --filter=\"@pkgs/cli-inspector\" run start",
     "reset": "bun x --bun rimraf './**/node_modules' node_modules; bun i",
     "type-check": "bun --filter=\"*\" run check",
     "biome:all": "biome check --write && biome format --write && biome lint --write",
@@ -32,7 +33,11 @@
   ],
   "dependencies": {
     "@xterm/headless": "^5.5.0",
-    "bun-pty": "^0.3.2",
+    "@xterm/xterm": "^5.5.0",
+    "bun-pty": "github:zenyr/bun-pty#merged",
     "strip-ansi": "^7.1.2"
-  }
+  },
+  "trustedDependencies": [
+    "bun-pty"
+  ]
 }
