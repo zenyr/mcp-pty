@@ -39,10 +39,9 @@ const serverFactory = new McpServerFactory({
     process.env.MCP_PTY_DEACTIVATE_RESOURCES === "true",
 });
 
-const server = serverFactory.createServer();
-
 if (finalTransport === "http") {
-  startHttpServer(server, finalPort);
+  startHttpServer(() => serverFactory.createServer(), finalPort);
 } else {
+  const server = serverFactory.createServer();
   startStdioServer(server);
 }

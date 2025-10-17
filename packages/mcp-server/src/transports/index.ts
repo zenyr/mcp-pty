@@ -2,8 +2,10 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { sessionManager } from "@pkgs/session-manager";
-import { toReqRes } from "fetch-to-node";
+import { toFetchResponse, toReqRes } from "fetch-to-node";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
+import { logger } from "hono/logger";
 import { bindSessionToServerResources } from "../resources";
 import { bindSessionToServer } from "../tools";
 import { logError, logServer } from "../utils";
@@ -34,51 +36,109 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
  * @param port HTTP server port
  */
 export const startHttpServer = async (
-  server: McpServer,
+  serverFactory: () => McpServer,
   port: number,
 ): Promise<void> => {
   const app = new Hono();
-  const transports = new Map<string, StreamableHTTPServerTransport>();
+  const sessions = new Map<
+    string,
+    { server: McpServer; transport: StreamableHTTPServerTransport }
+  >();
 
-  app.post("/mcp", async (c) => {
+  app.use(logger());
+  app.use(cors({ origin: "*", exposeHeaders: ["mcp-session-id"] }));
+
+  // DELETE endpoint to gracefully cleanup session
+  app.delete("/mcp", async (c) => {
     const sessionHeader = c.req.header("mcp-session-id");
-    let transport: StreamableHTTPServerTransport;
-    let sessionId: string;
-
-    if (sessionHeader && transports.has(sessionHeader)) {
-      const existingTransport = transports.get(sessionHeader);
-      if (!existingTransport) {
-        throw new Error(`Transport not found for session: ${sessionHeader}`);
-      }
-      transport = existingTransport;
-      sessionId = sessionHeader;
-    } else {
-      // New session - create session first, then bind to server
-      sessionId = sessionManager.createSession();
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => sessionId,
-        enableJsonResponse: true,
-        onsessioninitialized: (id) => {
-          transports.set(id, transport);
-        },
-      });
-      bindSessionToServer(server, sessionId);
-      bindSessionToServerResources(server, sessionId);
-      await server.connect(transport);
-      sessionManager.updateStatus(sessionId, "active");
+    if (!sessionHeader) {
+      return c.json({ error: "Missing mcp-session-id header" }, 400);
     }
 
-    const { req, res } = toReqRes(c.req.raw);
-    res.on("close", () => {
-      if (transport.sessionId) {
-        sessionManager.updateStatus(transport.sessionId, "terminated");
-        transports.delete(transport.sessionId);
+    const session = sessions.get(sessionHeader);
+    if (session) {
+      try {
+        await session.transport.close();
+      } catch {
+        // Ignore errors during close
       }
-    });
+      sessions.delete(sessionHeader);
+    }
+
+    await sessionManager.disposeSession(sessionHeader);
+    logServer(`Session disposed: ${sessionHeader}`);
+    return c.json({ success: true, sessionId: sessionHeader });
+  });
+
+  app.all("/mcp", async (c) => {
+    const sessionHeader = c.req.header("mcp-session-id");
+    let sessionId: string = "N/A";
     try {
-      await transport.handleRequest(req, res, await c.req.json());
+      let session = sessionHeader ? sessions.get(sessionHeader) : undefined;
+
+      if (!session) {
+        // Reconnection scenario: cleanup old session
+        if (sessionHeader) {
+          const oldSession = sessions.get(sessionHeader);
+          if (oldSession) {
+            try {
+              await oldSession.transport.close();
+            } catch {
+              // Ignore errors during close
+            }
+            sessions.delete(sessionHeader);
+          }
+          await sessionManager.disposeSession(sessionHeader);
+          logServer(
+            `Cleaned up stale session for reconnection: ${sessionHeader}`,
+          );
+        }
+
+        // Create new session with new server instance
+        sessionId = sessionManager.createSession();
+        const server = serverFactory();
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => sessionId,
+          enableJsonResponse: true,
+          onsessioninitialized: (id) => {
+            sessions.set(id, { server, transport });
+          },
+        });
+
+        bindSessionToServer(server, sessionId);
+        bindSessionToServerResources(server, sessionId);
+        await server.connect(transport);
+        sessionManager.updateStatus(sessionId, "active");
+
+        session = { server, transport };
+      } else {
+        // Type guard: sessionHeader is defined here because session exists
+        if (!sessionHeader) {
+          throw new Error("Session exists but sessionHeader is undefined");
+        }
+        sessionId = sessionHeader;
+      }
+
+      const { req, res } = toReqRes(c.req.raw);
+      const currentSessionId = sessionId;
+      res.on("close", () => {
+        const transportSessionId = session?.transport.sessionId;
+        if (transportSessionId) {
+          sessionManager.updateStatus(transportSessionId, "terminated");
+          sessions.delete(transportSessionId);
+        }
+      });
+      const body = (await c.req.text()).trim();
+      const jsonBody = body && JSON.parse(body);
+      await session.transport.handleRequest(req, res, jsonBody);
+      const response = await toFetchResponse(res);
+      // Ensure session ID header is set for client to reuse
+      if (!sessionHeader) {
+        response.headers.set("mcp-session-id", currentSessionId);
+      }
+      return response;
     } catch (error) {
-      logError("MCP server error", error);
+      logError(`[HTTP] Error (sessionId=${sessionId})`, error);
       return c.json({ error: "MCP server error" }, 500);
     }
   });
