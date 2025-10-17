@@ -39,11 +39,18 @@ export class PtyManager {
       const timer = setTimeout(resolve, timeoutMs);
 
       // Resolve early only if process exits (command completed)
-      process.process.onExit(() => {
-        clearTimeout(timer);
-        // Delay for final output buffering
-        setTimeout(resolve, 50);
+      const sub = process.subscribe({
+        onData: () => {},
+        onError: () => {},
+        onComplete: () => {
+          clearTimeout(timer);
+          // Delay for final output buffering
+          setTimeout(resolve, 50);
+        },
       });
+
+      // Cleanup subscription on timeout
+      setTimeout(() => sub.unsubscribe(), timeoutMs + 100);
     });
 
     return {
