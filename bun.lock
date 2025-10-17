@@ -52,6 +52,9 @@
       },
       "dependencies": {
         "@modelcontextprotocol/sdk": "^1.20.0",
+        "@pkgs/logger": "workspace:*",
+        "@pkgs/pty-manager": "workspace:*",
+        "@pkgs/session-manager": "workspace:*",
         "@xterm/headless": "^5.5.0",
         "bun-pty": "github:zenyr/bun-pty#merged",
         "consola": "^3.4.2",
@@ -345,8 +348,12 @@
 
     "zod-to-json-schema": ["zod-to-json-schema@3.24.6", "", { "peerDependencies": { "zod": "^3.24.1" } }, "sha512-h/z3PKvcTcTetyjl1fkj79MHNEjm+HpD6NXheWjzOekY7kV+lwDYnHw+ivHkijnCSMz1yJaWBD9vu/Fcmk+vEg=="],
 
+    "@pkgs/pty-manager/bun-pty": ["bun-pty@github:zenyr/bun-pty#62fb465", {}, "zenyr-bun-pty-62fb465"],
+
     "body-parser/iconv-lite": ["iconv-lite@0.6.3", "", { "dependencies": { "safer-buffer": ">= 2.1.2 < 3.0.0" } }, "sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw=="],
 
     "http-errors/statuses": ["statuses@2.0.1", "", {}, "sha512-RwNA9Z/7PrK06rYLIzFMlaF+l73iwpzsqRIFgbMLbTcLD6cOao82TaWefPXQvB2fOC4AjuYSEndS7N/mTCbkdQ=="],
+
+    "mcp-pty/bun-pty": ["bun-pty@github:zenyr/bun-pty#62fb465", {}, "zenyr-bun-pty-62fb465"],
   }
 }

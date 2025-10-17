@@ -48,6 +48,9 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.20.0",
+    "@pkgs/logger": "workspace:*",
+    "@pkgs/pty-manager": "workspace:*",
+    "@pkgs/session-manager": "workspace:*",
     "@xterm/headless": "^5.5.0",
     "bun-pty": "github:zenyr/bun-pty#merged",
     "consola": "^3.4.2",
