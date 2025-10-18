@@ -55,6 +55,10 @@ const requiresShellExecution = (node: any): boolean => {
       if (cmd.type === "Pipeline" || cmd.type === "LogicalExpression") {
         return true;
       }
+      // Check for environment variable assignments (prefix)
+      if (cmd.prefix && cmd.prefix.length > 0) {
+        return true;
+      }
       // Check suffix for redirects
       if (cmd.suffix) {
         for (const s of cmd.suffix) {
@@ -76,6 +80,10 @@ const extractCommandInfo = (
   if (node.type === "Script" && node.commands && node.commands.length > 0) {
     const cmd = node.commands[0];
     if (cmd.type === "Command") {
+      // If there are environment variable assignments (prefix), require shell
+      if (cmd.prefix && cmd.prefix.length > 0) {
+        return null;
+      }
       const commandName = cmd.name ? cmd.name.text : "";
       const args = cmd.suffix
         ? cmd.suffix
