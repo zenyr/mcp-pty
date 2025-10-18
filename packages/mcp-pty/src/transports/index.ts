@@ -77,40 +77,80 @@ export const startHttpServer = async (
       let session = sessionHeader ? sessions.get(sessionHeader) : undefined;
 
       if (!session) {
-        // Reconnection scenario: cleanup old session
         if (sessionHeader) {
-          const oldSession = sessions.get(sessionHeader);
-          if (oldSession) {
-            try {
-              await oldSession.transport.close();
-            } catch {
-              // Ignore errors during close
+          // Check if session exists in sessionManager (for reconnection)
+          const existingSession = sessionManager.getSession(sessionHeader);
+          if (existingSession) {
+            // Reconnect to existing session
+            sessionId = sessionHeader;
+            const server = serverFactory();
+            const transport = new StreamableHTTPServerTransport({
+              sessionIdGenerator: () => sessionId,
+              enableJsonResponse: true,
+              onsessioninitialized: (id) => {
+                sessions.set(id, { server, transport });
+              },
+            });
+
+            bindSessionToServer(server, sessionId);
+            bindSessionToServerResources(server, sessionId);
+            await server.connect(transport);
+            sessionManager.updateStatus(sessionId, "active");
+
+            session = { server, transport };
+            logServer(`Reconnected to session: ${sessionId}`);
+          } else {
+            // Stale session, cleanup and create new
+            const oldSession = sessions.get(sessionHeader);
+            if (oldSession) {
+              try {
+                await oldSession.transport.close();
+              } catch {
+                // Ignore errors during close
+              }
+              sessions.delete(sessionHeader);
             }
-            sessions.delete(sessionHeader);
+            logServer(
+              `Cleaned up stale session for new connection: ${sessionHeader}`,
+            );
+
+            // Create new session
+            sessionId = sessionManager.createSession();
+            const server = serverFactory();
+            const transport = new StreamableHTTPServerTransport({
+              sessionIdGenerator: () => sessionId,
+              enableJsonResponse: true,
+              onsessioninitialized: (id) => {
+                sessions.set(id, { server, transport });
+              },
+            });
+
+            bindSessionToServer(server, sessionId);
+            bindSessionToServerResources(server, sessionId);
+            await server.connect(transport);
+            sessionManager.updateStatus(sessionId, "active");
+
+            session = { server, transport };
           }
-          await sessionManager.disposeSession(sessionHeader);
-          logServer(
-            `Cleaned up stale session for reconnection: ${sessionHeader}`,
-          );
+        } else {
+          // New session
+          sessionId = sessionManager.createSession();
+          const server = serverFactory();
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => sessionId,
+            enableJsonResponse: true,
+            onsessioninitialized: (id) => {
+              sessions.set(id, { server, transport });
+            },
+          });
+
+          bindSessionToServer(server, sessionId);
+          bindSessionToServerResources(server, sessionId);
+          await server.connect(transport);
+          sessionManager.updateStatus(sessionId, "active");
+
+          session = { server, transport };
         }
-
-        // Create new session with new server instance
-        sessionId = sessionManager.createSession();
-        const server = serverFactory();
-        const transport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => sessionId,
-          enableJsonResponse: true,
-          onsessioninitialized: (id) => {
-            sessions.set(id, { server, transport });
-          },
-        });
-
-        bindSessionToServer(server, sessionId);
-        bindSessionToServerResources(server, sessionId);
-        await server.connect(transport);
-        sessionManager.updateStatus(sessionId, "active");
-
-        session = { server, transport };
       } else {
         // Type guard: sessionHeader is defined here because session exists
         if (!sessionHeader) {
@@ -124,6 +164,9 @@ export const startHttpServer = async (
       res.on("close", () => {
         const transportSessionId = session?.transport.sessionId;
         if (transportSessionId) {
+          // Dispose PTYs but keep session for reconnection
+          const ptyManager = sessionManager.getPtyManager(transportSessionId);
+          ptyManager?.dispose();
           sessionManager.updateStatus(transportSessionId, "terminated");
           sessions.delete(transportSessionId);
         }
