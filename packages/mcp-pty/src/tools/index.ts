@@ -206,7 +206,7 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Write Input to PTY",
       description:
-        "Write data to PTY stdin and return terminal state. Supports plain text, CJK, Emoji, multiline (\\n), and ANSI control codes (e.g., \\x03 for Ctrl+C).",
+        'Write data to PTY stdin and return terminal state. Supports plain text, CJK, Emoji, multiline (\\n), and ANSI control codes (e.g., \\x03 for Ctrl+C). IMPORTANT: Control characters must be actual escape sequences in JSON strings, not literal text - use "\\x03" (actual Ctrl+C byte), NOT "\\\\x03" (6 literal characters).',
       inputSchema: WriteInputSchema.shape,
       outputSchema: WriteInputOutputSchema.shape,
     },

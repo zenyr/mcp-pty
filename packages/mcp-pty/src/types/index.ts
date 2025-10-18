@@ -26,7 +26,7 @@ export const WriteInputSchema = z.object({
   data: z
     .string()
     .describe(
-      "Input data. Examples: 'ls\\n', 'hello\\nworld', '\\x03' (Ctrl+C), '안녕하세요 👋'",
+      "Input data. Examples: 'ls\\n', 'hello\\nworld', '\\x03' (Ctrl+C), '안녕하세요 👋'. NOTE: Use actual escape sequences like '\\x03' (single byte 0x03), NOT literal strings like '\\\\x03' (6 characters)",
     ),
   waitMs: z
     .number()
