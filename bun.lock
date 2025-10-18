@@ -86,6 +86,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@pkgs/logger": "workspace:*",
+        "@pkgs/normalize-commands": "workspace:*",
         "@xterm/headless": "^5.5.0",
         "@zenyr/bun-pty": "^0.4.3",
         "consola": "^3.4.2",
