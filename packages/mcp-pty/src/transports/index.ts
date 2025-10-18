@@ -65,8 +65,11 @@ export const startHttpServer = async (
       sessions.delete(sessionHeader);
     }
 
-    await sessionManager.disposeSession(sessionHeader);
-    logServer(`Session disposed: ${sessionHeader}`);
+    // Dispose PTYs but keep session for potential reconnection
+    const ptyManager = sessionManager.getPtyManager(sessionHeader);
+    ptyManager?.dispose();
+    sessionManager.updateStatus(sessionHeader, "terminated");
+    logServer(`Session PTYs disposed, session preserved: ${sessionHeader}`);
     return c.json({ success: true, sessionId: sessionHeader });
   });
 
