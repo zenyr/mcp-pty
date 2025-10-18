@@ -100,6 +100,7 @@ export const createToolHandlers = (server: McpServer) => {
           status: pty.status,
           createdAt: pty.createdAt.toISOString(),
           lastActivity: pty.lastActivity.toISOString(),
+          exitCode: pty.getExitCode(),
         }));
       return {
         content: [{ type: "text", text: JSON.stringify({ ptys }) }],
