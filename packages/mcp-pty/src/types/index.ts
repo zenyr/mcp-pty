@@ -57,6 +57,7 @@ export const PtyInfoSchema = z.object({
   status: z.string(),
   createdAt: z.string(),
   lastActivity: z.string(),
+  exitCode: z.number().nullable(),
 });
 
 export const ListPtyOutputSchema = z.object({ ptys: z.array(PtyInfoSchema) });
