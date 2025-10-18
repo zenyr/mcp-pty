@@ -129,6 +129,17 @@
 - [ ] PTY 인스턴스 정리 로직 (session-manager/index.ts)
 - [ ] 세션별 서버 인스턴스 생성 검토 (mcp-server/transports/index.ts)
 
+#### 4.8 Command Parser Implementation
+
+- [ ] Treesitter 기반 command parser 패키지 생성 (@pkgs/command-parser)
+- [ ] Shell grammar 정의 (bash/tree-sitter-bash 활용)
+- [ ] Parser 함수 구현: `parseCommand(input: string) => { normalized: string; isShellCommand: boolean }`
+- [ ] Shell 명령어 감지 로직 (&&, ||, |, ;, redirection 등)
+- [ ] 명령어 정규화 (whitespace 정리, quote 처리)
+- [ ] PTY 실행 로직 통합 (isShellCommand에 따라 sh -c vs direct spawn)
+- [ ] Unit tests 및 integration tests
+- [ ] Error handling 및 edge cases (malformed commands)
+
 ---
 
 ### Phase 5: Documentation & Examples
@@ -204,13 +215,14 @@ Phase 1 (Infrastructure)
   └─→ Phase 3 (Session Manager) ✅
         ├─→ Phase 4 (MCP Server) ✅
               ├─→ Phase 4.7 (Refinements)
-              │     ├─→ Phase 5 (Documentation) ⬅️ **Current Phase**
-              │     └─→ Phase 6 (Production Readiness)
+              │     ├─→ Phase 4.8 (Command Parser)
+              │     │     ├─→ Phase 5 (Documentation) ⬅️ **Current Phase**
+              │     │     └─→ Phase 6 (Production Readiness)
 ```
 
 ---
 
-## Current Priority: Phase 4.7 - Implementation Refinements
+## Current Priority: Phase 4.7 - Implementation Refinements & Phase 4.8 - Command Parser
 
 ### Recently Completed
 
@@ -233,17 +245,20 @@ Phase 1 (Infrastructure)
 ### In Progress
 
 - **4.7 Implementation Refinements** - remaining TODO items: PTY cleanup, server instance review
+- **4.8 Command Parser Implementation** - treesitter-based command parser for shell command detection and normalization
 
 ### Suggested Implementation Order
 
 1. **4.7 Implementation Refinements** - complete remaining TODO items
-2. **5.2 Developer Documentation** - architecture and contribution guides
-3. **5.3 Examples & Demos** - client configurations and use cases
-4. **6.x Production Readiness** - performance, security, observability
+2. **4.8 Command Parser Implementation** - treesitter-based parser for shell command detection
+3. **5.2 Developer Documentation** - architecture and contribution guides
+4. **5.3 Examples & Demos** - client configurations and use cases
+5. **6.x Production Readiness** - performance, security, observability
 
 ### Next Steps
 
 1. Add PTY instance cleanup logic in session termination
 2. Review session-specific server instance requirements
-3. Developer documentation (architecture deep-dive)
-4. Example client configurations and use cases
+3. Implement treesitter-based command parser for shell command detection
+4. Developer documentation (architecture deep-dive)
+5. Example client configurations and use cases
