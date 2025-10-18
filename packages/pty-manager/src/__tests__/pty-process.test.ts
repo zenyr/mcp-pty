@@ -443,3 +443,28 @@ test("PtyProcess tracks lastActivity on write", async () => {
 
   expect(after.getTime()).toBeGreaterThan(before.getTime());
 });
+
+// ============================================================================
+// Command Normalization Tests
+// ============================================================================
+
+test("PtyProcess normalizes simple command", async () => {
+  const pty = new PtyProcess("echo normalized");
+  ptys.push(pty);
+  const output = await pty.toPromise();
+  expect(output).toContain("normalized");
+});
+
+test("PtyProcess normalizes pipeline command", async () => {
+  const pty = new PtyProcess("echo hello | grep h");
+  ptys.push(pty);
+  const output = await pty.toPromise();
+  expect(output).toContain("hello");
+});
+
+test("PtyProcess normalizes command with redirection", async () => {
+  const pty = new PtyProcess("echo test > /tmp/test.txt && cat /tmp/test.txt");
+  ptys.push(pty);
+  const output = await pty.toPromise();
+  expect(output).toContain("test");
+});
