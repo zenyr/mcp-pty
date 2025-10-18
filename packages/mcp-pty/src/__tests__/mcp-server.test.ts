@@ -347,13 +347,18 @@ describe("MCP Server", () => {
       const result = await list({});
 
       const structured = result.structuredContent as {
-        ptys: Array<{ id: string; status: string }>;
+        ptys: Array<{ id: string; status: string; exitCode: number | null }>;
       };
       expect(structured.ptys.length).toBe(1);
       expect(structured.ptys[0]?.id).toBe(processId);
       expect(structured.ptys[0]).toHaveProperty("status");
       expect(structured.ptys[0]).toHaveProperty("createdAt");
       expect(structured.ptys[0]).toHaveProperty("lastActivity");
+      expect(structured.ptys[0]).toHaveProperty("exitCode");
+      expect(
+        structured.ptys[0]?.exitCode === null ||
+          typeof structured.ptys[0]?.exitCode === "number",
+      ).toBe(true);
     });
 
     test("read tool handler returns PTY output", async () => {
