@@ -175,7 +175,30 @@ export const startHttpServer = async (
         }
       });
       const body = (await c.req.text()).trim();
-      const jsonBody = body && JSON.parse(body);
+      let jsonBody: unknown;
+      try {
+        jsonBody = body ? JSON.parse(body) : undefined;
+      } catch (parseError) {
+        logError(
+          `[HTTP] Invalid JSON in request body (sessionId=${sessionId})`,
+          parseError,
+        );
+        return c.json({ error: "Invalid JSON in request body" }, 400);
+      }
+
+      // Handle notifications (messages without id)
+      if (
+        jsonBody &&
+        typeof jsonBody === "object" &&
+        "method" in jsonBody &&
+        jsonBody.method &&
+        !("id" in jsonBody)
+      ) {
+        logServer(`[HTTP] Handling notification: ${String(jsonBody.method)}`);
+        // For notifications, just acknowledge without calling handleRequest
+        return c.json({ jsonrpc: "2.0", result: null }, 200);
+      }
+
       await session.transport.handleRequest(req, res, jsonBody);
       const response = await toFetchResponse(res);
       // Ensure session ID header is set for client to reuse
