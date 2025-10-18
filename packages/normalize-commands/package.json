@@ -1,0 +1,19 @@
+{
+  "name": "@pkgs/normalize-commands",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "private": true,
+  "scripts": {
+    "test": "bun test",
+    "check": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write src"
+  },
+  "type": "module",
+  "dependencies": {
+    "bash-parser": "0.5.0"
+  }
+}
