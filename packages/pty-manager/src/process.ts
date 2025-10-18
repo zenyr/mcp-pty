@@ -1,4 +1,5 @@
 import { createLogger } from "@pkgs/logger";
+import { normalizeCommand } from "@pkgs/normalize-commands";
 import { Terminal } from "@xterm/headless";
 import type { IExitEvent, IPty } from "@zenyr/bun-pty";
 import { spawn } from "@zenyr/bun-pty";
@@ -69,9 +70,9 @@ export class PtyProcess {
   }
 
   private async init(): Promise<void> {
-    const cmdParts = this.options.command.split(" ");
-    const command = cmdParts[0] ?? this.options.command;
-    const args = cmdParts.slice(1);
+    const parsed = JSON.parse(normalizeCommand(this.options.command));
+    const command = parsed.command;
+    const args = parsed.args;
 
     this.pty = spawn(command, args, {
       name: "xterm-256color",
