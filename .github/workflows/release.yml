@@ -68,7 +68,7 @@ jobs:
         run: |
           git fetch origin develop
           git checkout develop
-          git cherry-pick main
+          git merge --ff-only main
           git push origin develop
 
       - name: Create GitHub Release
