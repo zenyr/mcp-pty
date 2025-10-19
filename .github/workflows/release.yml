@@ -84,8 +84,7 @@ jobs:
           git push origin $BRANCH_NAME
           gh pr create --base main --head $BRANCH_NAME \
             --title "chore: bump version to ${{ steps.version.outputs.new_version }}" \
-            --body "Auto-generated version bump after NPM publish" \
-            --label "release"
+            --body "Auto-generated version bump after NPM publish"
           gh pr merge $BRANCH_NAME --auto --squash --delete-branch
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
