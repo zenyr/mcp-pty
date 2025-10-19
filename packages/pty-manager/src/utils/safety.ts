@@ -101,26 +101,7 @@ export const checkRootPermission = (): void => {
   }
 };
 
-/**
- * Privilege escalation commands that require explicit consent
- */
-const PRIVILEGE_ESCALATION_COMMANDS = [
-  "sudo",
-  "doas",
-  "su",
-  "run0",
-  "pkexec",
-  "dzdo",
-  "pfexec",
-  "sesu",
-  "usermod",
-  "chown",
-  "chmod",
-  "passwd",
-  "visudo",
-  "vipw",
-  "vigr",
-];
+import { PRIVILEGE_ESCALATION_COMMANDS } from "@pkgs/normalize-commands/constants";
 
 /**
  * Sudo command execution prohibition utility
@@ -150,7 +131,7 @@ export const checkSudoPermission = (command: string): void => {
  */
 export const checkExecutablePermission = (executable: string): void => {
   const baseName = executable.split("/").pop()?.toLowerCase() ?? "";
-  if (PRIVILEGE_ESCALATION_COMMANDS.includes(baseName)) {
+  if (PRIVILEGE_ESCALATION_COMMANDS.includes(baseName as never)) {
     if (
       !validateConsent(
         dangerousConsentEnvVar,

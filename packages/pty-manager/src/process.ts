@@ -9,18 +9,14 @@ import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
 import { checkExecutablePermission, checkSudoPermission } from "./utils/safety";
 
 /**
- * Dangerous ANSI escape sequences and control characters
+ * Dangerous ANSI escape sequences (excluding safe color codes)
  */
 const DANGEROUS_CONTROL_PATTERNS = [
-  /\u001b\[.*m/, // ANSI color codes (safe)
   /\u001b\[[0-9;]*[Hf]/, // Cursor positioning (potentially dangerous)
   /\u001b\[[0-9;]*[JK]/, // Screen clearing (dangerous)
   /\u001b\[[0-9;]*[r]/, // Scrolling region (dangerous)
   /\u001b\].*\u0007/, // OSC sequences (dangerous)
   /\u001b\[.*[hl]/, // Mode setting (dangerous)
-  /\u0003/, // Ctrl+C (allowed for termination)
-  /\u0004/, // Ctrl+D (allowed for EOF)
-  /\u001a/, // Ctrl+Z (allowed for background)
 ];
 
 /**
@@ -30,15 +26,26 @@ const DANGEROUS_CONTROL_PATTERNS = [
  */
 const validateInputData = (data: string): void => {
   // Allow basic control characters used for terminal interaction
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: Terminal control chars are expected
   const allowedControls = /[\u0003\u0004\u001a\r\n\t]/; // Ctrl+C, Ctrl+D, Ctrl+Z, CR, LF, Tab
+
+  // Allow ANSI color codes (SGR sequences)
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI color codes are safe
+  const safeColorCodes = /\u001b\[[0-9;]*m/;
+
+  // Skip validation for single allowed control chars
+  if (allowedControls.test(data) && data.length === 1) {
+    return;
+  }
+
+  // Skip validation for ANSI color codes
+  if (safeColorCodes.test(data)) {
+    return;
+  }
 
   // Check for dangerous ANSI sequences
   for (const pattern of DANGEROUS_CONTROL_PATTERNS) {
     if (pattern.test(data)) {
-      // Skip allowed control characters
-      if (allowedControls.test(data) && data.length <= 1) {
-        continue;
-      }
       throw new Error(
         `Dangerous control sequence detected in input. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
       );
