@@ -58,17 +58,28 @@ jobs:
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           npm publish --access public
 
-      - name: Commit version bump to main
+      - name: Create version bump PR
         run: |
+          BRANCH_NAME="release/v${{ steps.version.outputs.new_version }}"
+          git checkout -b $BRANCH_NAME
           git add packages/mcp-pty/package.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
-          git push origin main
+          git push origin $BRANCH_NAME
+          gh pr create --base main --head $BRANCH_NAME \
+            --title "chore: bump version to ${{ steps.version.outputs.new_version }}" \
+            --body "Auto-generated version bump after NPM publish" \
+            --label "release"
+          gh pr merge $BRANCH_NAME --auto --squash --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sync version to develop
         run: |
+          sleep 10
+          git fetch origin main
           git fetch origin develop
           git checkout develop
-          git merge --ff-only main
+          git merge --ff-only origin/main
           git push origin develop
 
       - name: Create GitHub Release
