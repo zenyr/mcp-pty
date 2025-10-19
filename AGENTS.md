@@ -101,6 +101,8 @@ Then push to origin.
 - **Commit Message Format**: English only. Include issue references (e.g., `Fixes #30`). Focus on "why" not "what".
 - **AgentLogs Before PR**: Write AgentLog in docs/agentlogs/ following howto.md before creating PR. Ensures documentation of decisions, issues, solutions.
 - **PR Description**: Include AgentLog reference, key changes, impact. Use English.
+- **Agent Identity**: MUST declare specific agent name in all GitHub PRs/comments/reviews. Use exact model names: Sonnet4.5/Haiku4.5/GLM4.6/KimiK2/GrokCodeFast1 etc. "TypeScript expert/git" not valid. Ask user if unclear.
+- **Communication Style**: All GitHub PRs/comments/issues MUST be in English. Sacrifice grammar for concision. Use user's language only in direct responses.
 
 #### Response Style Guide (Prevent Repeat Mistakes)
 
