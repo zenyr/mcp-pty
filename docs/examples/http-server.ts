@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
-import { McpServerFactory } from "mcp-pty/server";
 import { startHttpServer } from "mcp-pty/transports";
+import { McpServerFactory } from "mcp-pty/server";
 
 const port = parseInt(process.env.PORT ?? "6420", 10);
 
