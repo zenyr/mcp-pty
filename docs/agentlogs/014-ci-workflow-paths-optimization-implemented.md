@@ -1,5 +1,7 @@
 ## CI Workflow Paths Optimization Implemented
 
+**Agent:** Grok Code Fast 1
+
 ### Initial Approach
 docs 변경시에도 전체 CI 실행되는 비효율성 발견.
 
