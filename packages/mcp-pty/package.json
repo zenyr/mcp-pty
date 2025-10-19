@@ -4,16 +4,13 @@
   "description": "MCP server for PTY session management with Bun runtime",
   "type": "module",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+
   "bin": {
     "mcp-pty": "dist/index.js"
   },
   "files": [
     "dist/**/*.js",
-    "dist/**/*.js.map",
-    "src/**/*.ts",
-    "!src/**/*.test.ts",
-    "!src/**/__tests__/**"
+    "dist/**/*.js.map"
   ],
   "exports": {
     ".": {
