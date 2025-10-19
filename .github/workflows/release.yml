@@ -108,19 +108,26 @@ jobs:
         echo "🔍 Dry run mode - skipping NPM publish"
         echo "Would publish version ${{ steps.version.outputs.new_version }}"
 
-    - name: Push to develop
+    - name: Push tag
       if: ${{ github.event.inputs.dry_run != 'true' }}
       run: |
-        git push -f origin develop
         git push origin "v${{ steps.version.outputs.new_version }}"
 
-    - name: Merge to main
+    - name: Update main branch
       if: ${{ github.event.inputs.dry_run != 'true' }}
       run: |
         git fetch origin main
         git checkout main
         git merge --no-ff develop -m "chore: release v${{ steps.version.outputs.new_version }}"
         git push origin main
+
+    - name: Sync back to develop
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      run: |
+        git fetch origin develop
+        git checkout develop
+        git merge --ff-only origin/main
+        git push -f origin develop
 
     - name: Create GitHub Release
       if: ${{ github.event.inputs.dry_run != 'true' }}
