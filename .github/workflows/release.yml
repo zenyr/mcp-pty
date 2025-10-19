@@ -3,6 +3,7 @@ name: Release & Publish
 on:
   push:
     branches: [main]
+    paths: ['packages/mcp-pty/**']
   workflow_dispatch:
     inputs:
       dry_run:
