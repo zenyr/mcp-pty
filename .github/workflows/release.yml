@@ -82,6 +82,7 @@ jobs:
 
     - name: Create tag
       run: |
+        git tag -d "v${{ steps.version.outputs.new_version }}" 2>/dev/null || true
         git tag -a "v${{ steps.version.outputs.new_version }}" -m "Release v${{ steps.version.outputs.new_version }}"
 
     - name: Publish to NPM
