@@ -35,8 +35,8 @@ export interface TerminalOutput {
 export interface PtyOptions {
   /** Shell command to execute (e.g., "ls -la", "echo hello && pwd") */
   command: string;
-  /** Working directory (defaults to process.cwd() if omitted) */
-  cwd?: string;
+  /** Working directory */
+  cwd: string;
   /** Environment variable overrides */
   env?: Record<string, string>;
   /** Whether to auto-dispose on program exit (for interactive programs) */
