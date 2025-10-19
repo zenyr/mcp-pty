@@ -121,7 +121,7 @@ jobs:
         git checkout main
         git reset --hard origin/develop
         git commit --allow-empty -m "chore: release v${{ steps.version.outputs.new_version }}"
-        git push origin main
+        git push -f origin main
 
     - name: Sync back to develop
       if: ${{ github.event.inputs.dry_run != 'true' }}
