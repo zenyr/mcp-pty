@@ -35,8 +35,8 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+       - name: Setup Bun
+         uses: oven-sh/setup-bun@v2
 
        - name: Configure Git
          run: |
