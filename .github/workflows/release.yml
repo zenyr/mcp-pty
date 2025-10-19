@@ -3,6 +3,16 @@ name: Release & Publish
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip NPM publish)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   release:
@@ -51,12 +61,19 @@ jobs:
           bun run build
 
       - name: Publish to NPM
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/mcp-pty
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           npm publish --access public
+      
+      - name: Dry run - Skip NPM publish
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "Dry run mode - skipping NPM publish"
+          echo "Would publish version ${{ steps.version.outputs.new_version }}"
 
       - name: Create version bump PR
         run: |
