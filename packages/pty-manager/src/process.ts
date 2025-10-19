@@ -311,7 +311,7 @@ export class PtyProcess {
   async toPromise(): Promise<string> {
     await this.ready();
     return new Promise<string>((resolve, reject) => {
-      const _sub = this.subscribe({
+      this.subscribe({
         onData: () => {}, // data는 outputBuffer에 누적
         onError: (err) => {
           this.dispose();

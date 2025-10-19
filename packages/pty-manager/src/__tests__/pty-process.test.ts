@@ -347,7 +347,7 @@ test("PtyProcess write throws when terminated", async () => {
   await pty.ready();
   await pty.dispose();
 
-  await expect(pty.write("test")).rejects.toThrow(/is not active/);
+  expect(pty.write("test")).rejects.toThrow(/is not active/);
 });
 
 // ============================================================================
