@@ -1,9 +1,14 @@
+<<<<<<< HEAD
 name: Test & Build
+=======
+name: Test & Lint
+>>>>>>> 55b267c (refactor: decompose CI workflow into reusable test and build jobs)
 
 on:
   workflow_call:
 
 jobs:
+<<<<<<< HEAD
   lint:
     name: Lint & Format
     runs-on: ubuntu-latest
@@ -13,10 +18,28 @@ jobs:
         with:
           bun-version: latest
       - uses: actions/cache@v4
+=======
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun modules
+        uses: actions/cache@v4
+>>>>>>> 55b267c (refactor: decompose CI workflow into reusable test and build jobs)
         with:
           path: ~/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
           restore-keys: ${{ runner.os }}-bun-
+<<<<<<< HEAD
       - run: bun install --no-save
       - run: bun run type-check
       - run: |
@@ -56,3 +79,23 @@ jobs:
           restore-keys: ${{ runner.os }}-bun-
       - run: bun install --no-save
       - run: bun --filter="@pkgs/*" run build || echo "No build script found"
+=======
+
+      - name: Install dependencies
+        run: bun install --no-save
+
+      - name: Type check
+        run: bun run type-check
+
+      - name: Lint & Format (parallel)
+        run: |
+          bun run check &
+          bun run format &
+          wait
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Run tests (parallel)
+        run: bun test --coverage --concurrent --max-concurrency=6
+>>>>>>> 55b267c (refactor: decompose CI workflow into reusable test and build jobs)

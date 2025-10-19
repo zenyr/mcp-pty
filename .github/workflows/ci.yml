@@ -27,6 +27,7 @@ jobs:
               - 'biome.json'
 
   test:
+<<<<<<< HEAD
     name: Test & Build
     needs: check-changes
     if: needs.check-changes.outputs.code-changed == 'true'
@@ -50,3 +51,12 @@ jobs:
           else
             echo "✓ No code changes - skipped tests"
           fi
+=======
+    name: Test & Lint
+    uses: ./.github/workflows/test.yml
+
+  build:
+    name: Build
+    needs: test
+    uses: ./.github/workflows/build.yml
+>>>>>>> 55b267c (refactor: decompose CI workflow into reusable test and build jobs)
