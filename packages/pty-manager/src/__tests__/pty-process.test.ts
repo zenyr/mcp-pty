@@ -201,6 +201,43 @@ test("PtyProcess write control characters", async () => {
   expect(result.cursor).toHaveProperty("x");
 });
 
+test("PtyProcess write empty string should not throw", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  await pty.ready();
+
+  // Empty string should be handled gracefully with warning
+  const result = await pty.write("", 100);
+  expect(result.screen).toBeDefined();
+  expect(result.cursor).toHaveProperty("x");
+  expect(result.exitCode).toBeNull();
+  expect(result.warning).toBe("Empty input ignored - use '\\n' for Enter key");
+});
+
+test("PtyProcess write newline only should work", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  await pty.ready();
+
+  // Newline only should work for Enter key simulation
+  const result = await pty.write("\n", 100);
+  expect(result.screen).toBeDefined();
+  expect(result.cursor).toHaveProperty("x");
+  expect(result.exitCode).toBeNull();
+});
+
+test("PtyProcess write multiple newlines should work", async () => {
+  const pty = new PtyProcess("cat");
+  ptys.push(pty);
+  await pty.ready();
+
+  // Multiple newlines should work
+  const result = await pty.write("\n\n\n", 200);
+  expect(result.screen).toBeDefined();
+  expect(result.cursor).toHaveProperty("x");
+  expect(result.exitCode).toBeNull();
+});
+
 // ============================================================================
 // Buffer Capture Tests
 // ============================================================================

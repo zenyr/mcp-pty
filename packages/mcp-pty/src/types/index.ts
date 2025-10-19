@@ -82,6 +82,10 @@ export const WriteInputOutputSchema = z.object({
     .number()
     .nullable()
     .describe("Process exit code (null if still running)"),
+  warning: z
+    .string()
+    .optional()
+    .describe("Warning message for edge cases (e.g., empty input)"),
 });
 
 /**
