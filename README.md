@@ -28,7 +28,7 @@ bun link  # Register as global command
 mcp-pty
 
 # HTTP mode
-mcp-pty --transport http --port 3000
+mcp-pty --transport http --port 6420
 
 # Help
 mcp-pty --help
@@ -51,7 +51,7 @@ bun run packages/mcp-server/src/index.ts --transport http
 1. **CLI Arguments** (highest): `--transport`, `--port`
 2. **XDG Config File**: `~/.config/mcp-pty/config.json`
 3. **Environment Variables**: `MCP_PTY_DEACTIVATE_RESOURCES`
-4. **Defaults**: stdio transport, port 3000
+4. **Defaults**: stdio transport, port 6420
 
 ### XDG Configuration File
 
@@ -60,7 +60,7 @@ bun run packages/mcp-server/src/index.ts --transport http
 ```json
 {
   "transport": "stdio",
-  "port": 3000,
+  "port": 6420,
   "deactivateResources": false
 }
 ```
@@ -110,3 +110,7 @@ bun test
 ```
 
 This project was generated with `bun init` on Bun v1.2.22. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+
+## Credits
+
+Built with opencode (opencode.ai + github sst/opencode)

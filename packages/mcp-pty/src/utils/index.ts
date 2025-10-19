@@ -27,7 +27,7 @@ export const parseCliArgs = () => {
 
  Options:
    -t, --transport <type>  Transport type: stdio (default) or http
-   -p, --port <port>       HTTP server port (default: 3000)
+   -p, --port <port>       HTTP server port (default: 6420)
    -h, --help              Show this help message
 
  Config file: ~/.config/mcp-pty/config.json (XDG_CONFIG_HOME)

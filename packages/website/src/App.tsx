@@ -1,39 +1,78 @@
-import { type FC } from "react";
+import "./index.css";
 
-/**
- * Main landing page component for mcp-pty
- */
-export const App: FC = () => {
+export const App = () => {
 	return (
-		<div style={styles.container}>
-			<header style={styles.header}>
-				<h1 style={styles.title}>mcp-pty</h1>
-				<p style={styles.subtitle}>
+		<div className="app">
+			<header className="header">
+				<h1>mcp-pty</h1>
+				<p className="subtitle">
 					MCP server for PTY process management with Bun
+				</p>
+				<p className="notice">
+					⚠️ <strong>Bun Runtime Required:</strong> Currently Bun-only due to{" "}
+					<code>bun:ffi</code> dependency. Node.js support planned for future
+					releases.{" "}
+					<a
+						href="https://bun.sh/docs/installation"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="install-link"
+					>
+						Install Bun →
+					</a>
 				</p>
 			</header>
 
-			<main style={styles.main}>
-				<section style={styles.section}>
-					<h2>Features</h2>
-					<ul style={styles.featureList}>
-						<li>🚀 PTY process management via MCP protocol</li>
-						<li>⚡ Built with Bun for maximum performance</li>
-						<li>🔒 Session-based isolation with secure defaults</li>
-						<li>🌐 Dual transport support (stdio & HTTP)</li>
-						<li>📝 Full terminal state capture (xterm.js headless)</li>
-						<li>🎯 Interactive input support (CJK, Emoji, ANSI)</li>
-					</ul>
-				</section>
+			<main className="main">
+			<section className="section">
+				<h2>Features</h2>
+				<ul className="feature-list">
+					<li>🚀 PTY process management via MCP protocol</li>
+					<li>⚡ Built with Bun for maximum performance</li>
+					<li>🔒 Session-based isolation with secure defaults</li>
+					<li>🌐 Dual transport support (stdio & HTTP)</li>
+					<li>📝 Full terminal state capture (xterm.js headless)</li>
+					<li>🎯 Interactive input support (CJK, Emoji, ANSI)</li>
+				</ul>
+			</section>
 
-				<section style={styles.section}>
-					<h2>Quick Start</h2>
-					<pre style={styles.code}>
-						<code>
-							{`# Install globally
+			<section className="section">
+				<h2>Technical Stack</h2>
+				<ul className="feature-list">
+					<li>
+						<strong>PTY Backend:</strong>{" "}
+						<a
+							href="https://www.npmjs.com/package/@zenyr/bun-pty"
+							className="tech-link"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							@zenyr/bun-pty
+						</a>{" "}
+						(fork of bun-pty with exit code handling, ARM64 support, and FFI
+						fixes)
+					</li>
+					<li>
+						<strong>Terminal Emulation:</strong> xterm.js headless mode for full
+						state capture
+					</li>
+					<li>
+						<strong>Transport:</strong> MCP SDK with stdio/HTTP dual support
+					</li>
+					<li>
+						<strong>Runtime:</strong> Bun 1.0+ with native FFI and optimized I/O
+					</li>
+				</ul>
+			</section>
+
+			<section className="section">
+				<h2>Quick Start</h2>
+				<pre className="code">
+					<code>
+						{`# Install globally
 bunx mcp-pty
 
-# Or use with MCP client (stdio mode)
+# Stdio mode (recommended for MCP clients)
 {
   "mcpServers": {
     "mcp-pty": {
@@ -41,17 +80,32 @@ bunx mcp-pty
       "args": ["mcp-pty"]
     }
   }
-}`}
-						</code>
-					</pre>
-				</section>
+}
 
-				<section style={styles.section}>
+# HTTP mode (for remote access, default port: 6420)
+bunx mcp-pty --transport http
+
+# Or specify custom port
+bunx mcp-pty --transport http --port 8080
+
+# Then connect with MCP client
+{
+  "mcpServers": {
+    "mcp-pty": {
+      "url": "http://localhost:6420/mcp"
+    }
+  }
+}`}
+					</code>
+				</pre>
+			</section>
+
+				<section className="section">
 					<h2>Links</h2>
-					<div style={styles.links}>
+					<div className="links">
 						<a
 							href="https://github.com/zenyr/mcp-pty"
-							style={styles.link}
+							className="link"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -59,7 +113,7 @@ bunx mcp-pty
 						</a>
 						<a
 							href="https://github.com/zenyr/mcp-pty#readme"
-							style={styles.link}
+							className="link"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -67,7 +121,7 @@ bunx mcp-pty
 						</a>
 						<a
 							href="https://www.npmjs.com/package/mcp-pty"
-							style={styles.link}
+							className="link"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -77,12 +131,12 @@ bunx mcp-pty
 				</section>
 			</main>
 
-			<footer style={styles.footer}>
+<footer className="footer">
 				<p>
 					Built with{" "}
 					<a
 						href="https://bun.sh"
-						style={styles.bunLink}
+						className="bun-link"
 						target="_blank"
 						rel="noopener noreferrer"
 					>
@@ -91,11 +145,20 @@ bunx mcp-pty
 					&{" "}
 					<a
 						href="https://modelcontextprotocol.io"
-						style={styles.bunLink}
+						className="bun-link"
 						target="_blank"
 						rel="noopener noreferrer"
 					>
 						MCP
+					</a>{" "}
+					&{" "}
+					<a
+						href="https://github.com/sst/opencode"
+						className="bun-link"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						opencode
 					</a>
 				</p>
 			</footer>
@@ -103,71 +166,4 @@ bunx mcp-pty
 	);
 };
 
-const styles = {
-	container: {
-		fontFamily: "system-ui, -apple-system, sans-serif",
-		maxWidth: "900px",
-		margin: "0 auto",
-		padding: "2rem",
-		lineHeight: "1.6",
-	},
-	header: {
-		textAlign: "center" as const,
-		marginBottom: "3rem",
-	},
-	title: {
-		fontSize: "3rem",
-		margin: "0 0 0.5rem 0",
-		color: "#111",
-		fontWeight: "700",
-	},
-	subtitle: {
-		fontSize: "1.25rem",
-		color: "#666",
-		margin: 0,
-	},
-	main: {
-		marginBottom: "3rem",
-	},
-	section: {
-		marginBottom: "2rem",
-	},
-	featureList: {
-		listStyle: "none",
-		padding: 0,
-		fontSize: "1.1rem",
-	},
-	code: {
-		background: "#f5f5f5",
-		padding: "1rem",
-		borderRadius: "8px",
-		overflow: "auto",
-		fontSize: "0.9rem",
-	},
-	links: {
-		display: "flex",
-		gap: "1rem",
-		flexWrap: "wrap" as const,
-	},
-	link: {
-		padding: "0.75rem 1.5rem",
-		background: "#111",
-		color: "#fff",
-		textDecoration: "none",
-		borderRadius: "6px",
-		fontSize: "1rem",
-		transition: "background 0.2s",
-	},
-	footer: {
-		textAlign: "center" as const,
-		color: "#666",
-		fontSize: "0.9rem",
-		paddingTop: "2rem",
-		borderTop: "1px solid #e0e0e0",
-	},
-	bunLink: {
-		color: "#111",
-		textDecoration: "none",
-		fontWeight: "600",
-	},
-};
+export default App;

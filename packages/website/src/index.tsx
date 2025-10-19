@@ -1,15 +1,22 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { App } from "./App";
+import { serve } from "bun";
+import index from "./index.html";
 
-const rootElement = document.getElementById("root");
-if (!rootElement) {
-	throw new Error("Root element not found");
-}
+const port = process.env.PORT ? Number.parseInt(process.env.PORT) : 3000;
 
-const root = createRoot(rootElement);
-root.render(
-	<StrictMode>
-		<App />
-	</StrictMode>,
-);
+const server = serve({
+  port,
+  routes: {
+    // Serve index.html for all unmatched routes.
+    "/*": index,
+  },
+
+  development: process.env.NODE_ENV !== "production" && {
+    // Enable browser hot reloading in development
+    hmr: true,
+
+    // Echo console logs from the browser to the server
+    console: true,
+  },
+});
+
+console.log(`🚀 Server running at ${server.url}`);
