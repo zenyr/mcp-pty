@@ -25,7 +25,23 @@ const DANGEROUS_PATTERNS = [
 /**
  * Privilege escalation commands
  */
-const PRIVILEGE_ESCALATION = ["sudo", "doas", "pkexec", "su", "run0", "dzdo"];
+const PRIVILEGE_ESCALATION = [
+  "sudo",
+  "doas",
+  "su",
+  "run0",
+  "pkexec",
+  "dzdo",
+  "pfexec",
+  "sesu",
+  "usermod",
+  "chown",
+  "chmod",
+  "passwd",
+  "visudo",
+  "vipw",
+  "vigr",
+];
 
 /**
  * Validate shell command for dangerous patterns
