@@ -101,10 +101,12 @@ export const checkRootPermission = (): void => {
   }
 };
 
+import { PRIVILEGE_ESCALATION_COMMANDS } from "@pkgs/normalize-commands/constants";
+
 /**
- * Utility to detect sudo command execution attempts
+ * Sudo command execution prohibition utility
  *
- * Detects commands starting with sudo in PTY and throws error if no user consent (MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS environment variable).
+ * Throws error if command starts with sudo and no user consent (MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS environment variable).
  *
  * @param command - Command string to execute
  * @throws {Error} When sudo command but no consent
@@ -122,17 +124,18 @@ export const checkSudoPermission = (command: string): void => {
 /**
  * Executable permission detection utility
  *
- * Throws error if executable filename contains sudo in PTY and no user consent (MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS environment variable).
+ * Throws error if executable filename matches privilege escalation commands and no user consent.
  *
- * @param executable - Executable filename
- * @throws {Error} When sudo-related file but no consent
+ * @param executable - Executable filename or path
+ * @throws {Error} When privilege escalation command detected but no consent
  */
 export const checkExecutablePermission = (executable: string): void => {
-  if (executable.toLowerCase().includes("sudo")) {
+  const baseName = executable.split("/").pop()?.toLowerCase() ?? "";
+  if (PRIVILEGE_ESCALATION_COMMANDS.includes(baseName as never)) {
     if (
       !validateConsent(
         dangerousConsentEnvVar,
-        "Executing sudo-related executable in PTY",
+        `Executing privilege escalation command '${executable}' in PTY`,
       )
     ) {
       throw new Error(sudoPermissionErrorPrompt);

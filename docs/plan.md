@@ -101,10 +101,84 @@
 
 #### 6.2 Security Hardening
 
-- [ ] Session isolation validation
-- [ ] Input sanitization for shell commands
-- [ ] Resource usage monitoring & limits
-- [ ] Audit security considerations section
+##### Current Security Issues (Critical Priority)
+
+**🔴 Critical Vulnerabilities**
+
+1. **Command Injection** - `normalize-commands` lacks validation when wrapping with `sh -c`
+   - [ ] Add dangerous pattern detection (rm -rf /, fork bombs, etc.)
+   - [ ] Implement command validation layer before shell execution
+   - [ ] Extend bash-parser error handling with security checks
+
+2. **Privilege Escalation Bypass** - sudo detection only checks string prefix
+   - [ ] Enhance sudo detection to check executable path (e.g., `/usr/bin/sudo`, `doas`, `su`, `run0`)
+   - [ ] Add validation for normalized commands after bash-parser processing
+   - [ ] Implement executable basename checking in `checkExecutablePermission`
+
+3. **PTY Write Input Injection** - `write_input` tool accepts arbitrary bytes
+   - [ ] Filter dangerous ANSI escape sequences
+   - [ ] Implement control character whitelist/blacklist
+   - [ ] Add rate limiting for write operations
+
+4. **Shell Metacharacter Attacks** - Glob patterns and redirections unfiltered
+   - [ ] Restrict file glob patterns (`*`, `?`, `[]`) in sensitive contexts
+   - [ ] Validate redirection operators (`>`, `>>`, `<`, `<<`)
+   - [ ] Add path traversal protection
+
+5. **Environment Variable Pollution** - PTY inherits parent process environment
+   - [ ] Implement safe default environment (whitelist approach)
+   - [ ] Block dangerous variables (`LD_PRELOAD`, `LD_LIBRARY_PATH`)
+   - [ ] Add per-session environment isolation
+
+**🟡 Medium Priority Issues**
+
+6. **Resource Exhaustion** - No limits on PTY creation or resource usage
+   - [ ] Add PTY instance count limit per session (configurable, default: 10)
+   - [ ] Implement memory usage monitoring and limits
+   - [ ] Add command execution timeout (configurable, default: 30min)
+   - [ ] Implement xterm buffer size limits
+
+7. **Session Security** - Predictable session IDs and weak timeout
+   - [ ] Evaluate ULID predictability for security contexts
+   - [ ] Make idle timeout configurable (current: 5min fixed)
+   - [ ] Add session-level authentication for HTTP mode
+   - [ ] Implement rate limiting for session creation
+
+8. **Information Disclosure** - Logs may contain sensitive data
+   - [ ] Implement log sanitization for commands and outputs
+   - [ ] Add redaction patterns for common secrets (tokens, passwords)
+   - [ ] Create separate audit log for security events
+
+**🟢 Existing Protections**
+
+- ✅ Root privilege detection with explicit consent requirement
+- ✅ Sudo command detection (partial - needs enhancement)
+- ✅ Session-based PTY isolation
+- ✅ Graceful SIGTERM → SIGKILL shutdown
+- ✅ Consent-based dangerous action framework (`MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS`)
+
+##### Security Hardening Roadmap
+
+**Phase 6.2.1: Critical Fixes (Pre-Release Blocker)**
+- [ ] Implement command validation layer in `normalize-commands`
+- [ ] Enhance privilege escalation detection (sudo/doas/su/run0/pkexec/dzdo)
+- [ ] Add dangerous pattern detection (rm -rf /, chmod 777, dd, mkfs, fork bombs)
+- [ ] Implement safe environment variable defaults
+- [ ] Add basic resource limits (PTY count, execution timeout)
+
+**Phase 6.2.2: Enhanced Security (Post v1.0)**
+- [ ] PTY write input filtering and rate limiting
+- [ ] Advanced shell metacharacter protection
+- [ ] Memory usage monitoring and enforcement
+- [ ] Session authentication for HTTP transport
+- [ ] Comprehensive audit logging
+
+**Phase 6.2.3: Documentation (Parallel Track)**
+- [ ] Create SECURITY.md with threat model and mitigation strategies
+- [ ] Document security considerations in README.md
+- [ ] Add security best practices guide
+- [ ] Document consent environment variables and their implications
+- [ ] Create security incident response guide
 
 #### 6.3 Observability
 
@@ -160,6 +234,7 @@ Phase 1 (Infrastructure) ✅
 - ✅ **Reconnection Fix** - Support reconnection with session reuse
 - ✅ **normalize-commands Integration** - Integrated command parsing into pty-manager
 - ✅ **Test Enhancement** - Extended tests for environment variables and argument parsing
+- ✅ **Accurate pwd Setting** - Fixed issue where commands execute with mcp-pty server directory as pwd by making pwd mandatory in start tool
 
 ### In Progress
 
@@ -187,3 +262,5 @@ Phase 1 (Infrastructure) ✅
 
 1. Environment variable passing: Analyze what env MCP clients expect
 2. Accurate pwd setting: Fix issue where commands execute with mcp-pty server directory as pwd
+3. **Node.js Runtime Support**: Currently `bunx mcp-pty` works but `npx mcp-pty` fails (Bun-only runtime). Add Node.js compatibility for wider adoption.
+4. **Library Export & Type Definitions**: Current package is CLI-only (no TypeScript sources in NPM package). When converting to library, add `.d.ts` generation and re-enable type exports in `package.json`.

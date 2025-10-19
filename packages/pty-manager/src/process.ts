@@ -6,13 +6,64 @@ import { spawn } from "@zenyr/bun-pty";
 import { nanoid } from "nanoid";
 import stripAnsi from "strip-ansi";
 import type { PtyOptions, PtyStatus, TerminalOutput } from "./types";
-import { checkSudoPermission } from "./utils/safety";
+import { checkExecutablePermission, checkSudoPermission } from "./utils/safety";
+
+/**
+ * Dangerous ANSI escape sequences (excluding safe color codes)
+ */
+const DANGEROUS_CONTROL_PATTERNS = [
+  /\u001b\[[0-9;]*[Hf]/, // Cursor positioning (potentially dangerous)
+  /\u001b\[[0-9;]*[JK]/, // Screen clearing (dangerous)
+  /\u001b\[[0-9;]*[r]/, // Scrolling region (dangerous)
+  /\u001b\].*\u0007/, // OSC sequences (dangerous)
+  /\u001b\[.*[hl]/, // Mode setting (dangerous)
+];
+
+/**
+ * Validate input data for dangerous control sequences
+ * @param data - Input data to validate
+ * @throws {Error} if dangerous control sequences detected
+ */
+const validateInputData = (data: string): void => {
+  // Allow basic control characters used for terminal interaction
+  const allowedControls = /[\u0003\u0004\u001a\r\n\t]/; // Ctrl+C, Ctrl+D, Ctrl+Z, CR, LF, Tab
+
+  // Allow ANSI color codes (SGR sequences)
+  const safeColorCodes = /\u001b\[[0-9;]*m/;
+
+  // Skip validation for single allowed control chars
+  if (allowedControls.test(data) && data.length === 1) {
+    return;
+  }
+
+  // Skip validation for ANSI color codes
+  if (safeColorCodes.test(data)) {
+    return;
+  }
+
+  // Check for dangerous ANSI sequences
+  for (const pattern of DANGEROUS_CONTROL_PATTERNS) {
+    if (pattern.test(data)) {
+      throw new Error(
+        `Dangerous control sequence detected in input. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
+      );
+    }
+  }
+};
 
 const logger = createLogger("pty-process");
 
 interface Subscription {
   unsubscribe: () => void;
 }
+
+const normalizePtyOptions = (
+  commandOrOptions: string | PtyOptions,
+): PtyOptions => {
+  return typeof commandOrOptions === "string"
+    ? { command: commandOrOptions, cwd: process.cwd() }
+    : commandOrOptions;
+};
 
 /**
  * Individual PTY process management class (bun-pty + xterm/headless)
@@ -45,18 +96,13 @@ export class PtyProcess {
   private isDisposed = false;
 
   constructor(commandOrOptions: string | PtyOptions) {
-    const options =
-      typeof commandOrOptions === "string"
-        ? { command: commandOrOptions }
-        : commandOrOptions;
-
     this.id = nanoid();
     this.createdAt = new Date();
     this.lastActivity = new Date();
-    this.options = options;
+    this.options = normalizePtyOptions(commandOrOptions);
 
     // Security check
-    checkSudoPermission(options.command);
+    checkSudoPermission(this.options.command);
 
     // Initialize xterm headless terminal
     this.terminal = new Terminal({
@@ -73,6 +119,9 @@ export class PtyProcess {
     const parsed = JSON.parse(normalizeCommand(this.options.command));
     const command = parsed.command;
     const args = parsed.args;
+
+    // Security check for executable
+    checkExecutablePermission(command);
 
     this.pty = spawn(command, args, {
       name: "xterm-256color",
@@ -136,8 +185,9 @@ export class PtyProcess {
       throw new Error(`PTY ${this.id} is not active`);
     }
 
-    // Security check
+    // Security checks
     checkSudoPermission(data);
+    validateInputData(data);
 
     this.pty?.write(data);
     this.updateActivity();

@@ -1,0 +1,85 @@
+name: Release & Publish
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  release:
+    name: Bump Version & Publish to NPM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Bump version (patch)
+        id: version
+        run: |
+          cd packages/mcp-pty
+          OLD_VERSION=$(node -p "require('./package.json').version")
+          bun x --bun semver -i patch $OLD_VERSION > new_version.txt
+          NEW_VERSION=$(cat new_version.txt)
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "old_version=$OLD_VERSION" >> $GITHUB_OUTPUT
+          
+          # Update package.json
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version='$NEW_VERSION';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+
+      - name: Build & Test
+        run: |
+          cd packages/mcp-pty
+          bun run check
+          bun test
+          bun run build
+
+      - name: Publish to NPM
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd packages/mcp-pty
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > .npmrc
+          npm publish --access public
+
+      - name: Commit version bump to main
+        run: |
+          git add packages/mcp-pty/package.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+          git push origin main
+
+      - name: Sync version to develop
+        run: |
+          git fetch origin develop
+          git checkout develop
+          git merge --ff-only main
+          git push origin develop
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.new_version }}
+          release_name: v${{ steps.version.outputs.new_version }}
+          body: |
+            Release v${{ steps.version.outputs.new_version }}
+            Previous: v${{ steps.version.outputs.old_version }}
+          draft: false
+          prerelease: false
