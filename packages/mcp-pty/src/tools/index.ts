@@ -12,6 +12,7 @@ import {
   WriteInputOutputSchema,
   WriteInputSchema,
 } from "../types";
+import { normalizeWorkingDirectory } from "../utils";
 
 /**
  * Session context holder for bound session ID
@@ -69,9 +70,27 @@ export const createToolHandlers = (server: McpServer) => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
+
+      // Normalize and validate working directory
+      const cwd = normalizeWorkingDirectory(pwd);
+
+      // Validate directory exists and is a directory
+      let stat: Awaited<ReturnType<typeof Bun.file.prototype.stat>>;
+      try {
+        stat = await Bun.file(cwd).stat();
+      } catch (_error) {
+        throw new Error(
+          `Working directory does not exist or is inaccessible: ${cwd}`,
+        );
+      }
+
+      if (!stat.isDirectory()) {
+        throw new Error(`Path is not a directory: ${cwd}`);
+      }
+
       const { processId, screen, exitCode } = await ptyManager.createPty({
         command,
-        cwd: pwd,
+        cwd,
       });
       sessionManager.addPty(sessionId, processId);
       return {

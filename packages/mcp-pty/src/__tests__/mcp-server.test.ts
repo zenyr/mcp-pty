@@ -292,6 +292,22 @@ describe("MCP Server", () => {
       expect(pty).toBeDefined();
     });
 
+    test("start tool handler throws for non-existent directory", async () => {
+      const { start } = createToolHandlers(server);
+
+      await expect(
+        start({ command: "echo test", pwd: "/nonexistent/directory/path" }),
+      ).rejects.toThrow("Working directory does not exist or is inaccessible");
+    });
+
+    test("start tool handler throws when pwd is a file", async () => {
+      const { start } = createToolHandlers(server);
+
+      await expect(
+        start({ command: "echo test", pwd: `${process.cwd()}/package.json` }),
+      ).rejects.toThrow("Path is not a directory");
+    });
+
     test("start tool handler throws when session not bound", async () => {
       const factory = new McpServerFactory({
         name: "mcp-pty",
