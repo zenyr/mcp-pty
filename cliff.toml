@@ -1,0 +1,71 @@
+# git-cliff configuration
+# See: https://git-cliff.org/
+
+[changelog]
+# Changelog header
+header = """
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+"""
+
+# Changelog body
+body = """
+{% if version %}\
+## [{{ version | trim_start_matches(pat="v") }}] - {{ now | date(format="%Y-%m-%d") }}
+{% else %}\
+## [Unreleased]
+{% endif %}\
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | upper }}
+{% for commit in commits %}
+- {% if commit.breaking %}⚠️ BREAKING: {% endif %}{{ commit.message | upper_first }} ([`{{ commit.id | truncate(length=7, end="") }}`](https://github.com/zenyr/mcp-pty/commit/{{ commit.id }}))
+{%- if commit.body %}\
+  
+  {{ commit.body | indent(width=2) }}
+{%- endif %}
+{% endfor %}
+{% endfor %}\n
+"""
+
+# Commit parser configuration
+commit_parsers = [
+  { message = "^feat", group = "Added" },
+  { message = "^fix", group = "Fixed" },
+  { message = "^doc", group = "Documentation" },
+  { message = "^perf", group = "Performance" },
+  { message = "^refactor", group = "Refactored" },
+  { message = "^style", group = "Styled" },
+  { message = "^test", group = "Testing" },
+  { message = "^chore\\(release\\):", skip = true },
+  { message = "^chore", group = "Miscellaneous Tasks" },
+  { body = ".*security", group = "Security" },
+]
+
+# Protect breaking changes from being skipped due to matching a skipping commit_parser
+protect_breaking_commits = false
+
+# Parse the commit message as conventional commit
+conventional_commits = true
+
+# Filter out the commits that are not conventional
+filter_unconventional = true
+
+# Regex for preprocessing the commit messages
+preprocess_commits = []
+
+# Regex for parsing the commit messages
+commit_id = "([0-9a-fA-F]+)"
+link_parsers = [
+  { pattern = "#(\\d+)", href = "https://github.com/zenyr/mcp-pty/issues/$1" },
+  { pattern = "GH-(\\d+)", href = "https://github.com/zenyr/mcp-pty/issues/$1" },
+]
+
+# Remove the lines that start with 'Co-authored-by'
+remove_lines = ["^Co-authored-by"]
+
+# Skip tags that match a regex
+skip_tags = "v0.1.0-"
