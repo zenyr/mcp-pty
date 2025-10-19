@@ -118,7 +118,8 @@ jobs:
       run: |
         git fetch origin main
         git checkout main
-        git merge --no-ff develop -m "chore: release v${{ steps.version.outputs.new_version }}"
+        git reset --hard origin/develop
+        git commit --allow-empty -m "chore: release v${{ steps.version.outputs.new_version }}"
         git push origin main
 
     - name: Sync back to develop
