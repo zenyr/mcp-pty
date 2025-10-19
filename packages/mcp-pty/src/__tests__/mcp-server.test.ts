@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { withTestSessionManager } from "@pkgs/session-manager";
 import { withTestPtyManager } from "@pkgs/pty-manager";
+import { withTestSessionManager } from "@pkgs/session-manager";
 import {
   bindSessionToServerResources,
   createResourceHandlers,

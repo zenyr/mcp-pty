@@ -1,15 +1,43 @@
-import { SessionManager, sessionManager } from "./index.ts";
+import { type SessionManager, sessionManager } from "./index.ts";
 
-/**
- * Test utilities for SessionManager with COMPLETE isolation.
- * ZERO shared state between tests - uses singleton pattern for MCP server integration.
- * All state is per-session - isolated by sessionId.
- */
+// Wrapper that tracks created sessions per test
+class SessionTracker {
+  private createdSessions = new Set<string>();
+
+  createSession(): string {
+    const id = sessionManager.createSession();
+    this.createdSessions.add(id);
+    return id;
+  }
+
+  async disposeAll(): Promise<void> {
+    // Only cleanup sessions THIS test created
+    for (const sessionId of Array.from(this.createdSessions)) {
+      await sessionManager.disposeSession(sessionId).catch(() => {
+        /* suppress cleanup errors */
+      });
+    }
+    this.createdSessions.clear();
+  }
+
+  getTrackedManager(): SessionManager {
+    // Return a proxy that wraps createSession
+    const self = this;
+    return new Proxy(sessionManager, {
+      get(target, prop) {
+        if (prop === "createSession") {
+          return () => self.createSession();
+        }
+        return Reflect.get(target, prop);
+      },
+    }) as SessionManager;
+  }
+}
 
 /**
  * Execute test with isolated session on singleton manager.
- * Creates fresh session, passes callback, disposes session after.
- * Concurrent safe - each test gets isolated sessionId.
+ * Tracks only sessions created by THIS test, cleans them up after.
+ * Concurrent safe - each test only cleans up its own sessions.
  *
  * @example
  * ```ts
@@ -24,17 +52,11 @@ import { SessionManager, sessionManager } from "./index.ts";
 export const withTestSessionManager = async <T>(
   cb: (manager: SessionManager) => T | Promise<T>,
 ): Promise<T> => {
+  const tracker = new SessionTracker();
+
   try {
-    return await cb(sessionManager);
+    return await cb(tracker.getTrackedManager());
   } finally {
-    // Cleanup all sessions created in this test
-    const sessions = sessionManager.getAllSessions();
-    await Promise.all(
-      sessions.map((session) =>
-        sessionManager.disposeSession(session.id).catch(() => {
-          /* suppress cleanup errors */
-        }),
-      ),
-    );
+    await tracker.disposeAll();
   }
 };

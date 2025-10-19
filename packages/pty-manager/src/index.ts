@@ -1,8 +1,8 @@
 export { PtyManager } from "./manager";
 export { PtyProcess } from "./process";
-export * from "./types";
 export {
   withTestPtyManager,
-  withTestPtyProcess,
   withTestPtyManagerAndProcesses,
+  withTestPtyProcess,
 } from "./test-utils";
+export * from "./types";
