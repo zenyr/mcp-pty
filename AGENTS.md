@@ -97,6 +97,41 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 - **Feedback Loop**: Call tools immediately on "execute" requests; no text responses.
 - **Response Format**: Tool call + 0-1 sentence result only.
 
+### Git Agent (@git) - MANDATORY FOR COMMITS
+
+**REQUIREMENT**: All git operations (commits, pushes, branch management) MUST use @git subagent. NO direct bash `git commit` in main agent.
+
+**When to Delegate**:
+- Stage changes with `git add`
+- Create commits (even single-file commits)
+- Push to remote
+- Manage branches
+- Create/update PRs
+
+**How to Delegate**:
+```
+Use Task tool with subagent_type: "git" and provide:
+- Files to stage (absolute paths)
+- Commit message (English, follows conventional commits)
+- AgentLog reference
+- Post-commit actions (push, PR create, etc.)
+```
+
+**Example Task Prompt**:
+```
+Stage and commit changes:
+1. .github/workflows/release.yml
+2. docs/agentlogs/013-github-workflow-fix-unnecessary-publish.md
+
+Commit message: "fix: expand release workflow trigger to all packages except website
+
+- Change paths from 'packages/mcp-pty/**' to 'packages/!(website)/**'
+- Ensures internal dependency changes trigger publish
+- Prevents version skips"
+
+Then push to origin.
+```
+
 ### PR Guidelines
 
 - **AgentLogs Before PR**: Write AgentLog in docs/agentlogs/ following howto.md before creating PR. Ensures documentation of decisions, issues, solutions.
