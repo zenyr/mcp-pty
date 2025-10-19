@@ -269,7 +269,7 @@ describe("MCP Server", () => {
     test("start tool handler creates PTY", async () => {
       const { start } = createToolHandlers(server);
 
-      const result = await start({ command: "echo test" });
+      const result = await start({ command: "echo test", pwd: process.cwd() });
 
       expect(result).toBeDefined();
       expect(result.content).toBeDefined();
@@ -301,9 +301,9 @@ describe("MCP Server", () => {
       const unboundServer = factory.createServer();
       const { start } = createToolHandlers(unboundServer);
 
-      await expect(start({ command: "echo test" })).rejects.toThrow(
-        "No session bound to server",
-      );
+      await expect(
+        start({ command: "echo test", pwd: process.cwd() }),
+      ).rejects.toThrow("No session bound to server");
     });
 
     test("kill tool handler removes PTY", async () => {

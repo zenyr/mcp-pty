@@ -47,7 +47,7 @@ export class PtyProcess {
   constructor(commandOrOptions: string | PtyOptions) {
     const options =
       typeof commandOrOptions === "string"
-        ? { command: commandOrOptions }
+        ? { command: commandOrOptions, cwd: process.cwd() }
         : commandOrOptions;
 
     this.id = nanoid();
