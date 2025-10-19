@@ -110,3 +110,7 @@ bun test
 ```
 
 이 프로젝트는 Bun v1.2.22에서 `bun init`으로 생성되었습니다. [Bun](https://bun.com)은 빠른 all-in-one JavaScript 런타임입니다.
+
+## 크레딧
+
+Built with opencode (opencode.sh + github sst/opencode)
