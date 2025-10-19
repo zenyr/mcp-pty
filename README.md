@@ -86,7 +86,7 @@ bun run packages/mcp-server/src/index.ts --transport http
 
 ### MCP Tools
 
-- `start`: 새 PTY 인스턴스 생성 (초기 출력 포함 즉시 반환)
+- `start`: 새 PTY 인스턴스 생성 (command와 pwd 필수, 초기 출력 포함 즉시 반환)
 - `kill`: PTY 인스턴스 종료
 - `list`: PTY 프로세스 목록 조회 (Resources 비활성화 시)
 - `read`: PTY 출력 읽기 (Resources 비활성화 시)

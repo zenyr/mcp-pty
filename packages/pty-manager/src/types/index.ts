@@ -36,7 +36,7 @@ export interface PtyOptions {
   /** Shell command to execute (e.g., "ls -la", "echo hello && pwd") */
   command: string;
   /** Working directory */
-  cwd?: string;
+  cwd: string;
   /** Environment variable overrides */
   env?: Record<string, string>;
   /** Whether to auto-dispose on program exit (for interactive programs) */

@@ -59,12 +59,20 @@ type ToolResult = {
  */
 export const createToolHandlers = (server: McpServer) => {
   return {
-    start: async ({ command }: { command: string }): Promise<ToolResult> => {
+    start: async ({
+      command,
+      pwd,
+    }: {
+      command: string;
+      pwd: string;
+    }): Promise<ToolResult> => {
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
-      const { processId, screen, exitCode } =
-        await ptyManager.createPty(command);
+      const { processId, screen, exitCode } = await ptyManager.createPty({
+        command,
+        cwd: pwd,
+      });
       sessionManager.addPty(sessionId, processId);
       return {
         content: [
