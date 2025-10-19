@@ -27,6 +27,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      pull-requests: write
     steps:
     - name: Checkout
       uses: actions/checkout@v4
@@ -110,7 +111,7 @@ jobs:
     - name: Push to develop
       if: ${{ github.event.inputs.dry_run != 'true' }}
       run: |
-        git push origin develop
+        git push -f origin develop
         git push origin "v${{ steps.version.outputs.new_version }}"
 
     - name: Merge to main
