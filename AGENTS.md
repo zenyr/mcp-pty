@@ -97,6 +97,12 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 - **Feedback Loop**: Call tools immediately on "execute" requests; no text responses.
 - **Response Format**: Tool call + 0-1 sentence result only.
 
+### PR Guidelines
+
+- **AgentLogs Before PR**: Write AgentLog in docs/agentlogs/ following howto.md before creating PR. Ensures documentation of decisions, issues, solutions.
+- **Commit Granularity**: Use @git for logical unit commits. Avoid large monolithic commits.
+- **PR Description**: Include AgentLog reference, key changes, impact. Use English.
+
 #### Response Style Guide (Prevent Repeat Mistakes)
 
 - **Analysis/Explanation Responses**: Summarize in 3-5 bullet points (1-2 sentences each). Keep total under 200-300 chars. Include code examples/improvements only on explicit user request.
