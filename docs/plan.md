@@ -5,193 +5,170 @@
 ### Completed Phases
 
 #### Phase 1: Package Infrastructure
-
-- ✅ Monorepo setup with Bun workspace
-- ✅ TypeScript configuration (strict mode, ES2022, ESNext)
-- ✅ ESLint & Prettier setup
-- ✅ Package dependency management
+- ✅ Monorepo setup w/ Bun workspace
+- ✅ TS config (strict, ES2022, ESNext)
+- ✅ ESLint + Prettier setup
+- ✅ Package dependency mgmt
 
 #### Phase 2: PTY Manager (@pkgs/pty-manager)
-
-- ✅ Type definitions (PtySession, PtyInstance, SessionStatus, etc.)
-- ✅ Process status types (initializing, active, idle, terminating, terminated)
-- ✅ PTY class implementation using bun-pty
-- ✅ xterm headless integration for terminal state & ANSI sequences
-- ✅ Process isolation with nanoid-based instance IDs
-- ✅ Command execution & stream processing (stdin/stdout/stderr)
-- ✅ PtyManager class with sessionId-based lifecycle management
-- ✅ System shell environment inheritance (shellMode with PATH preservation)
-- ✅ ANSI sequence capture & strip options
-- ✅ Interactive input support (write method with terminal state extraction)
-- ✅ CJK/Emoji/multiline/ANSI control codes support (Ctrl+C, etc.)
-- ✅ Graceful shutdown (SIGTERM → SIGKILL with 3s grace period)
-- ✅ Unit & integration tests
+- ✅ Type defs (PtySession, PtyInstance, SessionStatus)
+- ✅ Process status (initializing → active → idle → terminating → terminated)
+- ✅ PTY impl w/ bun-pty
+- ✅ xterm headless (terminal state, ANSI sequences)
+- ✅ Process isolation (nanoid-based IDs)
+- ✅ Command exec & stream (stdin/stdout/stderr)
+- ✅ PtyManager (sessionId lifecycle)
+- ✅ Shell env inheritance (shellMode w/ PATH)
+- ✅ ANSI capture/strip
+- ✅ Interactive input (write w/ terminal state)
+- ✅ CJK/Emoji/multiline/ANSI support (Ctrl+C, etc.)
+- ✅ Graceful shutdown (SIGTERM → SIGKILL, 3s grace)
+- ✅ Unit + integration tests
 
 #### Phase 3: Session Manager (@pkgs/session-manager)
+- ✅ Type defs (Session, SessionStatus, SessionId)
+- ✅ Transport types (stdio | streaming-http)
+- ✅ ULID session IDs
+- ✅ In-mem store (Map)
+- ✅ Session CRUD
+- ✅ 1:N PTY binding (session → multiple PTYs)
+- ✅ Lifecycle transitions
+- ✅ Idle timeout (5min auto-term)
+- ✅ SessionManager (transport-aware init)
+- ✅ Event system (SSE support)
+- ✅ Graceful shutdown w/ cleanup
+- ✅ Unit + integration tests
 
-- ✅ Type definitions (Session, SessionStatus, SessionId, etc.)
-- ✅ Transport layer types (stdio | streaming-http)
-- ✅ ULID-based session ID generation
-- ✅ In-memory session store (Map-based)
-- ✅ Session CRUD operations
-- ✅ 1:N PTY binding management (session → multiple PTY instances)
-- ✅ Session lifecycle state transitions (initializing → active → idle → terminating → terminated)
-- ✅ Idle timeout monitoring (5min auto-terminate)
-- ✅ SessionManager class with transport-aware initialization
-- ✅ Event system for session changes (SSE support)
-- ✅ Graceful shutdown with cleanup procedures
-- ✅ Unit & integration tests
-
-#### Phase 4: MCP Server Implementation (@pkgs/mcp-server)
-
-- ✅ Core server setup with MCP SDK, dual transports (stdio/HTTP), detection logic
-- ✅ Session integration with client connection mapping and cleanup
-- ✅ MCP resources: status, sessions/list, session/{id}/output, session/{id}/status
-- ✅ MCP tools: start_pty (with shellMode), kill_pty, list_pty, read_pty, activate_pty_tools
-- ✅ Integration layer wiring SessionManager + PtyManager
-- ✅ Error handling, logging, and MCP responses
-- ✅ Testing & quality assurance (unit, integration, type checks)
-- ✅ CLI entry point with bin field configuration
-- ✅ XDG Base Directory specification support
-- ✅ Configuration priority system (CLI args > XDG config > env vars > defaults)
+#### Phase 4: MCP Server (@pkgs/mcp-server)
+- ✅ Core server (MCP SDK, dual transports, detection)
+- ✅ Session integration (client mapping, cleanup)
+- ✅ Resources: status, sessions/list, session/{id}/output, session/{id}/status
+- ✅ Tools: start_pty (shellMode), kill_pty, list_pty, read_pty, activate_pty_tools
+- ✅ SessionManager + PtyManager integration
+- ✅ Error handling, logging, MCP responses
+- ✅ Tests (unit, integration, type checks)
+- ✅ CLI entry (bin config)
+- ✅ XDG Base Dir spec
+- ✅ Config priority (CLI > XDG > env > defaults)
 
 ---
 
 ### Phase 5: Documentation & Examples
 
 #### 5.1 User Documentation
-
-- ✅ README.md update:
-  - ✅ Project overview
-  - ✅ Installation instructions
-  - ✅ Configuration guide (stdio vs HTTP)
-  - ✅ Environment variables reference
-  - ✅ XDG config file location
-- ✅ API documentation:
-  - ✅ MCP resources schema
-  - ✅ MCP tools schema
-  - ✅ Error codes & handling
+- ✅ README.md: overview, install, config (stdio/HTTP), env vars, XDG
+- ✅ API docs: resources/tools schema, error codes
 
 #### 5.2 Developer Documentation
-
 - [ ] Architecture deep-dive
 - [ ] Package interaction diagrams
 - [ ] Contribution guidelines
-- [ ] Development setup guide
+- [ ] Dev setup guide
 
 #### 5.3 Examples & Demos
+- [ ] MCP client config (stdio)
+- [ ] HTTP server deploy
+- [ ] Use cases: dev server, interactive tools (htop/vim), build processes
 
-- [ ] Example MCP client configuration (stdio mode)
-- [ ] Example HTTP server deployment
-- [ ] Sample use cases:
-  - [ ] Long-running development server (e.g., `npm run dev`)
-  - [ ] Interactive CLI tools (e.g., `htop`, `vim`)
-  - [ ] Multi-step build processes
+#### 5.4 Project Website
+- [ ] GitHub Pages landing page (Bun + React static site)
+- [ ] CI automation for GH Pages deploy (only essential steps)
 
 ---
 
 ### Phase 6: Production Readiness
 
-#### 6.1 Performance Optimization
-
-- [ ] Memory leak detection & prevention
-- [ ] Process resource limits enforcement
-- [ ] Streaming output buffer optimization
+#### 6.1 Performance
+- [ ] Memory leak detection/prevention
+- [ ] Process resource limits
+- [ ] Streaming buffer optimization
 - [ ] Idle session cleanup verification
 
 #### 6.2 Security Hardening
 
-##### Current Security Issues (Critical Priority)
+##### Critical Issues (🔴 Pre-Release Blocker)
+1. **Command Injection** - `normalize-commands` lacks validation w/ `sh -c`
+   - [ ] Dangerous pattern detect (rm -rf /, fork bombs)
+   - [ ] Command validation layer pre-exec
+   - [ ] bash-parser security checks
 
-**🔴 Critical Vulnerabilities**
+2. **Privilege Escalation Bypass** - sudo detect only checks prefix
+   - [ ] Enhance sudo detect (exec path: /usr/bin/sudo, doas, su, run0)
+   - [ ] Validate normalized commands post-bash-parser
+   - [ ] Exec basename check in `checkExecutablePermission`
 
-1. **Command Injection** - `normalize-commands` lacks validation when wrapping with `sh -c`
-   - [ ] Add dangerous pattern detection (rm -rf /, fork bombs, etc.)
-   - [ ] Implement command validation layer before shell execution
-   - [ ] Extend bash-parser error handling with security checks
+3. **PTY Write Injection** - `write_input` accepts arbitrary bytes
+   - [ ] Filter dangerous ANSI escapes
+   - [ ] Control char whitelist/blacklist
+   - [ ] Rate limiting for writes
 
-2. **Privilege Escalation Bypass** - sudo detection only checks string prefix
-   - [ ] Enhance sudo detection to check executable path (e.g., `/usr/bin/sudo`, `doas`, `su`, `run0`)
-   - [ ] Add validation for normalized commands after bash-parser processing
-   - [ ] Implement executable basename checking in `checkExecutablePermission`
+4. **Shell Metachar Attacks** - Unfiltered globs/redirections
+   - [ ] Restrict globs (`*`, `?`, `[]`) in sensitive contexts
+   - [ ] Validate redirects (`>`, `>>`, `<`, `<<`)
+   - [ ] Path traversal protection
 
-3. **PTY Write Input Injection** - `write_input` tool accepts arbitrary bytes
-   - [ ] Filter dangerous ANSI escape sequences
-   - [ ] Implement control character whitelist/blacklist
-   - [ ] Add rate limiting for write operations
+5. **Env Var Pollution** - PTY inherits parent env
+   - [ ] Safe default env (whitelist)
+   - [ ] Block dangerous vars (`LD_PRELOAD`, `LD_LIBRARY_PATH`)
+   - [ ] Per-session env isolation
 
-4. **Shell Metacharacter Attacks** - Glob patterns and redirections unfiltered
-   - [ ] Restrict file glob patterns (`*`, `?`, `[]`) in sensitive contexts
-   - [ ] Validate redirection operators (`>`, `>>`, `<`, `<<`)
-   - [ ] Add path traversal protection
+##### Medium Priority (🟡 Post v1.0)
+6. **Resource Exhaustion** - No PTY/resource limits
+   - [ ] PTY count limit/session (default: 10)
+   - [ ] Memory monitoring/limits
+   - [ ] Exec timeout (default: 30min)
+   - [ ] xterm buffer size limits
 
-5. **Environment Variable Pollution** - PTY inherits parent process environment
-   - [ ] Implement safe default environment (whitelist approach)
-   - [ ] Block dangerous variables (`LD_PRELOAD`, `LD_LIBRARY_PATH`)
-   - [ ] Add per-session environment isolation
+7. **Session Security** - Predictable IDs, weak timeout
+   - [ ] Eval ULID predictability
+   - [ ] Configurable idle timeout (current: 5min)
+   - [ ] Session auth (HTTP mode)
+   - [ ] Rate limit session creation
 
-**🟡 Medium Priority Issues**
+8. **Info Disclosure** - Logs contain sensitive data
+   - [ ] Log sanitization (commands/outputs)
+   - [ ] Redaction patterns (tokens, passwords)
+   - [ ] Separate audit log
 
-6. **Resource Exhaustion** - No limits on PTY creation or resource usage
-   - [ ] Add PTY instance count limit per session (configurable, default: 10)
-   - [ ] Implement memory usage monitoring and limits
-   - [ ] Add command execution timeout (configurable, default: 30min)
-   - [ ] Implement xterm buffer size limits
-
-7. **Session Security** - Predictable session IDs and weak timeout
-   - [ ] Evaluate ULID predictability for security contexts
-   - [ ] Make idle timeout configurable (current: 5min fixed)
-   - [ ] Add session-level authentication for HTTP mode
-   - [ ] Implement rate limiting for session creation
-
-8. **Information Disclosure** - Logs may contain sensitive data
-   - [ ] Implement log sanitization for commands and outputs
-   - [ ] Add redaction patterns for common secrets (tokens, passwords)
-   - [ ] Create separate audit log for security events
-
-**🟢 Existing Protections**
-
-- ✅ Root privilege detection with explicit consent requirement
-- ✅ Sudo command detection (partial - needs enhancement)
+##### Existing Protections (🟢)
+- ✅ Root privilege detect w/ consent
+- ✅ Sudo detect (partial, needs enhancement)
 - ✅ Session-based PTY isolation
-- ✅ Graceful SIGTERM → SIGKILL shutdown
-- ✅ Consent-based dangerous action framework (`MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS`)
+- ✅ Graceful SIGTERM → SIGKILL
+- ✅ Consent framework (`MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS`)
 
-##### Security Hardening Roadmap
+##### Roadmap
+**6.2.1: Critical Fixes (Pre-Release)**
+- [ ] Command validation in `normalize-commands`
+- [ ] Privilege escalation detect (sudo/doas/su/run0/pkexec/dzdo)
+- [ ] Dangerous pattern detect (rm -rf /, chmod 777, dd, mkfs, fork bombs)
+- [ ] Safe env defaults
+- [ ] Basic resource limits (PTY count, exec timeout)
 
-**Phase 6.2.1: Critical Fixes (Pre-Release Blocker)**
-- [ ] Implement command validation layer in `normalize-commands`
-- [ ] Enhance privilege escalation detection (sudo/doas/su/run0/pkexec/dzdo)
-- [ ] Add dangerous pattern detection (rm -rf /, chmod 777, dd, mkfs, fork bombs)
-- [ ] Implement safe environment variable defaults
-- [ ] Add basic resource limits (PTY count, execution timeout)
-
-**Phase 6.2.2: Enhanced Security (Post v1.0)**
-- [ ] PTY write input filtering and rate limiting
-- [ ] Advanced shell metacharacter protection
-- [ ] Memory usage monitoring and enforcement
-- [ ] Session authentication for HTTP transport
+**6.2.2: Enhanced Security (Post v1.0)**
+- [ ] PTY write filtering/rate limiting
+- [ ] Advanced metachar protection
+- [ ] Memory monitoring/enforcement
+- [ ] Session auth (HTTP)
 - [ ] Comprehensive audit logging
 
-**Phase 6.2.3: Documentation (Parallel Track)**
-- [ ] Create SECURITY.md with threat model and mitigation strategies
-- [ ] Document security considerations in README.md
-- [ ] Add security best practices guide
-- [ ] Document consent environment variables and their implications
-- [ ] Create security incident response guide
+**6.2.3: Security Docs (Parallel)**
+- [ ] SECURITY.md (threat model, mitigations)
+- [ ] README security considerations
+- [ ] Security best practices guide
+- [ ] Consent env vars docs
+- [ ] Incident response guide
 
 #### 6.3 Observability
-
 - [ ] Structured logging (consola)
-- [ ] Error tracking & reporting
-- [ ] Metrics collection (sessions, processes, uptime)
-- [ ] Health check endpoints (HTTP mode)
+- [ ] Error tracking/reporting
+- [ ] Metrics (sessions, processes, uptime)
+- [ ] Health checks (HTTP mode)
 
 #### 6.4 Deployment
-
-- [ ] Docker container support
+- [ ] Docker support
 - [ ] systemd service example
-- [ ] Cloud deployment guides (optional)
+- [ ] Cloud deploy guides (optional)
 - [ ] Version release process
 
 ---
@@ -203,7 +180,7 @@ Phase 1 (Infrastructure) ✅
   ├─→ Phase 2 (PTY Manager) ✅
   └─→ Phase 3 (Session Manager) ✅
         ├─→ Phase 4 (MCP Server) ✅
-               ├─→ Phase 5 (Documentation) ⬅️ **Current Phase**
+               ├─→ Phase 5 (Documentation) ⬅️ **Current**
                └─→ Phase 6 (Production Readiness)
 ```
 
@@ -212,55 +189,52 @@ Phase 1 (Infrastructure) ✅
 ## Current Priority: Phase 5 - Documentation & Examples
 
 ### Recently Completed
-
-- ✅ **CLI Entry Point Setup** - `bunx mcp-pty` command support
-- ✅ **XDG Config System** - `~/.config/mcp-pty/config.json` support
-- ✅ **Configuration Priority** - CLI args > XDG config > env vars > defaults
-- ✅ **5.1 User Documentation** - README with XDG config guide
-- ✅ **PTY Schema Improvements** - Removed z.any() usage in types and tools
-- ✅ **PTY Output Retrieval** - Implemented in tools and resources
-- ✅ **PTY Count Calculation** - Added to status resource
-- ✅ **Session Creation Time Management** - Added to PtyManager
-- ✅ **System Shell Environment Inheritance** - shellMode with PATH preservation
-- ✅ **Tool Name Simplification** - Removed `_pty` suffix from all tools (start, kill, list, read)
-- ✅ **Resource URI Simplification** - Removed `sessions/` prefix from resource templates
-- ✅ **Immediate Output on Start** - `start` tool now returns initial PTY output with 500ms wait
-- ✅ **Interactive Input Support** - `write_input` tool with terminal state extraction
-- ✅ **Terminal State Queries** - xterm buffer-based screen content + cursor position
-- ✅ **Comprehensive Text Support** - CJK/Emoji/multiline/ANSI control codes (Ctrl+C, etc.)
-- ✅ **normalize-commands Package Implementation** - Command parsing and normalization based on bash-parser
-- ✅ **MCP-PTY List Tool ExitCode** - Added exitCode field to list tool
-- ✅ **HTTP Transport Fixes** - Improved session reconnection and notification handling
-- ✅ **Reconnection Fix** - Support reconnection with session reuse
-- ✅ **normalize-commands Integration** - Integrated command parsing into pty-manager
-- ✅ **Test Enhancement** - Extended tests for environment variables and argument parsing
-- ✅ **Accurate pwd Setting** - Fixed issue where commands execute with mcp-pty server directory as pwd by making pwd mandatory in start tool
+- ✅ CLI entry (`bunx mcp-pty`)
+- ✅ XDG config (`~/.config/mcp-pty/config.json`)
+- ✅ Config priority (CLI > XDG > env > defaults)
+- ✅ 5.1 User docs (README w/ XDG)
+- ✅ PTY schema (removed z.any())
+- ✅ PTY output retrieval (tools/resources)
+- ✅ PTY count calc (status resource)
+- ✅ Session creation time (PtyManager)
+- ✅ Shell env inheritance (shellMode w/ PATH)
+- ✅ Tool name simplify (removed `_pty` suffix)
+- ✅ Resource URI simplify (removed `sessions/` prefix)
+- ✅ Immediate output on start (500ms wait)
+- ✅ Interactive input (`write_input` w/ terminal state)
+- ✅ Terminal state queries (xterm buffer + cursor)
+- ✅ Comprehensive text support (CJK/Emoji/multiline/ANSI)
+- ✅ normalize-commands pkg (bash-parser based)
+- ✅ List tool exitCode
+- ✅ HTTP transport fixes (reconnection, notifications)
+- ✅ Reconnection support (session reuse)
+- ✅ normalize-commands integration (pty-manager)
+- ✅ Test enhancement (env vars, arg parsing)
+- ✅ Accurate pwd (mandatory in start tool)
 
 ### In Progress
+- 5.1 User docs (README update w/ latest features)
+- 5.2 Dev docs (architecture deep-dive, contribution guides, normalization)
 
-- **5.1 User Documentation** - README.md update with latest features
-- **5.2 Developer Documentation** - architecture deep-dive and contribution guides and normalization
-
-### Suggested Implementation Order
-
-1. **5.1 User Documentation** - README.md update with latest features
-2. **5.2 Developer Documentation** - architecture deep-dive and contribution guides
-3. **5.3 Examples & Demos** - client configurations and use cases
-4. **6.x Production Readiness** - performance, security, observability
+### Suggested Order
+1. 5.1 User docs (README w/ latest)
+2. 5.2 Dev docs (arch + contrib)
+3. 5.3 Examples (client configs, use cases)
+4. 5.4 Project website (GH Pages w/ Bun + React)
+5. 6.x Production readiness (perf, security, observability)
 
 ### Next Steps
-
-1. Update README.md with latest features and configuration options
-2. Create architecture deep-dive documentation
-3. Develop contribution guidelines and development setup guide
-4. Build example MCP client configurations (stdio and HTTP modes)
-5. Create sample use cases (long-running servers, interactive tools)
+1. Update README w/ latest features/config
+2. Arch deep-dive docs
+3. Contrib guidelines + dev setup
+4. Example MCP client configs (stdio/HTTP)
+5. Sample use cases (long-running servers, interactive tools)
+6. GH Pages landing (Bun + React static)
+7. CI automation for GH Pages deploy
 
 ---
 
 ## Additional Plans
 
-1. Environment variable passing: Analyze what env MCP clients expect
-2. Accurate pwd setting: Fix issue where commands execute with mcp-pty server directory as pwd
-3. **Node.js Runtime Support**: Currently `bunx mcp-pty` works but `npx mcp-pty` fails (Bun-only runtime). Add Node.js compatibility for wider adoption.
-4. **Library Export & Type Definitions**: Current package is CLI-only (no TypeScript sources in NPM package). When converting to library, add `.d.ts` generation and re-enable type exports in `package.json`.
+1. **Node.js Runtime Support**: Currently `bunx mcp-pty` works but `npx mcp-pty` fails (Bun-only runtime). Add Node.js compatibility for wider adoption.
+2. **Library Export & Type Definitions**: Current package is CLI-only (no TypeScript sources in NPM package). When converting to library, add `.d.ts` generation and re-enable type exports in `package.json`.
