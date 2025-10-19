@@ -1,65 +1,122 @@
-# Agent Logs 요약
+# Agent Logs Summary
 
-이 문서는 `docs/agentlogs/` 폴더의 001~004 개발 로그 파일들을 요약한 내용입니다. MCP-PTY 프로젝트의 개발 진행 상황을 한국어로 정리하였습니다.
+Summarizes docs/agentlogs/ 001-012 development logs. Korean original, English translation here.
 
-## 001: Bun PTY 구현 테스트 (Tested Bun PTY Implementation)
+## 001: Bun PTY Implementation Test
 
-- **날짜**: 2025년 9월 25일
-- **주요 내용**:
-  - `bun-pty` 라이브러리를 사용하여 Bun-native PTY 지원 검증.
-  - 한글 입력 실험, ANSI 이스케이프 시퀀스 처리, TUI 애플리케이션 테스트.
-  - `xterm.js` 통합을 통해 터미널 에뮬레이션 구현.
-  - Bun.spawn만으로는 부족하며 PTY가 필요하다는 결론 도출.
-- **다음 단계**: MCP 통합, 세션 관리, 듀얼 인터페이스 지원.
+**Date:** Sep 25 2025  
+**Key:** Tested bun-pty + xterm.js for Bun-native PTY.  
+**Results:** Works for TUI, ANSI. No full PTY without xterm.  
+**Next:** MCP integration, session mgmt, dual interfaces.
 
-## 002: 현재 구현에 맞춘 문서 업데이트 (Updated Documentation for Current Implementation)
+## 002: Updated Docs for Current Implementation
 
-- **날짜**: 2025년 9월 25일
-- **주요 내용**:
-  - `abstract.md`와 `snippets.md`를 `@xterm/headless` + `bun-pty` 기반 구현 방향으로 업데이트.
-  - PoC 코드(Packages/experiments)를 반영하여 PTY 구현 섹션 수정.
-  - 세션 ID 생성을 ULID에서 nanoid로 변경, PTYSession 인터페이스 조정.
-  - 사용자 피드백 반영으로 리소스 및 툴 설명 개선.
-- **다음 단계**: 코어 패키지 구현 시작, MCP 통합, 테스트.
+**Date:** Sep 25 2025  
+**Key:** Aligned abstract.md + snippets.md to @xterm/headless + bun-pty PoC.  
+**Changes:** Updated PTY impl section, added serialize addon, ANSI handling.  
+**Next:** Core packages, MCP integration, tests.
 
-## 003: PTY Manager 구현 완료 (PTY Manager Implementation Completed)
+## 003: PTY Manager Implementation Completed
 
-- **날짜**: 2025년 9월 26일
-- **주요 내용**:
-  - `pty-manager` 패키지 완전 구현: 타입 시스템, PtyProcess 클래스, PtyManager 클래스.
-  - `bun-pty` + `@xterm/headless` 통합으로 PTY 생성, 명령 실행, 스트림 처리.
-  - MCP 프로토콜 의존성 제거, 순수 PTY 관리 로직.
-  - 엄격한 TypeScript 설정, ESLint + Prettier 적용, Bun 테스트 환경 구축.
-  - 세션별 다중 PTY 인스턴스 관리, 생명주기 관리.
-- **다음 단계**: `session-manager`에서 PtyManager 활용하여 MCP 인터페이스 구현.
+**Date:** Sep 26 2025  
+**Key:** Full pty-manager pkg: types, PtyProcess, PtyManager.  
+**Features:** bun-pty + @xterm/headless, cmd exec, stream handling, session multi-PTY.  
+**Quality:** Strict TS, ESLint, Prettier, Bun tests.  
+**Next:** session-manager for MCP interface.
 
-## 004: Session Manager 구현 완료 (Session Manager Implementation Completed)
+## 004: Session Manager Implementation Completed
 
-- **날짜**: 2025년 9월 26일
-- **주요 내용**:
-  - `session-manager` 패키지 완전 구현: 타입 정의, SessionManager 클래스.
-  - ULID 기반 세션 ID 생성, 상태 머신 (initializing → active → idle → terminating → terminated).
-  - PTY 바인딩 관리, 이벤트 시스템, 유휴 세션 모니터링 (5분 타임아웃).
-  - 엄격한 TypeScript, ESLint, Prettier 적용, 포괄적인 유닛 테스트 (15개 테스트 케이스).
-  - Graceful shutdown, 메모리 정리, 이벤트 기반 아키텍처.
-- **다음 단계**: MCP 서버 통합, PTY Manager 연동, 전송 계층 구현.
+**Date:** Sep 26 2025  
+**Key:** Full session-manager pkg: types, SessionManager.  
+**Features:** ULID session IDs, state machine, PTY binding, idle timeout 5min, graceful shutdown.  
+**Quality:** Strict TS, ESLint, Prettier, 15 unit tests.  
+**Next:** MCP server integration, PTY mgr wiring, transport layer.
 
-## 전체 프로젝트 진행 상황
+## 005: MCP Server Implementation Completed
 
-- **완료된 부분**:
-  - PTY Manager: PTY 생성 및 관리 로직 완성.
-  - Session Manager: 세션 생명주기 및 PTY 바인딩 관리 완성.
-  - 실험적 검증: Bun-native PTY 및 TUI 지원 확인.
-  - 문서 업데이트: 현재 구현 방향에 맞춘 문서화.
+**Date:** Oct 10 2025  
+**Key:** Full mcp-server pkg integrating MCP + SessionMgr + PtyMgr.  
+**Features:** Dual transport (stdio/HTTP), MCP resources/tools, session client binding.  
+**Resources:** pty://status, pty://list, pty://{id}/output, pty://{id}/status.  
+**Tools:** start_pty, kill_pty, list_pty, read_pty, activate_pty_tools.  
+**Next:** Docs update, examples, Phase 6 prod readiness.
 
-- **진행 중인 부분**:
-  - MCP 서버 통합: session-manager와 pty-manager를 연결하여 MCP 프로토콜 구현.
-  - 듀얼 인터페이스 지원: Resources 모드(pty:// URI)와 Tools 모드 전환.
+## 006: normalize-commands Implementation Completed
 
-- **주요 기술적 특징**:
-  - Bun 런타임 전용, 엄격한 TypeScript, ESLint + Prettier.
-  - KISS/SOLID 원칙 준수, 모노레포 구조 (@pkgs/\* 임포트).
-  - PTY 격리, 보안, 성능 최적화.
-  - 이벤트 기반 아키텍처, Graceful shutdown.
+**Date:** Oct ~2025  
+**Key:** bash-parser for accurate bash cmd parsing.  
+**Features:** Detects pipelines, redirects, logical ops; ignores quoted ops.  
+**Output:** sh -c or direct exec.  
+**Tests:** 18 unit tests, edge cases.  
+**Next:** pty-manager integration.
 
-이 요약은 개발 로그를 기반으로 한 현재 상태를 반영하며, 프로젝트의 지속적인 발전을 위한 참고 자료입니다.
+## 007: MCP-PTY List Tool ExitCode Implementation Completed
+
+**Date:** Oct ~2025  
+**Key:** Added exitCode to PtyInfoSchema (number | null).  
+**Changes:** list tool returns exitCode per PTY.  
+**TDD:** Updated tests first, then code.  
+**Next:** HTTP transport fixes.
+
+## 008: MCP-PTY HTTP Transport Fixes Completed
+
+**Date:** Oct ~2025  
+**Key:** Session reuse for reconnection.  
+**Fixes:** PTY cleanup on disconnect, session persistence, MCP notification handling.  
+**Changes:** DELETE /mcp endpoint, res.on("close") logic.  
+**Next:** Reconnection fix.
+
+## 009: MCP-PTY Reconnection Fix Implementation Completed
+
+**Date:** Oct ~2025  
+**Key:** Session ID reuse on client reconnect.  
+**Fixes:** Prevents 400 errors, maintains session continuity.  
+**Next:** normalize-commands integration.
+
+## 010: normalize-commands Integration into pty-manager Completed
+
+**Date:** Oct ~2025  
+**Key:** Added @pkgs/normalize-commands dep to pty-manager.  
+**Changes:** PtyProcess uses normalizeCommand for cmd parsing.  
+**Benefit:** Accurate complex cmd exec (pipelines, redirects).  
+**Tests:** 3 normalization tests added.  
+**Next:** Test enhancements.
+
+## 011: normalize-commands Test Enhancement Completed
+
+**Date:** Oct ~2025  
+**Key:** Enhanced shell detection for env vars (VAR=1 echo).  
+**Changes:** requiresShellExecution checks env assignments, improved arg parsing with = signs.  
+**Refactor:** test.each for DRY.  
+**Tests:** 24 cases, all pass.  
+**Next:** README update.
+
+## 012: README Update with Latest Features and Config Completed
+
+**Date:** Oct 20 2025  
+**Key:** Comprehensive README rewrite with latest features.  
+**Changes:** Added Features section (9 caps), enhanced API docs, verified config/usage.  
+**Coverage:** All 005-011 impls included.  
+**Next:** Prod readiness, examples.
+
+## Overall Project Status (Updated)
+
+**Completed:**
+- MCP Server: Dual transport, resources/tools.
+- normalize-commands: Accurate bash parsing, pty-manager integration.
+- HTTP Transport: Reconnection, notifications.
+- List Tool: exitCode.
+- README: Full feature docs.
+
+**In Progress:**
+- Phase 6: Prod readiness (perf, security).
+- Examples, demos.
+
+**Key Tech Features (Updated):**
+- Bun-only runtime, strict TS, ESLint + Prettier.
+- KISS/SOLID, monorepo @pkgs/* imports.
+- PTY isolation, security, perf optimization.
+- Event-driven arch, graceful shutdown.
+- Advanced cmd parsing, session reconnection, comprehensive text support.
+
+Reflects current state from dev logs, for project evolution reference.
