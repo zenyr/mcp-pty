@@ -113,4 +113,4 @@ bun test
 
 ## 크레딧
 
-Built with opencode (opencode.sh + github sst/opencode)
+Built with opencode (opencode.ai + github sst/opencode)

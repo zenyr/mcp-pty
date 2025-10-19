@@ -131,7 +131,7 @@ bunx mcp-pty --transport http --port 8080
 				</section>
 			</main>
 
-			<footer className="footer">
+<footer className="footer">
 				<p>
 					Built with{" "}
 					<a
@@ -150,6 +150,15 @@ bunx mcp-pty --transport http --port 8080
 						rel="noopener noreferrer"
 					>
 						MCP
+					</a>{" "}
+					&{" "}
+					<a
+						href="https://github.com/sst/opencode"
+						className="bun-link"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						opencode
 					</a>
 				</p>
 			</footer>
