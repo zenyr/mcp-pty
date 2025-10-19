@@ -17,13 +17,13 @@ interface Subscription {
 /**
  * Individual PTY process management class (bun-pty + xterm/headless)
  *
- * spawn.ts 기반 완전 재작성:
- * - IPty + xterm/headless 통합
- * - Subscribe 패턴으로 이벤트 관리
- * - Promise 변환 (toPromise)
- * - 터미널 버퍼 캡처 (captureBuffer)
- * - 리사이즈 지원 (resize)
- * - 안전한 dispose 처리
+ * Complete rewrite based on spawn.ts:
+ * - IPty + xterm/headless integration
+ * - Event management with subscribe pattern
+ * - Promise conversion (toPromise)
+ * - Terminal buffer capture (captureBuffer)
+ * - Resize support (resize)
+ * - Safe dispose handling
  */
 export class PtyProcess {
   public readonly id: string;
