@@ -347,10 +347,10 @@ test("checkExecutablePermission allows non-sudo executable", () => {
 
 test("checkExecutablePermission throws error for sudo executable without consent", () => {
   delete process.env.MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS;
-  expect(() => checkExecutablePermission("sudo-vi")).toThrow(
+  expect(() => checkExecutablePermission("sudo")).toThrow(
     /MCP-PTY detected an attempt to execute a sudo command/,
   );
-  expect(() => checkExecutablePermission("SUDO")).toThrow();
+  expect(() => checkExecutablePermission("/usr/bin/sudo")).toThrow();
 });
 
 test("checkExecutablePermission allows sudo executable with consent", () => {
@@ -363,7 +363,7 @@ test("checkExecutablePermission allows sudo executable with consent", () => {
     warnCalled = true;
   };
 
-  expect(() => checkExecutablePermission("sudo-vi")).not.toThrow();
+  expect(() => checkExecutablePermission("sudo")).not.toThrow();
   expect(warnCalled).toBe(true);
 
   console.warn = originalWarn;
