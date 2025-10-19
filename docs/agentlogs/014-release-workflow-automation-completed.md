@@ -31,29 +31,31 @@ Implement a two-stage release workflow:
 7. Sync to develop branch
 ```
 
-### 2. Created `.github/workflows/changelog.yml`
+### 2. Integrated CHANGELOG Generation into release.yml
 
-**Purpose:** Separate workflow for CHANGELOG generation and GitHub Release creation
+**Previous Design:** Separate `changelog.yml` workflow triggered asynchronously
+**Current Design:** Inline CHANGELOG generation within `release.yml` to prevent race conditions
 
-**Inputs:**
-- `version`: New version (e.g., 0.1.0)
-- `old_version`: Previous version (e.g., 0.0.1)
-
-**Steps:**
-1. Checkout with full history
-2. Generate CHANGELOG via git-cliff
-3. Commit CHANGELOG to main
-4. Create GitHub Release with version tag
+**Process:**
+1. Bump version in package.json
+2. Build & Test
+3. Publish to NPM (with rollback on failure)
+4. Commit version bump
+5. **Generate CHANGELOG** via git-cliff (inline)
+6. **Commit CHANGELOG** to main
+7. **Create GitHub Release** via gh CLI
+8. Sync main → develop with `--no-ff` merge
 
 **Advantages:**
-- Decoupled from NPM publish logic
-- Can be triggered independently for hotfixes or backports
-- Isolated failure handling
+- Eliminates race condition between NPM publish and CHANGELOG generation
+- Atomic operation: either everything succeeds or everything rolls back
+- Simpler deployment model (single workflow)
+- Ensures CHANGELOG always matches released version
 
 ### 3. Created `cliff.toml` Configuration
 
 **Features:**
-- Conventional Commits parsing (feat, fix, docs, perf, refactor, style, test, chore)
+- Conventional Commits parsing (feat, fix, doc/docs, perf, refactor, style, test, chore)
 - Grouped output by commit type
 - Automatic link generation for issue references (#123)
 - Semantic versioning friendly
@@ -62,7 +64,7 @@ Implement a two-stage release workflow:
 **Commit Groups:**
 - Added (feat)
 - Fixed (fix)
-- Documentation (doc)
+- Documentation (doc/docs - both singular and plural)
 - Performance (perf)
 - Refactored (refactor)
 - Styled (style)
@@ -102,11 +104,18 @@ Implement a two-stage release workflow:
 - Avoids accidental major version bumps
 - Simpler and safer for teams
 
-### Why Separate `changelog.yml`?
-- **Single Responsibility:** One workflow for documents, one for packages
-- **Error Isolation:** NPM failure ≠ CHANGELOG failure
-- **Reusability:** Can trigger independently
-- **Future-proofing:** Ready for A (automatic version detection) upgrade
+### Why Inline CHANGELOG Generation?
+- **Race Condition Prevention:** Async `gh workflow run` caused timing issues
+  - Old design: trigger → develop sync → CHANGELOG may not exist yet
+  - New design: generate → commit → sync (atomic)
+- **Rollback Safety:** NPM failure triggers `git reset --hard` before exit
+- **Atomic Release:** All-or-nothing semantics prevent zombie version bumps
+- **Simpler Debugging:** Single workflow log for entire release process
+
+### Why `git merge --no-ff`?
+- Prevents failures when `develop` has commits ahead of `main`
+- Creates explicit merge commit for release tracking
+- More reliable than `--ff-only` in multi-branch environments
 
 ## Future Enhancements (Type A - Automatic)
 
@@ -150,9 +159,9 @@ When comfortable, can implement:
    - Verify CHANGELOG format
 
 ## Files Modified
-- `.github/workflows/release.yml` (refactored)
-- `.github/workflows/changelog.yml` (new)
-- `cliff.toml` (new)
+- `.github/workflows/release.yml` (refactored with inline CHANGELOG generation & rollback)
+- `cliff.toml` (new, with regex fix for both doc/docs)
+- `docs/agentlogs/014-release-workflow-automation-completed.md` (this document, updated)
 
 ## Notes
 - All workflows use Bun for consistency

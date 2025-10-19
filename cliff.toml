@@ -35,7 +35,7 @@ body = """
 commit_parsers = [
   { message = "^feat", group = "Added" },
   { message = "^fix", group = "Fixed" },
-  { message = "^doc", group = "Documentation" },
+  { message = "^docs?", group = "Documentation" },
   { message = "^perf", group = "Performance" },
   { message = "^refactor", group = "Refactored" },
   { message = "^style", group = "Styled" },
