@@ -1,22 +1,19 @@
-import { type FC } from "react";
+import "./index.css";
 
-/**
- * Main landing page component for mcp-pty
- */
-export const App: FC = () => {
+export const App = () => {
 	return (
-		<div style={styles.container}>
-			<header style={styles.header}>
-				<h1 style={styles.title}>mcp-pty</h1>
-				<p style={styles.subtitle}>
+		<div className="app">
+			<header className="header">
+				<h1>mcp-pty</h1>
+				<p className="subtitle">
 					MCP server for PTY process management with Bun
 				</p>
 			</header>
 
-			<main style={styles.main}>
-				<section style={styles.section}>
+			<main className="main">
+				<section className="section">
 					<h2>Features</h2>
-					<ul style={styles.featureList}>
+					<ul className="feature-list">
 						<li>🚀 PTY process management via MCP protocol</li>
 						<li>⚡ Built with Bun for maximum performance</li>
 						<li>🔒 Session-based isolation with secure defaults</li>
@@ -26,9 +23,9 @@ export const App: FC = () => {
 					</ul>
 				</section>
 
-				<section style={styles.section}>
+				<section className="section">
 					<h2>Quick Start</h2>
-					<pre style={styles.code}>
+					<pre className="code">
 						<code>
 							{`# Install globally
 bunx mcp-pty
@@ -46,12 +43,12 @@ bunx mcp-pty
 					</pre>
 				</section>
 
-				<section style={styles.section}>
+				<section className="section">
 					<h2>Links</h2>
-					<div style={styles.links}>
+					<div className="links">
 						<a
 							href="https://github.com/zenyr/mcp-pty"
-							style={styles.link}
+							className="link"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -59,7 +56,7 @@ bunx mcp-pty
 						</a>
 						<a
 							href="https://github.com/zenyr/mcp-pty#readme"
-							style={styles.link}
+							className="link"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -67,7 +64,7 @@ bunx mcp-pty
 						</a>
 						<a
 							href="https://www.npmjs.com/package/mcp-pty"
-							style={styles.link}
+							className="link"
 							target="_blank"
 							rel="noopener noreferrer"
 						>
@@ -77,12 +74,12 @@ bunx mcp-pty
 				</section>
 			</main>
 
-			<footer style={styles.footer}>
+			<footer className="footer">
 				<p>
 					Built with{" "}
 					<a
 						href="https://bun.sh"
-						style={styles.bunLink}
+						className="bun-link"
 						target="_blank"
 						rel="noopener noreferrer"
 					>
@@ -91,7 +88,7 @@ bunx mcp-pty
 					&{" "}
 					<a
 						href="https://modelcontextprotocol.io"
-						style={styles.bunLink}
+						className="bun-link"
 						target="_blank"
 						rel="noopener noreferrer"
 					>
@@ -103,71 +100,4 @@ bunx mcp-pty
 	);
 };
 
-const styles = {
-	container: {
-		fontFamily: "system-ui, -apple-system, sans-serif",
-		maxWidth: "900px",
-		margin: "0 auto",
-		padding: "2rem",
-		lineHeight: "1.6",
-	},
-	header: {
-		textAlign: "center" as const,
-		marginBottom: "3rem",
-	},
-	title: {
-		fontSize: "3rem",
-		margin: "0 0 0.5rem 0",
-		color: "#111",
-		fontWeight: "700",
-	},
-	subtitle: {
-		fontSize: "1.25rem",
-		color: "#666",
-		margin: 0,
-	},
-	main: {
-		marginBottom: "3rem",
-	},
-	section: {
-		marginBottom: "2rem",
-	},
-	featureList: {
-		listStyle: "none",
-		padding: 0,
-		fontSize: "1.1rem",
-	},
-	code: {
-		background: "#f5f5f5",
-		padding: "1rem",
-		borderRadius: "8px",
-		overflow: "auto",
-		fontSize: "0.9rem",
-	},
-	links: {
-		display: "flex",
-		gap: "1rem",
-		flexWrap: "wrap" as const,
-	},
-	link: {
-		padding: "0.75rem 1.5rem",
-		background: "#111",
-		color: "#fff",
-		textDecoration: "none",
-		borderRadius: "6px",
-		fontSize: "1rem",
-		transition: "background 0.2s",
-	},
-	footer: {
-		textAlign: "center" as const,
-		color: "#666",
-		fontSize: "0.9rem",
-		paddingTop: "2rem",
-		borderTop: "1px solid #e0e0e0",
-	},
-	bunLink: {
-		color: "#111",
-		textDecoration: "none",
-		fontWeight: "600",
-	},
-};
+export default App;
