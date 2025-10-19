@@ -241,14 +241,14 @@ test("PtyProcess captureBuffer returns array of lines", async () => {
   });
 });
 
-test("PtyProcess getOutputBuffer accumulates output", async () => {
+test("PtyProcess getScreenContent captures current screen", async () => {
   await withTestPtyProcess("echo accumulate", async (pty) => {
     await pty.ready();
     await Bun.sleep(200);
 
-    const output = pty.getOutputBuffer();
-    expect(output.length).toBeGreaterThan(0);
-    expect(output).toContain("accumulate");
+    const screen = pty.getScreenContent();
+    expect(screen.length).toBeGreaterThan(0);
+    expect(screen).toContain("accumulate");
   });
 });
 

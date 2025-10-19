@@ -373,8 +373,8 @@ test("PtyProcess autoDisposeOnExit triggers cleanup on process exit", async () =
 test("PtyProcess onOutput callback receives output data", async () => {
   await withTestPtyProcess("echo hello", async (pty) => {
     await Bun.sleep(100);
-    const buffer = pty.getOutputBuffer();
-    expect(buffer.length).toBeGreaterThan(0);
+    const screen = pty.getScreenContent();
+    expect(screen.length).toBeGreaterThan(0);
   });
 });
 

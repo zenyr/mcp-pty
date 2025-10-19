@@ -86,7 +86,6 @@ export class PtyProcess {
 
   private pty: IPty | null = null;
   private exitCode: number | null = null;
-  private outputBuffer = "";
   private subscribers: Array<{
     onData: (data: string) => void;
     onError: (error: Error) => void;
@@ -133,7 +132,6 @@ export class PtyProcess {
 
     // PTY output -> xterm and subscribers
     this.pty.onData((data: string) => {
-      this.outputBuffer += data;
       this.terminal.write(data);
       this.updateActivity();
 
@@ -218,7 +216,7 @@ export class PtyProcess {
   /**
    * Extract current screen content from terminal buffer
    */
-  private getScreenContent(): string {
+  public getScreenContent(): string {
     const buffer = this.terminal.buffer.active;
     const lines: string[] = [];
 
@@ -257,13 +255,6 @@ export class PtyProcess {
     }
 
     return lines;
-  }
-
-  /**
-   * Get raw output buffer
-   */
-  getOutputBuffer(): string {
-    return this.outputBuffer;
   }
 
   /**
@@ -306,13 +297,13 @@ export class PtyProcess {
   }
 
   /**
-   * Convert to Promise
+   * Convert to Promise - returns final screen content
    */
   async toPromise(): Promise<string> {
     await this.ready();
     return new Promise<string>((resolve, reject) => {
       this.subscribe({
-        onData: () => {}, // data는 outputBuffer에 누적
+        onData: () => {}, // Process data in background
         onError: (err) => {
           this.dispose();
           reject(err);
@@ -326,7 +317,8 @@ export class PtyProcess {
             error.exitCode = this.exitCode;
             reject(error);
           } else {
-            resolve(this.outputBuffer);
+            // Return final screen content from xterm buffer
+            resolve(this.getScreenContent());
           }
         },
       });

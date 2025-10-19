@@ -64,7 +64,7 @@ describe("MCP Server", () => {
         if (!pty) throw new Error("PTY not found");
 
         expect(pty).toBeDefined();
-        expect(typeof pty.getOutputBuffer()).toBe("string");
+        expect(typeof pty.getScreenContent()).toBe("string");
       });
     });
 
@@ -217,8 +217,8 @@ describe("MCP Server", () => {
         if (!content?.text) throw new Error("content.text is undefined");
 
         const parsed = JSON.parse(content.text);
-        expect(parsed).toHaveProperty("output");
-        expect(typeof parsed.output).toBe("string");
+        expect(parsed).toHaveProperty("screen");
+        expect(typeof parsed.screen).toBe("string");
 
         ptyManager.dispose();
       });

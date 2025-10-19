@@ -82,8 +82,9 @@ export const createResourceHandlers = (server: McpServer) => ({
     if (!ptyManager) throw new Error("Session not found");
     const pty = ptyManager.getPty(processId);
     if (!pty) throw new Error("PTY process not found");
-    const output = pty.getOutputBuffer();
-    return { contents: [{ uri: uri.href, text: JSON.stringify({ output }) }] };
+    // Get current screen content from xterm buffer
+    const screen = pty.getScreenContent();
+    return { contents: [{ uri: uri.href, text: JSON.stringify({ screen }) }] };
   },
 });
 
