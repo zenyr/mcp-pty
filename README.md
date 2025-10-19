@@ -60,7 +60,7 @@ bun run packages/mcp-server/src/index.ts --transport http
 ```json
 {
   "transport": "stdio",
-  "port": 3000,
+  "port": 6420,
   "deactivateResources": false
 }
 ```

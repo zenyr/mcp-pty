@@ -33,7 +33,7 @@ export type McpPtyConfig = {
   transport?: "stdio" | "http";
   /**
    * HTTP server port (only for http transport)
-   * @default 3000
+   * @default 6420
    */
   port?: number;
   /**

@@ -38,6 +38,35 @@ body {
 	color: #666;
 }
 
+.notice {
+	margin-top: 1rem;
+	padding: 0.75rem 1rem;
+	background: #fff3cd;
+	border: 1px solid #ffc107;
+	border-radius: 6px;
+	font-size: 0.95rem;
+	color: #856404;
+	display: inline-block;
+}
+
+.notice code {
+	background: rgba(0, 0, 0, 0.1);
+	padding: 0.2rem 0.4rem;
+	border-radius: 3px;
+	font-family: "Courier New", monospace;
+	font-size: 0.9em;
+}
+
+.install-link {
+	color: #856404;
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+.install-link:hover {
+	color: #533f03;
+}
+
 .main {
 	margin-bottom: 3rem;
 }
@@ -103,5 +132,15 @@ body {
 }
 
 .bun-link:hover {
+	text-decoration: underline;
+}
+
+.tech-link {
+	color: #0066cc;
+	text-decoration: none;
+	font-weight: 500;
+}
+
+.tech-link:hover {
 	text-decoration: underline;
 }
