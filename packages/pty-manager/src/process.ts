@@ -26,11 +26,9 @@ const DANGEROUS_CONTROL_PATTERNS = [
  */
 const validateInputData = (data: string): void => {
   // Allow basic control characters used for terminal interaction
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: Terminal control chars are expected
   const allowedControls = /[\u0003\u0004\u001a\r\n\t]/; // Ctrl+C, Ctrl+D, Ctrl+Z, CR, LF, Tab
 
   // Allow ANSI color codes (SGR sequences)
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI color codes are safe
   const safeColorCodes = /\u001b\[[0-9;]*m/;
 
   // Skip validation for single allowed control chars

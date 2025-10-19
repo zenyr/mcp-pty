@@ -53,7 +53,7 @@ const isDangerousRedirect = (node: BashNode): boolean => {
     for (const s of node.suffix) {
       if (s && s.type === "Redirect") {
         const target = (s as { file?: BashNode }).file;
-        if (target && target.text) {
+        if (target?.text) {
           // Block writes to block devices
           if (/^\/dev\/sd[a-z]/.test(target.text)) {
             return true;
