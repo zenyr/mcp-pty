@@ -126,19 +126,19 @@
 - ✅ 세션 생성 시간 관리 (pty-manager/manager.ts)
 - ✅ Interactive input support (PtyProcess.write() + write_input tool)
 - ✅ Terminal state extraction (xterm buffer + cursor position)
-- [ ] PTY 인스턴스 정리 로직 (session-manager/index.ts)
-- [ ] 세션별 서버 인스턴스 생성 검토 (mcp-server/transports/index.ts)
+ - [x] PTY 인스턴스 정리 로직 (session-manager/index.ts)
+ - [x] 세션별 서버 인스턴스 생성 검토 (mcp-server/transports/index.ts)
 
 #### 4.8 Command Parser Implementation
 
-- [ ] Treesitter 기반 command parser 패키지 생성 (@pkgs/command-parser)
-- [ ] Shell grammar 정의 (bash/tree-sitter-bash 활용)
-- [ ] Parser 함수 구현: `parseCommand(input: string) => { normalized: string; isShellCommand: boolean }`
-- [ ] Shell 명령어 감지 로직 (&&, ||, |, ;, redirection 등)
-- [ ] 명령어 정규화 (whitespace 정리, quote 처리)
-- [ ] PTY 실행 로직 통합 (isShellCommand에 따라 sh -c vs direct spawn)
-- [ ] Unit tests 및 integration tests
-- [ ] Error handling 및 edge cases (malformed commands)
+- [x] Treesitter 기반 command parser 패키지 생성 (@pkgs/command-parser) - bash-parser로 대체
+- [x] Shell grammar 정의 (bash/tree-sitter-bash 활용) - bash-parser AST 활용
+- [x] Parser 함수 구현: `parseCommand(input: string) => { normalized: string; isShellCommand: boolean }`
+- [x] Shell 명령어 감지 로직 (&&, ||, |, ;, redirection 등)
+- [x] 명령어 정규화 (whitespace 정리, quote 처리)
+- [x] PTY 실행 로직 통합 (isShellCommand에 따라 sh -c vs direct spawn)
+- [x] Unit tests 및 integration tests
+- [x] Error handling 및 edge cases (malformed commands)
 
 ---
 
@@ -214,15 +214,15 @@ Phase 1 (Infrastructure)
   ├─→ Phase 2 (PTY Manager) ✅
   └─→ Phase 3 (Session Manager) ✅
         ├─→ Phase 4 (MCP Server) ✅
-              ├─→ Phase 4.7 (Refinements)
-              │     ├─→ Phase 4.8 (Command Parser)
+               ├─→ Phase 4.7 (Refinements) ✅
+               │     ├─→ Phase 4.8 (Command Parser) ✅
               │     │     ├─→ Phase 5 (Documentation) ⬅️ **Current Phase**
               │     │     └─→ Phase 6 (Production Readiness)
 ```
 
 ---
 
-## Current Priority: Phase 4.7 - Implementation Refinements & Phase 4.8 - Command Parser
+## Current Priority: Phase 5 - Documentation & Examples
 
 ### Recently Completed
 
@@ -241,24 +241,29 @@ Phase 1 (Infrastructure)
 - ✅ **Interactive Input Support** - `write_input` tool with terminal state extraction
 - ✅ **Terminal State Queries** - xterm buffer-based screen content + cursor position
 - ✅ **Comprehensive Text Support** - CJK/Emoji/multiline/ANSI control codes (Ctrl+C, etc.)
+- ✅ **normalize-commands Package Implementation** - bash-parser 기반 명령어 파싱 및 정규화
+- ✅ **MCP-PTY List Tool ExitCode** - 리스트 툴에 exitCode 필드 추가
+- ✅ **HTTP Transport Fixes** - 세션 재연결 및 알림 처리 개선
+- ✅ **Reconnection Fix** - 세션 재사용으로 재연결 지원
+- ✅ **normalize-commands Integration** - pty-manager에 명령어 파싱 통합
+- ✅ **Test Enhancement** - 환경 변수 및 인자 파싱 테스트 확장
 
 ### In Progress
 
-- **4.7 Implementation Refinements** - remaining TODO items: PTY cleanup, server instance review
-- **4.8 Command Parser Implementation** - treesitter-based command parser for shell command detection and normalization
+- **5.1 User Documentation** - README.md update with latest features
+- **5.2 Developer Documentation** - architecture deep-dive and contribution guides and normalization
 
 ### Suggested Implementation Order
 
-1. **4.7 Implementation Refinements** - complete remaining TODO items
-2. **4.8 Command Parser Implementation** - treesitter-based parser for shell command detection
-3. **5.2 Developer Documentation** - architecture and contribution guides
-4. **5.3 Examples & Demos** - client configurations and use cases
-5. **6.x Production Readiness** - performance, security, observability
+1. **5.1 User Documentation** - README.md update with latest features
+2. **5.2 Developer Documentation** - architecture deep-dive and contribution guides
+3. **5.3 Examples & Demos** - client configurations and use cases
+4. **6.x Production Readiness** - performance, security, observability
 
 ### Next Steps
 
-1. Add PTY instance cleanup logic in session termination
-2. Review session-specific server instance requirements
-3. Implement treesitter-based command parser for shell command detection
-4. Developer documentation (architecture deep-dive)
-5. Example client configurations and use cases
+1. Update README.md with latest features and configuration options
+2. Create architecture deep-dive documentation
+3. Develop contribution guidelines and development setup guide
+4. Build example MCP client configurations (stdio and HTTP modes)
+5. Create sample use cases (long-running servers, interactive tools)
