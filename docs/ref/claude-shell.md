@@ -1,7 +1,7 @@
 # Spawn Class Interface (Based on Z31 Function)
 
 ## Overview
-Spawn 클래스는 프로세스를 스폰하고 EventEmitter 기반으로 입출력을 처리하는 고급 프로세스 실행 인터페이스입니다. 원래의 Z31 함수를 개선하여 RxJS 의존성을 완전히 제거하고 타입 안정성을 강화했습니다. 깔끔한 아웃풋 캡처와 백그라운드 실행을 지원하며 Bun 런타임을 활용합니다.
+The Spawn class is an advanced process execution interface that spawns processes and handles input/output based on EventEmitter. It improves the original Z31 function by completely removing RxJS dependencies and enhancing type safety. It supports clean output capture and background execution, leveraging the Bun runtime.
 
 ## Class Signature
 ```typescript
@@ -32,10 +32,10 @@ class Spawn<T = OutputEvent | string> {
 ## Parameters
 
 ### command: string
-실행할 명령어 (예: "echo", "ls", "/bin/sh")
+Command to execute (e.g., "echo", "ls", "/bin/sh")
 
 ### args: string[]
-명령어에 전달할 인자 배열
+Array of arguments to pass to the command
 
 ### options: SpawnOptions (optional)
 ```typescript
@@ -50,82 +50,82 @@ interface SpawnOptions {
   usePty?: boolean                                   // PTY 모드 활성화 (대화형 프로그램 지원)
   cols?: number                                      // 터미널 컬럼 수 (PTY 모드, 기본: 80)
   rows?: number                                      // 터미널 행 수 (PTY 모드, 기본: 24)
-  onSpawn?: (subprocess: PtySubprocess | BunSubprocess) => void  // 프로세스 시작 콜백
+  onSpawn?: (subprocess: PtySubprocess | BunSubprocess) => void  // Process start callback
 }
 ```
 
-**주의사항**:
-- `detached` 옵션은 Bun.spawn에서 미지원되어 실제로는 무시됩니다
-- 백그라운드 실행이 필요한 경우 `detach()` 메서드를 사용하세요
+**Notes**:
+- The `detached` option is not supported in Bun.spawn and is ignored
+- Use the `detach()` method for background execution when needed
 
 ## Return Value
 
-### Spawn<string> (기본 모드)
+### Spawn<string> (default mode)
 ```typescript
-// subscribe를 통한 데이터 수신
+// Receive data via subscribe
 Spawn<string>.subscribe((data: string) => {
-  // stdout과 stderr이 합쳐진 텍스트 스트림
+  // Combined stdout and stderr text stream
 })
 ```
 
-### Spawn<OutputEvent> (split 모드)
+### Spawn<OutputEvent> (split mode)
 ```typescript
 interface OutputEvent {
   source: "stdout" | "stderr"
   text: string
 }
 
-// subscribe를 통한 데이터 수신
+// Receive data via subscribe
 Spawn<OutputEvent>.subscribe((data: OutputEvent) => {
-  // stdout/stderr 분리된 객체 스트림
+  // Separated stdout/stderr object stream
 })
 ```
 
 ## Key Features
 
-1. **EventEmitter 기반 입출력**: RxJS 없이 Node.js EventEmitter를 사용한 비동기 스트림 처리
-2. **타입 안정성**: 완전한 TypeScript 타입 정의, `any` 타입 완전 제거, 런타임 타입 가드
-3. **깔끔한 아웃풋 캡처**: AsyncSubject 패턴을 EventEmitter로 구현하여 stdout/stderr 완전 캡처
-4. **자동 프로세스 관리**: 에러 발생 시 자동 종료, 구독 해제 시 프로세스 킬
-5. **백그라운드 실행 지원**: detached 옵션과 spawnDetached 함수로 백그라운드 프로세스 관리
-6. **에러 처리**: exit code 기반 에러 생성 및 전파, SIGTERM(143) 정상 처리
-7. **인코딩 지원**: UTF-8 기본, 커스텀 인코딩 지원, 안전한 텍스트 변환
-8. **Bun 런타임**: Bun.spawn() 및 bun-pty API 활용으로 성능 최적화
-9. **PTY 지원**: bun-pty를 통한 완전한 PTY 모드 지원 (vim, nano 등 대화형 프로그램)
-10. **동적 stdin 입력**: 실행 중인 프로세스에 동적으로 stdin 데이터 전송 가능 (write 메서드)
-11. **프로세스 Detach**: 실행 중인 프로세스를 detach하여 백그라운드 실행으로 전환 가능
-12. **프로세스 상태 조회**: isRunning(), isPtyMode() 메서드로 프로세스 실행 상태 확인
-13. **저수준 접근**: getSubprocess() 메서드로 Bun subprocess 또는 PTY 프로세스 객체 직접 접근
-14. **터미널 리사이즈**: PTY 모드에서 resize() 메서드로 동적 터미널 크기 조정
-15. **안전한 스트림 처리**: stdin/stdout/stderr의 타입 체크로 file descriptor 오류 방지
+1. **EventEmitter-based I/O**: Asynchronous stream processing using Node.js EventEmitter without RxJS
+2. **Type Safety**: Complete TypeScript type definitions, complete removal of `any` types, runtime type guards
+3. **Clean Output Capture**: Implementation of AsyncSubject pattern with EventEmitter for complete stdout/stderr capture
+4. **Automatic Process Management**: Automatic termination on errors, process kill on subscription unsubscribe
+5. **Background Execution Support**: Background process management with detached option and spawnDetached function
+6. **Error Handling**: Error generation and propagation based on exit codes, normal handling of SIGTERM(143)
+7. **Encoding Support**: UTF-8 default, custom encoding support, safe text transformation
+8. **Bun Runtime**: Performance optimization using Bun.spawn() and bun-pty APIs
+9. **PTY Support**: Complete PTY mode support via bun-pty (for interactive programs like vim, nano)
+10. **Dynamic stdin Input**: Ability to send stdin data dynamically to running processes (write method)
+11. **Process Detach**: Ability to detach running processes to background execution
+12. **Process Status Queries**: Check process running status with isRunning(), isPtyMode() methods
+13. **Low-level Access**: Direct access to Bun subprocess or PTY process objects via getSubprocess() method
+14. **Terminal Resize**: Dynamic terminal size adjustment in PTY mode with resize() method
+15. **Safe Stream Processing**: Type checking of stdin/stdout/stderr to prevent file descriptor errors
 
 ## Usage Examples
 
-### 1. 기본 Subscribe 패턴
+### 1. Basic Subscribe Pattern
 ```typescript
 const spawn = Spawn.spawn("echo", ["Hello, World!"]);
 
 const subscription = spawn.subscribe(
   (data) => {
-    console.log(`출력: ${data}`);
+    console.log(`Output: ${data}`);
   },
   (err) => {
-    console.error(`에러: ${err.message}`);
+    console.error(`Error: ${err.message}`);
   },
   () => {
-    console.log("프로세스 완료");
+    console.log("Process completed");
     subscription.unsubscribe();
   }
 );
 ```
 
-### 2. Promise 패턴 (가장 간단)
+### 2. Promise Pattern (Simplest)
 ```typescript
 const output = await Spawn.spawnPromise("ls", ["-la"]);
 console.log(output);
 ```
 
-### 3. Split 모드 (stdout/stderr 분리)
+### 3. Split Mode (stdout/stderr separation)
 ```typescript
 const spawn = Spawn.spawnSplit("sh", ["-c", 'echo "stdout" && echo "stderr" >&2']);
 
@@ -138,7 +138,7 @@ spawn.subscribe((data) => {
 });
 ```
 
-### 4. Split Promise 패턴
+### 4. Split Promise Pattern
 ```typescript
 const spawn = Spawn.spawnSplit("sh", ["-c", 'echo "out" && echo "err" >&2']);
 const { stdout, stderr } = await spawn.toSplitPromise();
@@ -146,7 +146,7 @@ console.log(`stdout: ${stdout}`);
 console.log(`stderr: ${stderr}`);
 ```
 
-### 5. stdin 입력 (Async Generator)
+### 5. stdin Input (Async Generator)
 ```typescript
 async function* generateInput() {
   yield "Hello\n";
@@ -161,7 +161,7 @@ const output = await spawn.toPromise();
 console.log(output); // "Hello\nWorld\n"
 ```
 
-### 6. 에러 핸들링 (exit code !== 0)
+### 6. Error Handling (exit code !== 0)
 ```typescript
 try {
   await Spawn.spawnPromise("cat", ["/nonexistent/file.txt"]);
@@ -174,34 +174,34 @@ try {
 }
 ```
 
-### 7. Echo Output (실시간 출력)
+### 7. Echo Output (Real-time output)
 ```typescript
 await Spawn.spawnPromise("sh", ["-c", 'for i in 1 2 3; do echo "Count: $i"; sleep 0.1; done'], {
-  echoOutput: true,  // 콘솔에 실시간으로 출력됨
+  echoOutput: true,  // Output to console in real-time
 });
 ```
 
-### 8. Cleanup 콜백
+### 8. Cleanup Callback
 ```typescript
 const spawn = Spawn.spawn("long-running-command", []);
 
 spawn.onCleanup(() => {
-  console.log("프로세스 정리 중...");
+  console.log("Cleaning up process...");
 });
 
 const subscription = spawn.subscribe(
   (data) => console.log(data),
   (err) => console.error(err),
-  () => console.log("완료")
+  () => console.log("Completed")
 );
 
-// 필요 시 강제 종료
+// Force termination if needed
 setTimeout(() => {
-  subscription.unsubscribe(); // cleanup 콜백 실행됨
+  subscription.unsubscribe(); // cleanup callback executed
 }, 5000);
 ```
 
-### 9. 병렬 실행
+### 9. Parallel Execution
 ```typescript
 const commands = [
   { cmd: "echo", args: ["Process 1"] },
@@ -218,55 +218,53 @@ results.forEach((output, i) => {
 });
 ```
 
-### 10. Detached 백그라운드 프로세스
+### 10. Detached Background Process
 ```typescript
-const spawn = Spawn.spawnDetached("long-running-daemon", []);
-
-// 또는 Promise 패턴
+// Or Promise pattern
 const output = await Spawn.spawnDetachedPromise("background-task", []);
 ```
 
-### 11. 실행 중인 프로세스에 동적으로 stdin 입력
+### 11. Dynamic stdin Input to Running Process
 ```typescript
-// 대화형 프로세스 시작
+// Start interactive process
 const spawn = Spawn.spawn("python3", ["-i"]);
 
 spawn.subscribe((data) => {
   console.log(data);
 });
 
-// 프로세스 시작 후 동적으로 명령어 입력
+// Input commands dynamically after process starts
 await spawn.write("print('Hello from stdin')\n");
 await spawn.write("x = 10\n");
 await spawn.write("print(x * 2)\n");
 
-// write() 메서드는 PTY와 Standard 모드 모두 지원
-// - Standard 모드: stdin이 FileSink인지 체크 후 write
-// - PTY 모드: PTY process의 write 메서드 사용
+// write() method supports both PTY and Standard modes
+// - Standard mode: Check if stdin is FileSink then write
+// - PTY mode: Use PTY process's write method
 ```
 
-### 12. 실행 중인 프로세스 Detach
+### 12. Detach Running Process
 ```typescript
-// 프로세스 시작
+// Start process
 const spawn = Spawn.spawn("long-running-server", []);
 
 const subscription = spawn.subscribe((data) => {
   console.log(data);
 });
 
-// 잠시 후 detach하여 백그라운드에서 계속 실행
+// Detach after a while to continue running in background
 setTimeout(() => {
   const subprocess = spawn.detach();
   console.log("Process detached but still running");
 
-  // 필요시 subprocess 객체로 직접 관리 가능
+  // Can manage directly with subprocess object if needed
   if (subprocess) {
     console.log("PID:", subprocess.pid);
   }
 }, 5000);
 ```
 
-### 13. 프로세스 상태 확인
+### 13. Process Status Check
 ```typescript
 const spawn = Spawn.spawn("echo", ["test"]);
 
@@ -281,7 +279,7 @@ spawn.subscribe(
 );
 ```
 
-### 14. 고급: subprocess 객체 직접 접근
+### 14. Advanced: Direct Access to subprocess Object
 ```typescript
 const spawn = Spawn.spawn("node", ["-v"]);
 
@@ -294,23 +292,23 @@ if (subprocess) {
 }
 ```
 
-### 15. PTY 모드로 대화형 프로그램 실행
+### 15. Run Interactive Programs in PTY Mode
 ```typescript
-// vim 편집기 실행 (PTY 필수)
+// Run vim editor (PTY required)
 const spawn = Spawn.spawnPty("vim", ["test.txt"]);
 
 spawn.subscribe((data) => {
   console.log("Screen output:", data);
 });
 
-// vim 명령어 입력
-await spawn.write("i");           // Insert 모드 진입
-await spawn.write("Hello, World!\n");  // 텍스트 입력
-await spawn.write("\x1b");        // ESC 키 (종료 모드)
-await spawn.write(":wq\n");       // 저장 후 종료
+// Input vim commands
+await spawn.write("i");           // Enter insert mode
+await spawn.write("Hello, World!\n");  // Input text
+await spawn.write("\x1b");        // ESC key (exit mode)
+await spawn.write(":wq\n");       // Save and quit
 ```
 
-### 16. PTY 모드로 Python 대화형 세션
+### 16. Python Interactive Session in PTY Mode
 ```typescript
 const spawn = Spawn.spawnPty("python3", ["-i"]);
 
@@ -318,14 +316,14 @@ spawn.subscribe((data) => {
   console.log(data);
 });
 
-// Python 명령어 동적 입력
+// Input Python commands dynamically
 await spawn.write("x = 10\n");
 await spawn.write("y = 20\n");
 await spawn.write("print(x + y)\n");
 await spawn.write("exit()\n");
 ```
 
-### 17. PTY 터미널 리사이즈
+### 17. PTY Terminal Resize
 ```typescript
 const spawn = Spawn.spawnPty("top", []);
 
@@ -333,14 +331,14 @@ spawn.subscribe((data) => {
   console.log(data);
 });
 
-// 터미널 크기 변경
+// Change terminal size
 setTimeout(() => {
   spawn.resize(120, 40);
   console.log("Terminal resized to 120x40");
 }, 2000);
 ```
 
-### 18. PTY 모드 확인
+### 18. PTY Mode Check
 ```typescript
 const spawn1 = Spawn.spawn("echo", ["test"]);
 console.log("Is PTY mode?", spawn1.isPtyMode()); // false
@@ -349,22 +347,22 @@ const spawn2 = Spawn.spawnPty("vim", ["test.txt"]);
 console.log("Is PTY mode?", spawn2.isPtyMode()); // true
 ```
 
-### 19. PTY Promise 패턴
+### 19. PTY Promise Pattern
 ```typescript
-// vim으로 파일 편집 후 결과 캡처
+// Edit file with vim and capture result
 const output = await Spawn.spawnPtyPromise("vim", ["test.txt"]);
 console.log("Final output:", output);
 ```
 
 ## Deep Dive: Output Capture Mechanism
 
-### EventEmitter 기반 AsyncSubject 패턴 구현
-- **stdout/stderr 분리 관리**: 각 스트림을 독립적으로 읽고 완료 상태 추적
-- **완전성 보장**: `stdoutClosed`, `stderrClosed`, `exitCode` 모두 준비될 때까지 대기
-- **청크 처리**: ReadableStream의 각 청크마다 텍스트 변환 및 EventEmitter로 전송
-- **안전한 변환**: Uint8Array → String 변환 시 예외 처리 및 fallback 메시지
+### EventEmitter-based AsyncSubject Pattern Implementation
+- **stdout/stderr Separate Management**: Read each stream independently and track completion status
+- **Completeness Guarantee**: Wait until `stdoutClosed`, `stderrClosed`, `exitCode` are all ready
+- **Chunk Processing**: Text transformation and EventEmitter transmission for each chunk of ReadableStream
+- **Safe Transformation**: Exception handling and fallback messages during Uint8Array → String conversion
 
-### Text Transformation Process (processChunk 함수)
+### Text Transformation Process (processChunk function)
 ```typescript
 const processChunk = (source: "stdout" | "stderr", chunk: Uint8Array): void => {
   if (chunk.length < 1) return;
@@ -392,7 +390,7 @@ const processChunk = (source: "stdout" | "stderr", chunk: Uint8Array): void => {
 };
 ```
 
-### Completion Detection (checkCompletion 메서드)
+### Completion Detection (checkCompletion method)
 ```typescript
 private checkCompletion(): void {
   // Wait for all streams to close and process to exit
@@ -411,17 +409,17 @@ private checkCompletion(): void {
 ```
 
 ### Split vs Non-Split Output
-- **split: true**: `{source: "stdout"|"stderr", text: string}` 객체 스트림 (타입: `Spawn<OutputEvent>`)
-- **split: false**: 순수 텍스트 스트림 (기본값, 타입: `Spawn<string>`)
+- **split: true**: `{source: "stdout"|"stderr", text: string}` object stream (type: `Spawn<OutputEvent>`)
+- **split: false**: Pure text stream (default, type: `Spawn<string>`)
 
 ## Process Lifecycle Management
 
-### 프로세스 생명주기
-1. **Spawn**: `Bun.spawn()`으로 프로세스 생성
-2. **Stream Setup**: stdin/stdout/stderr ReadableStream/WritableStream 설정
-3. **Data Flow**: 각 스트림에서 청크 단위로 데이터 읽기 및 EventEmitter로 전송
-4. **Completion**: stdout/stderr close + process exit 확인 후 complete 이벤트 발생
-5. **Cleanup**: 구독 해제 시 프로세스 kill 및 cleanup 콜백 실행
+### Process Lifecycle
+1. **Spawn**: Create process with `Bun.spawn()`
+2. **Stream Setup**: Set up stdin/stdout/stderr ReadableStream/WritableStream
+3. **Data Flow**: Read data in chunks from each stream and transmit via EventEmitter
+4. **Completion**: Emit complete event after confirming stdout/stderr close + process exit
+5. **Cleanup**: Kill process and execute cleanup callbacks on subscription unsubscribe
 
 ### Subscription Management
 ```typescript
@@ -429,21 +427,21 @@ interface SpawnSubscription {
   unsubscribe(): void
 }
 
-// 구독 시작
+// Start subscription
 const subscription = spawn.subscribe(onData, onError, onComplete);
 
-// 구독 해제 (프로세스 자동 종료)
+// Unsubscribe (automatic process termination)
 subscription.unsubscribe();
 ```
 
 ### Automatic Cleanup
-- 모든 구독자가 unsubscribe하면 프로세스 자동 kill
-- `onCleanup()` 콜백을 통해 커스텀 정리 로직 추가 가능
-- 프로세스 종료 시 모든 cleanup 콜백 실행
+- Automatically kill process when all subscribers unsubscribe
+- Add custom cleanup logic via `onCleanup()` callback
+- Execute all cleanup callbacks when process terminates
 
 ## Error Handling
 
-### SpawnError 인터페이스
+### SpawnError Interface
 ```typescript
 interface SpawnError extends Error {
   exitCode: number
@@ -451,22 +449,22 @@ interface SpawnError extends Error {
 }
 ```
 
-### 에러 전파
-- 프로세스 에러: EventEmitter의 "error" 이벤트로 전파
-- 비정상 종료: exit code !== 0 && !== 143일 때 SpawnError 생성 및 전파
-- SIGTERM 처리: exit code 143 (SIGTERM)은 정상 종료로 간주 (complete 이벤트 발생)
-- stdin 쓰기 에러: writeStdin() 실패 시 에러 이벤트 발생
-- 스트림 읽기 에러: readStream() 실패 시 에러 이벤트 발생
-- stdin 타입 에러: file descriptor (number) 타입일 경우 명시적 에러
+### Error Propagation
+- Process error: Propagated via EventEmitter's "error" event
+- Abnormal termination: SpawnError generated and propagated when exit code !== 0 && !== 143
+- SIGTERM handling: exit code 143 (SIGTERM) considered normal termination (complete event)
+- stdin write error: Error event on writeStdin() failure
+- Stream read error: Error event on readStream() failure
+- stdin type error: Explicit error when stdin is number (file descriptor) type
 
-### Exit Code 처리 정책
-- **0**: 정상 종료 (complete)
-- **143**: SIGTERM으로 종료, 정상 종료로 간주 (complete)
-- **기타**: 비정상 종료로 간주 (error)
+### Exit Code Handling Policy
+- **0**: Normal termination (complete)
+- **143**: Terminated by SIGTERM, considered normal termination (complete)
+- **Others**: Considered abnormal termination (error)
 
 ### Type Guards
 ```typescript
-// OutputEvent 타입 가드
+// OutputEvent type guard
 function isOutputEvent(data: unknown): data is OutputEvent {
   return (
     typeof data === "object" &&
@@ -478,7 +476,7 @@ function isOutputEvent(data: unknown): data is OutputEvent {
   );
 }
 
-// SpawnError 타입 가드
+// SpawnError type guard
 function isSpawnError(error: unknown): error is SpawnError {
   return (
     error instanceof Error &&
@@ -491,82 +489,82 @@ function isSpawnError(error: unknown): error is SpawnError {
 ## Implementation Notes
 
 ### Core Engine
-- **Dual Runtime Support**: `Bun.spawn()` (일반 프로세스) 및 `bun-pty` (PTY 모드) 양쪽 지원
-- **PTY Integration**: bun-pty를 통한 완전한 가상 터미널 지원, vim/nano 등 대화형 프로그램 실행
-- **No Dependencies**: RxJS, Lodash 등 외부 의존성 완전 제거
-- **Type Safety**: 모든 `any` 타입 제거, 완전한 TypeScript 타입 안정성
+- **Dual Runtime Support**: Support for both `Bun.spawn()` (regular processes) and `bun-pty` (PTY mode)
+- **PTY Integration**: Complete virtual terminal support via bun-pty, for running interactive programs like vim/nano
+- **No Dependencies**: Complete removal of external dependencies like RxJS, Lodash
+- **Type Safety**: Removal of all `any` types, complete TypeScript type safety
 
 ### Output Safety
-- 모든 청크를 TextDecoder로 변환, 실패 시 fallback 메시지
-- 스트림 완전 캡처 (AsyncSubject 패턴)
-- 손실 방지 메커니즘 내장
-- stdout/stderr 타입 체크: `ReadableStream` vs `number` (file descriptor) 구분
+- Transform all chunks with TextDecoder, fallback messages on failure
+- Complete stream capture (AsyncSubject pattern)
+- Built-in loss prevention mechanisms
+- stdout/stderr type checking: Distinguish `ReadableStream` vs `number` (file descriptor)
 
 ### Resource Management
-- EventEmitter 기반 구독 관리
-- 메모리 누수 방지 (자동 리스너 제거)
-- 프로세스 자동 정리 (unsubscribe 시 kill)
-- SIGTERM(143) 정상 종료 처리로 cleanup 안정성 향상
+- EventEmitter-based subscription management
+- Memory leak prevention (automatic listener removal)
+- Automatic process cleanup (kill on unsubscribe)
+- Improved cleanup stability with SIGTERM(143) normal termination handling
 
 ### Stream Type Safety
-- **stdin 체크**: `typeof stdin === "number"` 체크로 file descriptor 필터링
-- **stdout/stderr 체크**: `instanceof ReadableStream` 체크로 안전한 스트림 읽기
-- **FileSink 타입**: stdin이 FileSink가 아닌 number일 경우 명시적 에러 발생
+- **stdin check**: Filter file descriptors with `typeof stdin === "number"` check
+- **stdout/stderr check**: Safe stream reading with `instanceof ReadableStream` check
+- **FileSink type**: Explicit error when stdin is number instead of FileSink
 
 ### Encoding Robustness
-- UTF-8 기본, 커스텀 인코딩 지원
-- TextDecoder로 안전한 변환
-- fallback 에러 처리로 안정성 보장
+- UTF-8 default, custom encoding support
+- Safe transformation with TextDecoder
+- Stability guaranteed with fallback error handling
 
 ## Differences from Original Z31
 
-### 제거된 기능
-- **RxJS Observable**: EventEmitter로 대체
-- **Windows Jobber**: Bun 런타임이 프로세스 관리 담당
-- **stdio 옵션**: Bun.spawn이 자동 처리
-- **detached 옵션**: Bun.spawn에서 미지원 (대신 `detach()` 메서드 제공)
+### Removed Features
+- **RxJS Observable**: Replaced with EventEmitter
+- **Windows Jobber**: Process management handled by Bun runtime
+- **stdio option**: Automatically handled by Bun.spawn
+- **detached option**: Not supported in Bun.spawn (provided via `detach()` method instead)
 
-### 개선된 기능
-- **타입 안정성**: `any` 완전 제거, 모든 타입 명시
-- **인터페이스**: BunSubprocess, PtySubprocess, SpawnError 등 명확한 타입 정의
-- **Type Guards**: isOutputEvent, isSpawnError로 런타임 타입 검증
-- **Static Methods**: spawn, spawnPty, spawnSplit, spawnPromise 등 편의 메서드
-- **Cleanup System**: onCleanup 콜백으로 확장 가능한 정리 로직
+### Improved Features
+- **Type Safety**: Complete removal of `any`, all types explicit
+- **Interfaces**: Clear type definitions like BunSubprocess, PtySubprocess, SpawnError
+- **Type Guards**: Runtime type validation with isOutputEvent, isSpawnError
+- **Static Methods**: Convenience methods like spawn, spawnPty, spawnSplit, spawnPromise
+- **Cleanup System**: Extensible cleanup logic with onCleanup callbacks
 
-### 새로운 기능
-- **PTY Mode**: bun-pty 통합으로 완전한 가상 터미널 지원
-- **Dynamic stdin**: write() 메서드로 실행 중 stdin 입력
-- **Process Detach**: detach() 메서드로 프로세스를 백그라운드로 전환
-- **Terminal Resize**: PTY 모드에서 resize() 메서드로 동적 크기 조정
-- **Status Queries**: isRunning(), isPtyMode() 메서드로 상태 조회
-- **toSplitPromise()**: stdout/stderr 분리된 Promise 반환
-- **Generic Types**: `Spawn<T>` 제네릭으로 split/non-split 구분
-- **Async Iterable stdin**: async generator 지원으로 유연한 입력 처리
-- **Runtime Type Guards**: stdin/stdout/stderr 타입 체크로 런타임 안정성 보장
-- **SIGTERM Handling**: exit code 143 (SIGTERM) 정상 종료 처리
-- **Stream Type Safety**: file descriptor vs stream 구분으로 타입 에러 방지
+### New Features
+- **PTY Mode**: Complete virtual terminal support with bun-pty integration
+- **Dynamic stdin**: Input stdin to running processes with write() method
+- **Process Detach**: Switch processes to background with detach() method
+- **Terminal Resize**: Dynamic size adjustment in PTY mode with resize() method
+- **Status Queries**: Query status with isRunning(), isPtyMode() methods
+- **toSplitPromise()**: Return Promise with separated stdout/stderr
+- **Generic Types**: Distinguish split/non-split with `Spawn<T>` generic
+- **Async Iterable stdin**: Flexible input handling with async generator support
+- **Runtime Type Guards**: Runtime stability with stdin/stdout/stderr type checking
+- **SIGTERM Handling**: Normal termination handling for exit code 143 (SIGTERM)
+- **Stream Type Safety**: Prevent type errors by distinguishing file descriptor vs stream
 
 ## PTY vs Standard Mode
 
-### PTY 모드 (usePty: true)
-- **장점**:
-  - 완전한 터미널 에뮬레이션 (vim, nano, htop 등 대화형 프로그램 지원)
-  - ANSI 이스케이프 코드 완전 지원
-  - 터미널 크기 조정 가능 (resize)
-  - 프로세스가 TTY에 연결되었다고 인식
-- **단점**:
-  - stdout/stderr 구분 불가 (단일 스트림)
-  - 약간의 오버헤드
+### PTY Mode (usePty: true)
+- **Advantages**:
+  - Complete terminal emulation (supports interactive programs like vim, nano, htop)
+  - Full ANSI escape code support
+  - Terminal size adjustment possible (resize)
+  - Process recognizes it's connected to TTY
+- **Disadvantages**:
+  - Cannot distinguish stdout/stderr (single stream)
+  - Slight overhead
 
-### Standard 모드 (기본값)
-- **장점**:
-  - stdout/stderr 분리 가능 (split 옵션)
-  - 가벼운 오버헤드
-  - 단순한 명령어 실행에 최적화
-- **단점**:
-  - 대화형 프로그램 실행 제한
-  - TTY 기반 기능 미지원
+### Standard Mode (default)
+- **Advantages**:
+  - Can separate stdout/stderr (split option)
+  - Lightweight overhead
+  - Optimized for simple command execution
+- **Disadvantages**:
+  - Limited interactive program execution
+  - No TTY-based features supported
 
-### 사용 가이드
-- **PTY 사용 시기**: vim, nano, python -i, node repl, ssh, top 등
-- **Standard 사용 시기**: ls, cat, echo, grep 등 단순 명령어
+### Usage Guide
+- **When to use PTY**: vim, nano, python -i, node repl, ssh, top, etc.
+- **When to use Standard**: ls, cat, echo, grep, etc. simple commands
