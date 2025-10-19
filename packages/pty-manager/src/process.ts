@@ -53,6 +53,12 @@ const validateInputData = (data: string): void => {
 
 const logger = createLogger("pty-process");
 
+/**
+ * Maximum output buffer size: 64KB
+ * Prevents unbounded memory growth for LLM context windows
+ */
+const MAX_OUTPUT_BUFFER_SIZE = 64 * 1024; // 64KB
+
 interface Subscription {
   unsubscribe: () => void;
 }
@@ -134,6 +140,13 @@ export class PtyProcess {
     // PTY output -> xterm and subscribers
     this.pty.onData((data: string) => {
       this.outputBuffer += data;
+
+      // Maintain buffer size limit (FIFO - remove oldest when exceeding limit)
+      if (this.outputBuffer.length > MAX_OUTPUT_BUFFER_SIZE) {
+        const overflow = this.outputBuffer.length - MAX_OUTPUT_BUFFER_SIZE;
+        this.outputBuffer = this.outputBuffer.slice(overflow);
+      }
+
       this.terminal.write(data);
       this.updateActivity();
 
