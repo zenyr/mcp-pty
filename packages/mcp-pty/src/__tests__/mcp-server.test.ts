@@ -1,15 +1,7 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  test,
-} from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { PtyManager } from "@pkgs/pty-manager";
-import { sessionManager } from "@pkgs/session-manager";
+import { withTestPtyManager } from "@pkgs/pty-manager";
+import { withTestSessionManager } from "@pkgs/session-manager";
 import {
   bindSessionToServerResources,
   createResourceHandlers,
@@ -40,188 +32,221 @@ describe("MCP Server", () => {
   });
 
   describe("Integration Tests", () => {
-    let sessionId: string;
-    let ptyManager: PtyManager;
+    test("createSession creates session with ptyManager", async () => {
+      await withTestSessionManager(async (sessionManager) => {
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
 
-    beforeEach(() => {
-      sessionId = sessionManager.createSession();
-      const currentPtyManager = sessionManager.getPtyManager(sessionId);
-      if (!currentPtyManager)
-        throw new Error("Failed to get PtyManager for session");
-      ptyManager = currentPtyManager;
-    });
-
-    afterEach(async () => {
-      ptyManager?.dispose();
-      if (sessionId) {
-        await sessionManager.disposeSession(sessionId);
-      }
-    });
-
-    test("createSession creates session with ptyManager", () => {
-      expect(sessionId).toBeDefined();
-      expect(ptyManager).toBeDefined();
-      expect(sessionManager.getSession(sessionId)).toBeDefined();
+        expect(sessionId).toBeDefined();
+        expect(ptyManager).toBeDefined();
+        expect(sessionManager.getSession(sessionId)).toBeDefined();
+      });
     });
 
     test("ptyManager creates and lists PTY processes", async () => {
-      const { processId } = await ptyManager.createPty("echo");
-      expect(processId).toBeDefined();
+      await withTestPtyManager("test-session", async (ptyManager) => {
+        const { processId } = await ptyManager.createPty("echo");
+        expect(processId).toBeDefined();
 
-      const ptys = ptyManager.getAllPtys();
-      expect(ptys).toBeDefined();
-      expect(ptys.length).toBe(1);
-      expect(ptys[0]?.id).toBe(processId);
+        const ptys = ptyManager.getAllPtys();
+        expect(ptys).toBeDefined();
+        expect(ptys.length).toBe(1);
+        expect(ptys[0]?.id).toBe(processId);
+      });
     });
 
     test("ptyManager reads output buffer", async () => {
-      const { processId } = await ptyManager.createPty("echo");
-      if (!processId) throw new Error("Failed to create PTY");
+      await withTestPtyManager("test-session", async (ptyManager) => {
+        const { processId } = await ptyManager.createPty("echo");
+        if (!processId) throw new Error("Failed to create PTY");
 
-      const pty = ptyManager.getPty(processId);
-      if (!pty) throw new Error("PTY not found");
+        const pty = ptyManager.getPty(processId);
+        if (!pty) throw new Error("PTY not found");
 
-      expect(pty).toBeDefined();
-      expect(typeof pty.getOutputBuffer()).toBe("string");
+        expect(pty).toBeDefined();
+        expect(typeof pty.getOutputBuffer()).toBe("string");
+      });
     });
 
     test("ptyManager removes PTY", async () => {
-      const { processId } = await ptyManager.createPty("sleep");
-      if (!processId) throw new Error("Failed to create PTY");
+      await withTestPtyManager("test-session", async (ptyManager) => {
+        const { processId } = await ptyManager.createPty("sleep");
+        if (!processId) throw new Error("Failed to create PTY");
 
-      const removed = ptyManager.removePty(processId);
-      expect(removed).toBe(true);
-      expect(ptyManager.getPty(processId)).toBeUndefined();
+        const removed = ptyManager.removePty(processId);
+        expect(removed).toBe(true);
+        expect(ptyManager.getPty(processId)).toBeUndefined();
+      });
     });
 
-    test("ptyManager returns false when removing non-existent PTY", () => {
-      const removed = ptyManager.removePty("non-existent");
-      expect(removed).toBe(false);
-    });
-
-    test("sessionManager counts sessions and processes", async () => {
-      await ptyManager.createPty("echo");
-      await ptyManager.createPty("ls");
-
-      expect(sessionManager.getSessionCount()).toBeGreaterThan(0);
-      const sessions = sessionManager.getAllSessions();
-      expect(sessions.length).toBeGreaterThan(0);
-    });
-
-    test("sessionManager provides ptyManager per session", () => {
-      const manager = sessionManager.getPtyManager(sessionId);
-      expect(manager).toBe(ptyManager);
-    });
-
-    test("sessionManager returns undefined for non-existent session", () => {
-      const manager = sessionManager.getPtyManager("non-existent");
-      expect(manager).toBeUndefined();
+    test("ptyManager returns false when removing non-existent PTY", async () => {
+      await withTestPtyManager("test-session", async (ptyManager) => {
+        const removed = ptyManager.removePty("non-existent");
+        expect(removed).toBe(false);
+      });
     });
   });
 
   describe("MCP Resources", () => {
-    let server: McpServer;
-    let sessionId: string;
-    let ptyManager: PtyManager;
-
-    beforeEach(() => {
-      const factory = new McpServerFactory({
-        name: "mcp-pty",
-        version: "0.1.0",
-        deactivateResources: false,
-      });
-      server = factory.createServer();
-      sessionId = sessionManager.createSession();
-      const currentPtyManager = sessionManager.getPtyManager(sessionId);
-      if (!currentPtyManager)
-        throw new Error("Failed to get PtyManager for session");
-      ptyManager = currentPtyManager;
-      bindSessionToServer(server, sessionId);
-      bindSessionToServerResources(server, sessionId);
-    });
-
-    afterEach(async () => {
-      ptyManager?.dispose();
-      if (sessionId) {
-        await sessionManager.disposeSession(sessionId);
-      }
-    });
-
     test("pty://status returns global server status", async () => {
-      const handlers = createResourceHandlers(server);
-      const result = await handlers.status();
-      expect(result).toBeDefined();
-      expect(result.contents).toBeDefined();
-      expect(result.contents.length).toBe(1);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const content = result.contents[0];
-      expect(content?.uri).toBe("pty://status");
-      if (!content?.text) throw new Error("content.text is undefined");
+        bindSessionToServer(server, sessionId);
+        bindSessionToServerResources(server, sessionId);
 
-      const parsed = JSON.parse(content.text);
-      expect(parsed).toHaveProperty("sessions");
-      expect(parsed).toHaveProperty("processes");
-      expect(typeof parsed.sessions).toBe("number");
-      expect(typeof parsed.processes).toBe("number");
+        const handlers = createResourceHandlers(server);
+        const result = await handlers.status();
+        expect(result).toBeDefined();
+        expect(result.contents).toBeDefined();
+        expect(result.contents.length).toBe(1);
+
+        const content = result.contents[0];
+        expect(content?.uri).toBe("pty://status");
+        if (!content?.text) throw new Error("content.text is undefined");
+
+        const parsed = JSON.parse(content.text);
+        expect(parsed).toHaveProperty("sessions");
+        expect(parsed).toHaveProperty("processes");
+        expect(typeof parsed.sessions).toBe("number");
+        expect(typeof parsed.processes).toBe("number");
+
+        ptyManager.dispose();
+      });
     });
 
     test("pty://processes returns empty process list initially", async () => {
-      const handlers = createResourceHandlers(server);
-      const result = await handlers.processes();
-      expect(result.contents).toBeDefined();
-      expect(result.contents.length).toBe(1);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const content = result.contents[0];
-      expect(content?.uri).toBe("pty://processes");
-      if (!content?.text) throw new Error("content.text is undefined");
+        bindSessionToServer(server, sessionId);
+        bindSessionToServerResources(server, sessionId);
 
-      const parsed = JSON.parse(content.text);
-      expect(parsed).toHaveProperty("processes");
-      expect(Array.isArray(parsed.processes)).toBe(true);
-      expect(parsed.processes.length).toBe(0);
+        const handlers = createResourceHandlers(server);
+        const result = await handlers.processes();
+        expect(result.contents).toBeDefined();
+        expect(result.contents.length).toBe(1);
+
+        const content = result.contents[0];
+        expect(content?.uri).toBe("pty://processes");
+        if (!content?.text) throw new Error("content.text is undefined");
+
+        const parsed = JSON.parse(content.text);
+        expect(parsed).toHaveProperty("processes");
+        expect(Array.isArray(parsed.processes)).toBe(true);
+        expect(parsed.processes.length).toBe(0);
+
+        ptyManager.dispose();
+      });
     });
 
     test("pty://processes returns process list after creating PTY", async () => {
-      const { processId } = await ptyManager.createPty("echo test");
-      sessionManager.addPty(sessionId, processId);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const handlers = createResourceHandlers(server);
-      const result = await handlers.processes();
-      const content = result.contents[0];
-      if (!content?.text) throw new Error("content.text is undefined");
+        bindSessionToServer(server, sessionId);
+        bindSessionToServerResources(server, sessionId);
 
-      const parsed = JSON.parse(content.text);
-      expect(parsed.processes.length).toBe(1);
-      expect(parsed.processes[0]).toHaveProperty("processId", processId);
-      expect(parsed.processes[0]).toHaveProperty("status");
-      expect(parsed.processes[0]).toHaveProperty("createdAt");
-      expect(parsed.processes[0]).toHaveProperty("lastActivity");
+        const { processId } = await ptyManager.createPty("echo test");
+        sessionManager.addPty(sessionId, processId);
+
+        const handlers = createResourceHandlers(server);
+        const result = await handlers.processes();
+        const content = result.contents[0];
+        if (!content?.text) throw new Error("content.text is undefined");
+
+        const parsed = JSON.parse(content.text);
+        expect(parsed.processes.length).toBe(1);
+        expect(parsed.processes[0]).toHaveProperty("processId", processId);
+        expect(parsed.processes[0]).toHaveProperty("status");
+        expect(parsed.processes[0]).toHaveProperty("createdAt");
+        expect(parsed.processes[0]).toHaveProperty("lastActivity");
+
+        ptyManager.dispose();
+      });
     });
 
     test("pty://processes/{processId} returns specific process output", async () => {
-      const { processId } = await ptyManager.createPty("echo test");
-      sessionManager.addPty(sessionId, processId);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      // Wait for additional output
-      await new Promise((resolve) => setTimeout(resolve, 100));
+        bindSessionToServer(server, sessionId);
+        bindSessionToServerResources(server, sessionId);
 
-      const handlers = createResourceHandlers(server);
-      const uri = new URL(`pty://processes/${processId}`);
-      const result = await handlers.processOutput(uri, { processId });
-      const content = result.contents[0];
-      if (!content?.text) throw new Error("content.text is undefined");
+        const { processId } = await ptyManager.createPty("echo test");
+        sessionManager.addPty(sessionId, processId);
 
-      const parsed = JSON.parse(content.text);
-      expect(parsed).toHaveProperty("output");
-      expect(typeof parsed.output).toBe("string");
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const handlers = createResourceHandlers(server);
+        const uri = new URL(`pty://processes/${processId}`);
+        const result = await handlers.processOutput(uri, { processId });
+        const content = result.contents[0];
+        if (!content?.text) throw new Error("content.text is undefined");
+
+        const parsed = JSON.parse(content.text);
+        expect(parsed).toHaveProperty("output");
+        expect(typeof parsed.output).toBe("string");
+
+        ptyManager.dispose();
+      });
     });
 
     test("pty://processes/{processId} throws for non-existent process", async () => {
-      const handlers = createResourceHandlers(server);
-      const uri = new URL("pty://processes/non-existent");
-      await expect(
-        handlers.processOutput(uri, { processId: "non-existent" }),
-      ).rejects.toThrow("PTY process not found");
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
+
+        bindSessionToServer(server, sessionId);
+        bindSessionToServerResources(server, sessionId);
+
+        const handlers = createResourceHandlers(server);
+        const uri = new URL("pty://processes/non-existent");
+        await expect(
+          handlers.processOutput(uri, { processId: "non-existent" }),
+        ).rejects.toThrow("PTY process not found");
+
+        ptyManager.dispose();
+      });
     });
 
     test("resource throws when session not bound", async () => {
@@ -240,72 +265,96 @@ describe("MCP Server", () => {
   });
 
   describe("MCP Tools", () => {
-    let server: McpServer;
-    let sessionId: string;
-    let ptyManager: PtyManager;
-
-    beforeEach(() => {
-      const factory = new McpServerFactory({
-        name: "mcp-pty",
-        version: "0.1.0",
-        deactivateResources: false,
-      });
-      server = factory.createServer();
-      sessionId = sessionManager.createSession();
-      const currentPtyManager = sessionManager.getPtyManager(sessionId);
-      if (!currentPtyManager)
-        throw new Error("Failed to get PtyManager for session");
-      ptyManager = currentPtyManager;
-      bindSessionToServer(server, sessionId);
-    });
-
-    afterEach(async () => {
-      ptyManager?.dispose();
-      if (sessionId) {
-        await sessionManager.disposeSession(sessionId);
-      }
-    });
-
     test("start tool handler creates PTY", async () => {
-      const { start } = createToolHandlers(server);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const result = await start({ command: "echo test", pwd: process.cwd() });
+        bindSessionToServer(server, sessionId);
 
-      expect(result).toBeDefined();
-      expect(result.content).toBeDefined();
-      expect(result.structuredContent).toBeDefined();
+        const { start } = createToolHandlers(server);
+        const result = await start({
+          command: "echo test",
+          pwd: process.cwd(),
+        });
 
-      const structured = result.structuredContent as {
-        processId: string;
-        screen: string;
-        exitCode: number | null;
-      };
-      expect(structured.processId).toBeDefined();
-      expect(typeof structured.processId).toBe("string");
-      expect(typeof structured.screen).toBe("string");
-      expect(
-        structured.exitCode === null || typeof structured.exitCode === "number",
-      ).toBe(true);
+        expect(result).toBeDefined();
+        expect(result.content).toBeDefined();
+        expect(result.structuredContent).toBeDefined();
 
-      // Verify PTY was created
-      const pty = ptyManager.getPty(structured.processId);
-      expect(pty).toBeDefined();
+        const structured = result.structuredContent as {
+          processId: string;
+          screen: string;
+          exitCode: number | null;
+        };
+        expect(structured.processId).toBeDefined();
+        expect(typeof structured.processId).toBe("string");
+        expect(typeof structured.screen).toBe("string");
+        expect(
+          structured.exitCode === null ||
+            typeof structured.exitCode === "number",
+        ).toBe(true);
+
+        const pty = ptyManager.getPty(structured.processId);
+        expect(pty).toBeDefined();
+
+        ptyManager.dispose();
+      });
     });
 
     test("start tool handler throws for non-existent directory", async () => {
-      const { start } = createToolHandlers(server);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      await expect(
-        start({ command: "echo test", pwd: "/nonexistent/directory/path" }),
-      ).rejects.toThrow("Working directory does not exist or is inaccessible");
+        bindSessionToServer(server, sessionId);
+
+        const { start } = createToolHandlers(server);
+        await expect(
+          start({ command: "echo test", pwd: "/nonexistent/directory/path" }),
+        ).rejects.toThrow(
+          "Working directory does not exist or is inaccessible",
+        );
+
+        ptyManager.dispose();
+      });
     });
 
     test("start tool handler throws when pwd is a file", async () => {
-      const { start } = createToolHandlers(server);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      await expect(
-        start({ command: "echo test", pwd: `${process.cwd()}/package.json` }),
-      ).rejects.toThrow("Path is not a directory");
+        bindSessionToServer(server, sessionId);
+
+        const { start } = createToolHandlers(server);
+        await expect(
+          start({ command: "echo test", pwd: `${process.cwd()}/package.json` }),
+        ).rejects.toThrow("Path is not a directory");
+
+        ptyManager.dispose();
+      });
     });
 
     test("start tool handler throws when session not bound", async () => {
@@ -323,130 +372,270 @@ describe("MCP Server", () => {
     });
 
     test("kill tool handler removes PTY", async () => {
-      const { processId } = await ptyManager.createPty("sleep 10");
-      sessionManager.addPty(sessionId, processId);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const { kill } = createToolHandlers(server);
-      const result = await kill({ processId });
+        bindSessionToServer(server, sessionId);
 
-      const structured = result.structuredContent as { success: boolean };
-      expect(structured.success).toBe(true);
+        const { processId } = await ptyManager.createPty("sleep 10");
+        sessionManager.addPty(sessionId, processId);
 
-      // Verify PTY was removed
-      expect(ptyManager.getPty(processId)).toBeUndefined();
+        const { kill } = createToolHandlers(server);
+        const result = await kill({ processId });
+
+        const structured = result.structuredContent as { success: boolean };
+        expect(structured.success).toBe(true);
+        expect(ptyManager.getPty(processId)).toBeUndefined();
+
+        ptyManager.dispose();
+      });
     });
 
     test("kill tool handler returns false for non-existent PTY", async () => {
-      const { kill } = createToolHandlers(server);
-      const result = await kill({ processId: "non-existent" });
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const structured = result.structuredContent as { success: boolean };
-      expect(structured.success).toBe(false);
+        bindSessionToServer(server, sessionId);
+
+        const { kill } = createToolHandlers(server);
+        const result = await kill({ processId: "non-existent" });
+
+        const structured = result.structuredContent as { success: boolean };
+        expect(structured.success).toBe(false);
+
+        ptyManager.dispose();
+      });
     });
 
     test("list tool handler returns empty array initially", async () => {
-      const { list } = createToolHandlers(server);
-      const result = await list({});
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const structured = result.structuredContent as {
-        ptys: Array<{ id: string; status: string }>;
-      };
-      expect(Array.isArray(structured.ptys)).toBe(true);
-      expect(structured.ptys.length).toBe(0);
+        bindSessionToServer(server, sessionId);
+
+        const { list } = createToolHandlers(server);
+        const result = await list({});
+
+        const structured = result.structuredContent as {
+          ptys: Array<{ id: string; status: string }>;
+        };
+        expect(Array.isArray(structured.ptys)).toBe(true);
+        expect(structured.ptys.length).toBe(0);
+
+        ptyManager.dispose();
+      });
     });
 
     test("list tool handler returns PTY list", async () => {
-      const { processId } = await ptyManager.createPty("echo test");
-      sessionManager.addPty(sessionId, processId);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const { list } = createToolHandlers(server);
-      const result = await list({});
+        bindSessionToServer(server, sessionId);
 
-      const structured = result.structuredContent as {
-        ptys: Array<{ id: string; status: string; exitCode: number | null }>;
-      };
-      expect(structured.ptys.length).toBe(1);
-      expect(structured.ptys[0]?.id).toBe(processId);
-      expect(structured.ptys[0]).toHaveProperty("status");
-      expect(structured.ptys[0]).toHaveProperty("createdAt");
-      expect(structured.ptys[0]).toHaveProperty("lastActivity");
-      expect(structured.ptys[0]).toHaveProperty("exitCode");
-      expect(
-        structured.ptys[0]?.exitCode === null ||
-          typeof structured.ptys[0]?.exitCode === "number",
-      ).toBe(true);
+        const { processId } = await ptyManager.createPty("echo test");
+        sessionManager.addPty(sessionId, processId);
+
+        const { list } = createToolHandlers(server);
+        const result = await list({});
+
+        const structured = result.structuredContent as {
+          ptys: Array<{ id: string; status: string; exitCode: number | null }>;
+        };
+        expect(structured.ptys.length).toBe(1);
+        expect(structured.ptys[0]?.id).toBe(processId);
+        expect(structured.ptys[0]).toHaveProperty("status");
+        expect(structured.ptys[0]).toHaveProperty("createdAt");
+        expect(structured.ptys[0]).toHaveProperty("lastActivity");
+        expect(structured.ptys[0]).toHaveProperty("exitCode");
+        expect(
+          structured.ptys[0]?.exitCode === null ||
+            typeof structured.ptys[0]?.exitCode === "number",
+        ).toBe(true);
+
+        ptyManager.dispose();
+      });
     });
 
     test("read tool handler returns PTY output", async () => {
-      const { processId } = await ptyManager.createPty("echo test");
-      sessionManager.addPty(sessionId, processId);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+        bindSessionToServer(server, sessionId);
 
-      const { read } = createToolHandlers(server);
-      const result = await read({ processId });
+        const { processId } = await ptyManager.createPty("echo test");
+        sessionManager.addPty(sessionId, processId);
 
-      const structured = result.structuredContent as { screen: string };
-      expect(typeof structured.screen).toBe("string");
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const { read } = createToolHandlers(server);
+        const result = await read({ processId });
+
+        const structured = result.structuredContent as { screen: string };
+        expect(typeof structured.screen).toBe("string");
+
+        ptyManager.dispose();
+      });
     });
 
     test("read tool handler throws for non-existent PTY", async () => {
-      const { read } = createToolHandlers(server);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      await expect(read({ processId: "non-existent" })).rejects.toThrow(
-        "PTY not found",
-      );
+        bindSessionToServer(server, sessionId);
+
+        const { read } = createToolHandlers(server);
+        await expect(read({ processId: "non-existent" })).rejects.toThrow(
+          "PTY not found",
+        );
+
+        ptyManager.dispose();
+      });
     });
 
     test("write_input tool handler writes data and returns terminal state", async () => {
-      const { processId } = await ptyManager.createPty("cat");
-      sessionManager.addPty(sessionId, processId);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const { write_input } = createToolHandlers(server);
-      const result = await write_input({
-        processId,
-        data: "hello world\n",
-        waitMs: 500,
+        bindSessionToServer(server, sessionId);
+
+        const { processId } = await ptyManager.createPty("cat");
+        sessionManager.addPty(sessionId, processId);
+
+        const { write_input } = createToolHandlers(server);
+        const result = await write_input({
+          processId,
+          data: "hello world\n",
+          waitMs: 500,
+        });
+
+        expect(result).toBeDefined();
+        expect(result.content).toBeDefined();
+        expect(result.structuredContent).toBeDefined();
+
+        const structured = result.structuredContent as {
+          screen: string;
+          cursor: { x: number; y: number };
+          exitCode: number | null;
+        };
+        expect(typeof structured.screen).toBe("string");
+        expect(structured.screen).toContain("hello world");
+        expect(structured.cursor).toHaveProperty("x");
+        expect(structured.cursor).toHaveProperty("y");
+        expect(structured.exitCode).toBeNull();
+
+        ptyManager.dispose();
       });
-
-      expect(result).toBeDefined();
-      expect(result.content).toBeDefined();
-      expect(result.structuredContent).toBeDefined();
-
-      const structured = result.structuredContent as {
-        screen: string;
-        cursor: { x: number; y: number };
-        exitCode: number | null;
-      };
-      expect(typeof structured.screen).toBe("string");
-      expect(structured.screen).toContain("hello world");
-      expect(structured.cursor).toHaveProperty("x");
-      expect(structured.cursor).toHaveProperty("y");
-      expect(structured.exitCode).toBeNull();
     });
 
     test("write_input tool handler handles CJK and Emoji", async () => {
-      const { processId } = await ptyManager.createPty("cat");
-      sessionManager.addPty(sessionId, processId);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      const { write_input } = createToolHandlers(server);
-      const result = await write_input({
-        processId,
-        data: "안녕하세요 👋\n",
-        waitMs: 500,
+        bindSessionToServer(server, sessionId);
+
+        const { processId } = await ptyManager.createPty("cat");
+        sessionManager.addPty(sessionId, processId);
+
+        const { write_input } = createToolHandlers(server);
+        const result = await write_input({
+          processId,
+          data: "안녕하세요 👋\n",
+          waitMs: 500,
+        });
+
+        const structured = result.structuredContent as { screen: string };
+        expect(structured.screen).toContain("안녕하세요");
+        expect(structured.screen).toContain("👋");
+
+        ptyManager.dispose();
       });
-
-      const structured = result.structuredContent as { screen: string };
-      expect(structured.screen).toContain("안녕하세요");
-      expect(structured.screen).toContain("👋");
     });
 
     test("write_input tool handler throws for non-existent PTY", async () => {
-      const { write_input } = createToolHandlers(server);
+      await withTestSessionManager(async (sessionManager) => {
+        const factory = new McpServerFactory({
+          name: "mcp-pty",
+          version: "0.1.0",
+          deactivateResources: false,
+        });
+        const server = factory.createServer();
+        const sessionId = sessionManager.createSession();
+        const ptyManager = sessionManager.getPtyManager(sessionId);
+        if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-      await expect(
-        write_input({ processId: "non-existent", data: "test\n" }),
-      ).rejects.toThrow("PTY not found");
+        bindSessionToServer(server, sessionId);
+
+        const { write_input } = createToolHandlers(server);
+        await expect(
+          write_input({ processId: "non-existent", data: "test\n" }),
+        ).rejects.toThrow("PTY not found");
+
+        ptyManager.dispose();
+      });
     });
   });
 });
