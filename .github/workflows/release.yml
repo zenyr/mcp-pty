@@ -33,6 +33,7 @@ jobs:
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
+        ref: 'main'
 
     - name: Setup Bun
       uses: oven-sh/setup-bun@v2
@@ -112,6 +113,11 @@ jobs:
         gh release create v${{ steps.version.outputs.new_version }} \
           --title "v${{ steps.version.outputs.new_version }}" \
           --generate-notes
+
+    - name: Push to main
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      run: |
+        git push origin main
 
     - name: Sync version to develop
       if: ${{ github.event.inputs.dry_run != 'true' }}
