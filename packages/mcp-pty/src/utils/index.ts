@@ -3,6 +3,7 @@ import { logger } from "@pkgs/logger";
 import { sessionManager } from "@pkgs/session-manager";
 
 export * from "./config";
+export * from "./path";
 
 /**
  * Parse command line arguments

@@ -15,7 +15,11 @@ export interface McpServerConfig {
  */
 export const StartPtyInputSchema = z.object({
   command: z.string(),
-  pwd: z.string().describe("Working directory for the PTY process"),
+  pwd: z
+    .string()
+    .describe(
+      "Working directory for the PTY process. Must be an absolute path (e.g., /home/user/project) or start with tilde (e.g., ~/project). Relative paths (., .., ./foo) are not allowed.",
+    ),
 });
 
 export const KillPtyInputSchema = z.object({ processId: z.string() });
