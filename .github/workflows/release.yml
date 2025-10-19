@@ -27,13 +27,14 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      pull-requests: write
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
-        ref: 'main'
+        ref: 'develop'
 
     - name: Setup Bun
       uses: oven-sh/setup-bun@v2
@@ -51,7 +52,7 @@ jobs:
       run: |
         cd packages/mcp-pty
         OLD_VERSION=$(node -p "require('./package.json').version")
-        bun x --bun semver -i ${{ github.event.inputs.version_type }} $OLD_VERSION > new_version.txt
+        bun x --bun semver -i ${{ github.event.inputs.version_type || 'minor' }} $OLD_VERSION > new_version.txt
         NEW_VERSION=$(cat new_version.txt)
         echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "old_version=$OLD_VERSION" >> $GITHUB_OUTPUT
@@ -65,6 +66,23 @@ jobs:
         bun run check
         bun test
         bun run build
+
+    - name: Generate CHANGELOG
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      run: |
+        bun x --bun git-cliff --unreleased --tag v${{ steps.version.outputs.new_version }} -o CHANGELOG.md
+
+    - name: Commit version bump and CHANGELOG
+      run: |
+        git add packages/mcp-pty/package.json
+        if [ -f CHANGELOG.md ]; then
+          git add CHANGELOG.md
+        fi
+        git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+
+    - name: Create tag
+      run: |
+        git tag -a "v${{ steps.version.outputs.new_version }}" -m "Release v${{ steps.version.outputs.new_version }}"
 
     - name: Publish to NPM
       id: npm_publish
@@ -80,6 +98,7 @@ jobs:
     - name: Rollback on NPM failure
       if: ${{ steps.npm_publish.outcome == 'failure' }}
       run: |
+        git tag -d "v${{ steps.version.outputs.new_version }}"
         git reset --hard HEAD~1
         exit 1
 
@@ -89,21 +108,26 @@ jobs:
         echo "🔍 Dry run mode - skipping NPM publish"
         echo "Would publish version ${{ steps.version.outputs.new_version }}"
 
-    - name: Commit version bump
-      run: |
-        git add packages/mcp-pty/package.json
-        git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
-
-    - name: Generate CHANGELOG
+    - name: Push tag
       if: ${{ github.event.inputs.dry_run != 'true' }}
       run: |
-        bun x --bun git-cliff --tag v${{ steps.version.outputs.new_version }} -o CHANGELOG.md
+        git push origin "v${{ steps.version.outputs.new_version }}"
 
-    - name: Commit CHANGELOG
+    - name: Update main branch
       if: ${{ github.event.inputs.dry_run != 'true' }}
       run: |
-        git add CHANGELOG.md
-        git commit -m "chore(release): update CHANGELOG for v${{ steps.version.outputs.new_version }}"
+        git fetch origin main
+        git checkout main
+        git merge --no-ff develop -m "chore: release v${{ steps.version.outputs.new_version }}"
+        git push origin main
+
+    - name: Sync back to develop
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      run: |
+        git fetch origin develop
+        git checkout develop
+        git merge --ff-only origin/main
+        git push -f origin develop
 
     - name: Create GitHub Release
       if: ${{ github.event.inputs.dry_run != 'true' }}
@@ -113,19 +137,5 @@ jobs:
         gh release create v${{ steps.version.outputs.new_version }} \
           --title "v${{ steps.version.outputs.new_version }}" \
           --generate-notes
-
-    - name: Push to main
-      if: ${{ github.event.inputs.dry_run != 'true' }}
-      run: |
-        git push origin main
-
-    - name: Sync version to develop
-      if: ${{ github.event.inputs.dry_run != 'true' }}
-      run: |
-        git fetch origin main
-        git fetch origin develop
-        git checkout develop
-        git merge --no-ff origin/main -m "chore: sync main after release v${{ steps.version.outputs.new_version }}"
-        git push origin develop
 
 
