@@ -3,6 +3,8 @@ name: Release & Publish
 on:
   push:
     branches: [main]
+    paths:
+      - 'packages/!(website)/**'
   workflow_dispatch:
     inputs:
       dry_run:
