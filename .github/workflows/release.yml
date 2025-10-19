@@ -22,7 +22,7 @@ on:
 
 jobs:
   release:
-    name: Bump Version & Publish to NPM
+     name: "Bump Version & Publish to NPM"
     runs-on: ubuntu-latest
      permissions:
        contents: write
