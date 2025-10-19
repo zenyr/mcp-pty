@@ -3,6 +3,16 @@ name: Release & Publish
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (skip NPM publish)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
 
 jobs:
   release:
@@ -51,27 +61,53 @@ jobs:
           bun run build
 
       - name: Publish to NPM
+        if: ${{ github.event_name == 'push' || github.event.inputs.dry_run != 'true' }}
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd packages/mcp-pty
           echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
           npm publish --access public
-
-      - name: Commit version bump to main
+      
+      - name: Dry run - Skip NPM publish
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
         run: |
+          echo "🔍 Dry run mode - skipping NPM publish"
+          echo "Would publish version ${{ steps.version.outputs.new_version }}"
+
+      - name: Create version bump PR
+        if: ${{ github.event_name == 'push' || github.event.inputs.dry_run != 'true' }}
+        run: |
+          BRANCH_NAME="release/v${{ steps.version.outputs.new_version }}"
+          git checkout -b $BRANCH_NAME
           git add packages/mcp-pty/package.json
           git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
-          git push origin main
+          git push origin $BRANCH_NAME
+          gh pr create --base main --head $BRANCH_NAME \
+            --title "chore: bump version to ${{ steps.version.outputs.new_version }}" \
+            --body "Auto-generated version bump after NPM publish"
+          gh pr merge $BRANCH_NAME --auto --squash --delete-branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Dry run - Skip PR creation
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "🔍 Dry run mode - skipping version bump PR"
+          echo "Would create PR for version ${{ steps.version.outputs.new_version }}"
 
       - name: Sync version to develop
+        if: ${{ github.event_name == 'push' || github.event.inputs.dry_run != 'true' }}
         run: |
+          sleep 10
+          git fetch origin main
           git fetch origin develop
           git checkout develop
-          git merge --ff-only main
+          git merge --ff-only origin/main
           git push origin develop
 
       - name: Create GitHub Release
+        if: ${{ github.event_name == 'push' || github.event.inputs.dry_run != 'true' }}
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
