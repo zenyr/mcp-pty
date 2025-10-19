@@ -234,6 +234,7 @@ Phase 1 (Infrastructure) ✅
 - ✅ **Reconnection Fix** - Support reconnection with session reuse
 - ✅ **normalize-commands Integration** - Integrated command parsing into pty-manager
 - ✅ **Test Enhancement** - Extended tests for environment variables and argument parsing
+- ✅ **Accurate pwd Setting** - Fixed issue where commands execute with mcp-pty server directory as pwd by making pwd mandatory in start tool
 
 ### In Progress
 
@@ -260,4 +261,3 @@ Phase 1 (Infrastructure) ✅
 ## Additional Plans
 
 1. Environment variable passing: Analyze what env MCP clients expect
-2. Accurate pwd setting: Fix issue where commands execute with mcp-pty server directory as pwd
