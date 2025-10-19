@@ -71,8 +71,8 @@ MCP Client → Transport Layer → MCP Server → Session Manager → PTY Manage
 
 **Key Features:**
 - ULID-based session identification
-- Graceful shutdown with SIGTERM → SIGKILL fallback
-- 5-minute idle timeout with configurable monitoring
+- Graceful shutdown with SIGTERM → SIGKILL fallback (3s timeout)
+- 5-minute idle timeout with 1-minute monitoring interval
 - Event listeners for session state changes
 
 ### pty-manager

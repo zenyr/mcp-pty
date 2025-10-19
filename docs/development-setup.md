@@ -49,13 +49,10 @@ This will:
 - Set up workspace configuration
 - Prepare development tools
 
-### 4. Setup Development Environment
+### 4. Verify Setup
 
 ```bash
-# Link for local development
-bun link
-
-# Verify setup
+# Type checking
 bun check
 ```
 
@@ -127,7 +124,7 @@ Create `.vscode/settings.json`:
 
 ```json
 {
-  "typescript.preferences.importModuleSpecifier": "relative",
+  "typescript.preferences.importModuleSpecifier": "non-relative",
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "biomejs.biome",
   "editor.codeActionsOnSave": {

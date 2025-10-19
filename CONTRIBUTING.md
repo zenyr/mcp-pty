@@ -34,12 +34,9 @@ Thank you for your interest in contributing to mcp-pty! This guide will help you
    bun install
    ```
 
-3. **Setup Development Environment**
+3. **Verify Setup**
    ```bash
-   # Link for local development
-   bun link
-   
-   # Verify installation
+   # Type checking
    bun check
    ```
 
