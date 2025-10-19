@@ -284,3 +284,6 @@ export class SessionManager {
 
 // Default instance export
 export const sessionManager = new SessionManager();
+
+// Test utilities export
+export { withTestSessionManager } from "./test-utils.ts";
