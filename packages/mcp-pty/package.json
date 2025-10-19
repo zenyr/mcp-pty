@@ -1,6 +1,6 @@
 {
   "name": "mcp-pty",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "MCP server for PTY session management with Bun runtime",
   "type": "module",
   "main": "dist/index.js",
