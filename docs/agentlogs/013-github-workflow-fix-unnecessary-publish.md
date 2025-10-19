@@ -7,10 +7,12 @@
 PR merge 시 코드 변경 없어도 워크플로우 실행, 불필요한 publish 발생.
 
 ### Solution Attempt
-paths 조건 추가: packages/mcp-pty/** 파일 변경 시만 워크플로우 실행.
+paths 조건 추가: website 제외한 모든 packages 변경 시만 워크플로우 실행.
+내부 의존성(logger, pty-manager, session-manager) 변경도 포함하여 버전 스킵 방지.
 
 ### Implementation Details
-- .github/workflows/release.yml on.push에 paths: ['packages/mcp-pty/**'] 추가
+- .github/workflows/release.yml on.push에 paths: ['packages/!(website)/**'] 추가
+- website 패키지만 제외, 내부 의존 패키지 변경도 자동 감지
 
 ### TDD Process
 - packages/mcp-pty 테스트 실행: 45 pass, 0 fail
