@@ -57,6 +57,14 @@ interface Subscription {
   unsubscribe: () => void;
 }
 
+const normalizePtyOptions = (
+  commandOrOptions: string | PtyOptions,
+): PtyOptions => {
+  return typeof commandOrOptions === "string"
+    ? { command: commandOrOptions, cwd: process.cwd() }
+    : commandOrOptions;
+};
+
 /**
  * Individual PTY process management class (bun-pty + xterm/headless)
  *
@@ -88,18 +96,13 @@ export class PtyProcess {
   private isDisposed = false;
 
   constructor(commandOrOptions: string | PtyOptions) {
-    const options =
-      typeof commandOrOptions === "string"
-        ? { command: commandOrOptions, cwd: process.cwd() }
-        : commandOrOptions;
-
     this.id = nanoid();
     this.createdAt = new Date();
     this.lastActivity = new Date();
-    this.options = options;
+    this.options = normalizePtyOptions(commandOrOptions);
 
     // Security check
-    checkSudoPermission(options.command);
+    checkSudoPermission(this.options.command);
 
     // Initialize xterm headless terminal
     this.terminal = new Terminal({

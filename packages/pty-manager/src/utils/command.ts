@@ -15,5 +15,5 @@ export const parseCommand = (
     throw new Error("Command string cannot be empty");
   }
 
-  return { command: trimmed };
+  return { command: trimmed, cwd: process.cwd() };
 };

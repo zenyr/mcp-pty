@@ -320,6 +320,7 @@ test("PtyProcess write throws when terminated", async () => {
 test("PtyProcess with ansiStrip option", async () => {
   const pty = new PtyProcess({
     command: 'echo -e "\\x1b[31mRed Text\\x1b[0m"',
+    cwd: process.cwd(),
     ansiStrip: true,
   });
   ptys.push(pty);
@@ -404,7 +405,11 @@ test("PtyProcess dispose with SIGKILL", async () => {
 // ============================================================================
 
 test("PtyProcess autoDisposeOnExit option", async () => {
-  const pty = new PtyProcess({ command: "true", autoDisposeOnExit: true });
+  const pty = new PtyProcess({
+    command: "true",
+    cwd: process.cwd(),
+    autoDisposeOnExit: true,
+  });
 
   await pty.ready();
   await Bun.sleep(600);

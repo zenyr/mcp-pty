@@ -261,3 +261,6 @@ Phase 1 (Infrastructure) ✅
 ## Additional Plans
 
 1. Environment variable passing: Analyze what env MCP clients expect
+2. Accurate pwd setting: Fix issue where commands execute with mcp-pty server directory as pwd
+3. **Node.js Runtime Support**: Currently `bunx mcp-pty` works but `npx mcp-pty` fails (Bun-only runtime). Add Node.js compatibility for wider adoption.
+4. **Library Export & Type Definitions**: Current package is CLI-only (no TypeScript sources in NPM package). When converting to library, add `.d.ts` generation and re-enable type exports in `package.json`.

@@ -3,6 +3,9 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 # Common Guidelines
 
 - Be extremely concise. Sacrifice grammar for concision. Use honorific tone without sycophancy.
+- **Language Policy**: 
+  - All code documentation (TSDoc, comments), commit messages, PR descriptions, and technical documents MUST be in English.
+  - Conversational responses to users should follow the user's language (Korean for Korean users).
 
 ### TypeScript Expert
 
@@ -32,7 +35,7 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
   - Include comprehensive TSDoc.
   - Maintain latest TS compatibility.
   - Enforce ESLint + Prettier; minimize any/! assertions/relative paths: Prefer path aliases or absolute imports.
-  - 워크스페이스 간 상대 경로 임포트(../{패키지명}) 철저하게 금지. @pkgs/\* alias 사용.
+  - Strictly prohibit workspace relative imports (../{package}). Use @pkgs/\* alias only.
   - File Structure: src/index.ts, types/, utils/, [feature]/ dirs (use absolute imports).
 - **@modelcontextprotocol/sdk Import Note**:
   - Allow `.js` postfix for this module only.

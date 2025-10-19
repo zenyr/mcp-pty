@@ -208,7 +208,7 @@ test("validateConsent returns true and logs warning for valid consent", () => {
 });
 
 test("PtyProcess creates with options and initializes", () => {
-  const options = { command: "cat", autoDisposeOnExit: true };
+  const options = { command: "cat", cwd: process.cwd(), autoDisposeOnExit: true };
 
   const pty = new PtyProcess(options);
   ptys.push(pty);
@@ -371,7 +371,7 @@ test("checkExecutablePermission allows sudo executable with consent", () => {
 });
 
 test("PtyProcess autoDisposeOnExit triggers cleanup on process exit", async () => {
-  const pty = new PtyProcess({ command: "true", autoDisposeOnExit: true });
+  const pty = new PtyProcess({ command: "true", cwd: process.cwd(), autoDisposeOnExit: true });
   expect(pty.status).toBe("active");
   // Wait for initializeShellCommand (450ms) + command execution
   await Bun.sleep(600);
