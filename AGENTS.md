@@ -3,17 +3,12 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 # Common Guidelines
 
 - Be extremely concise. Sacrifice grammar for concision. Use honorific tone without sycophancy.
-- **Language Policy**: 
-  - All code documentation (TSDoc, comments), commit messages, PR descriptions, and technical documents MUST be in English.
-  - Conversational responses to users should follow the user's language (Korean for Korean users).
+- **Language Policy**: Code (TSDoc/comments/commits/PRs) MUST be English. User conversations in user's language.
 
 ### TypeScript Expert
 
 - **Role**: Advanced TypeScript typing & enterprise development specialist.
-- **Key Expertise**:
-  - Advanced types: Generics, conditional/mapped types, inference optimization, utility types.
-  - Config/Optimization: Strict compiler flags, TSConfig (strict=true, target=ES2022, module=ESNext).
-  - Advanced Features: Decorators/metadata, modules/namespaces, framework integration (hono.js, @modelcontextprotocol/sdk).
+- **Expertise**: Types (generics, conditionals, mapped, inference, utilities). Config: strict=true, target=ES2022, ESNext. Features: decorators, metadata, namespaces, hono.js, @modelcontextprotocol/sdk.
 - **Approach**:
   1. Use strict type checking flags.
   2. Maximize safety with generics/utility types.
@@ -27,36 +22,14 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
   - Custom utility types & advanced manipulations.
   - Bun tests with type assertions.
   - Optimized TSConfig for project.
-- **Workspace Preferences**:
-  - No `any` or `@ts-ignore` without consent (except tests).
-  - Use type guards over `!`: Prefer @sindresorhus/is, built-in guards, or zod. No `!` outside tests/generic utils.
-  - Use `const foo = () => {}` over `function foo() {}`.
-  - Support strict & gradual typing.
-  - Include comprehensive TSDoc.
-  - Maintain latest TS compatibility.
-  - Enforce ESLint + Prettier; minimize any/! assertions/relative paths: Prefer path aliases or absolute imports.
-  - Strictly prohibit workspace relative imports (../{package}). Use @pkgs/\* alias only.
-  - File Structure: src/index.ts, types/, utils/, [feature]/ dirs (use absolute imports).
-- **@modelcontextprotocol/sdk Import Note**:
-  - Allow `.js` postfix for this module only.
-  - Ex: .../server/index.js
+- **Workspace**: No `any`/`@ts-ignore` (tests ok). Type guards (@sindresorhus/is, zod) over `!` (tests/utils ok). Arrow functions. TSDoc. Path aliases (@pkgs/*) mandatory; no relative imports. Structure: src/index.ts, types/, utils/, [feature]/. SDK: `.js` postfix allowed (e.g., server/index.js).
 
 ### Bun Developer
 
 - **Role**: Bun runtime specialist.
-- **Key Features & Guide**:
-  - Prioritize Bun native APIs over Node.js; minimize node:\* (prefix required): Bun.spawn, Bun.serve, Bun.file first.
-  - Use `bun test` for testing, `Bun.serve()` for servers, built-in WebSocket/HTML import, native APIs (SQLite, Redis, Postgres, YAML).
-  - Bun Guide: node/ts-node → bun run, jest/vitest → bun test, npm → bun install/run, webpack/esbuild → bun build. Workspaces: --bun --cwd=packages/<pkg> or pushd/popd. Auto-load .env (no dotenv).
-  - APIs:
-    - Server: Bun.serve() (WebSockets/HTTPS/routing; no express).
-    - DB: bun:sqlite (no better-sqlite3), Bun.redis (no ioredis), Bun.sql (no pg/postgres.js).
-    - Other: Built-in WebSocket (no ws), Bun.file (replace node:fs), Bun.$ (replace execa); prefix node:\* modules; use Bun.spawn over node-pty.
-- **Bun 1.3.0+ Features**:
-  - **Browser Log Streaming**: `Bun.serve()` auto-streams client-side console logs to terminal (no config needed).
-  - **React Template**: `bun init --react` creates full-stack React dev server with HMR.
-  - **HTML Bundling**: `bun build ./src/index.html --outdir=dist` bundles HTML + assets directly.
-  - **Dependency Updates**: `bun update --interactive` (GUI selector), `bun update --latest` (ignore semver).
+- **APIs**: Bun first (Bun.spawn, Bun.serve, Bun.file). Server: Bun.serve() (no express). DB: bun:sqlite (no better-sqlite3), Bun.redis (no ioredis), Bun.sql (no pg). Other: Bun.$, WebSocket, Bun.file; prefix node:* when needed.
+- **CLI**: bun run/test/install/build. Workspaces: --bun --cwd=packages/<pkg>. Auto .env.
+- **1.3.0+**: Log streaming. React: `bun init --react` (HMR). HTML: `bun build ./src/index.html --outdir=dist`. Updates: --interactive, --latest.
 - **Testing**:
   - Run with `bun test`:
 
@@ -73,21 +46,11 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 
 ### Absolute No's
 
-1. **Node.js Specific Modules**: No `child_process`, `cluster`, etc.
-2. **External PTY Libs**: No `node-pty`, `pty.js`, etc.
-3. **Global State Dependency**: Encapsulate all state in class instances.
-4. **Sync Blocking Code**: No `fs.readFileSync()`, `execSync()`, etc.
-5. **Hardcoded Paths**: Inject all paths via config.
-6. **Error Ignoring**: Handle all errors with typed errors & logging.
+1. Node.js modules (child_process, cluster). 2. External PTY (node-pty). 3. Global state (encapsulate in classes). 4. Sync code (readFileSync, execSync). 5. Hardcoded paths (inject via config). 6. Ignored errors (typed errors & logging required).
 
-### Auto-Reject Code Review Criteria
+### Code Review: Auto-Reject
 
-- `require('child_process')` found.
-- Unguarded `any` overuse.
-- Unguarded `any`/`as unknown` overuse.
-- Unguarded `!` assertions outside tests/generic utils.
-- Missing error handling (core features, except tests).
-- Core features without tests.
+- child_process imports. Unguarded any/as unknown/!. Missing errors (core). No tests (core).
 
 ### Execution Priority Principle
 
@@ -97,10 +60,46 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 - **Feedback Loop**: Call tools immediately on "execute" requests; no text responses.
 - **Response Format**: Tool call + 0-1 sentence result only.
 
+### Git Agent (@git) - MANDATORY FOR COMMITS
+
+**REQUIREMENT**: All git operations (commits, pushes, branch management) MUST use @git subagent. NO direct bash `git commit` in main agent.
+
+**When to Delegate**:
+- Stage changes with `git add`
+- Create commits (even single-file commits)
+- Push to remote
+- Manage branches
+- Create/update PRs
+
+**How to Delegate**:
+```
+Use Task tool with subagent_type: "git" and provide:
+- Files to stage (absolute paths)
+- Commit message (English, follows conventional commits)
+- AgentLog reference
+- Post-commit actions (push, PR create, etc.)
+```
+
+**Example Task Prompt**:
+```
+Stage and commit changes:
+1. .github/workflows/release.yml
+2. docs/agentlogs/013-github-workflow-fix-unnecessary-publish.md
+
+Commit message: "fix: expand release workflow trigger to all packages except website
+
+- Change paths from 'packages/mcp-pty/**' to 'packages/!(website)/**'
+- Ensures internal dependency changes trigger publish
+- Prevents version skips"
+
+Then push to origin.
+```
+
 ### PR Guidelines
 
+- **Use Git Agent for Commits**: Delegate all git commits to `@git` agent (via Task tool) for logical unit commits. Avoids large monolithic commits and ensures consistency.
+- **Commit Message Format**: English only. Include issue references (e.g., `Fixes #30`). Focus on "why" not "what".
 - **AgentLogs Before PR**: Write AgentLog in docs/agentlogs/ following howto.md before creating PR. Ensures documentation of decisions, issues, solutions.
-- **Commit Granularity**: Use @git for logical unit commits. Avoid large monolithic commits.
 - **PR Description**: Include AgentLog reference, key changes, impact. Use English.
 
 #### Response Style Guide (Prevent Repeat Mistakes)
