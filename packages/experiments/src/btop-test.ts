@@ -30,10 +30,7 @@ const testBtopInput = async () => {
 
   console.log(`PTY spawned, writing to fd: ${pty.pid}`);
 
-  let _output = "";
-
   pty.onData((data: string) => {
-    _output += data;
     terminal.write(data);
   });
 
