@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mcp-pty": {
+      "command": "bun",
+      "args": ["run", "packages/mcp-pty/src/index.ts"],
+      "cwd": "/path/to/mcp-pty/project",
+      "env": {
+        "NODE_ENV": "production"
+      }
+    }
+  }
+}
