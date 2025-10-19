@@ -30,10 +30,10 @@ const testBtopInput = async () => {
 
   console.log(`PTY spawned, writing to fd: ${pty.pid}`);
 
-  let output = "";
+  let _output = "";
 
   pty.onData((data: string) => {
-    output += data;
+    _output += data;
     terminal.write(data);
   });
 
@@ -49,7 +49,7 @@ const testBtopInput = async () => {
 
     for (let i = 0; i < terminal.rows; i++) {
       const line = terminal.buffer.active.getLine(i)?.translateToString();
-      if (line && line.trim()) {
+      if (line?.trim()) {
         const trimmed = line.slice(0, 120);
         console.log(`  [${String(i).padStart(2, "0")}] ${trimmed}`);
       }

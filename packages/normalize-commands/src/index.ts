@@ -1,5 +1,15 @@
 const parse = require("bash-parser");
 
+// Basic AST node types for bash-parser
+interface BashNode {
+  type: string;
+  commands?: BashNode[];
+  prefix?: BashNode[];
+  suffix?: BashNode[];
+  name?: BashNode;
+  text?: string;
+}
+
 /**
  * Normalizes a command string into a JSON string representing the command and arguments.
  * Uses bash-parser to accurately parse bash syntax and determine if shell execution is required.
@@ -38,7 +48,7 @@ export const normalizeCommand = (input: string): string => {
   return JSON.stringify({ command: "", args: [] });
 };
 
-const requiresShellExecution = (node: any): boolean => {
+const requiresShellExecution = (node: BashNode): boolean => {
   // Check if it's a pipeline or logical expression
   if (node.type === "Pipeline" || node.type === "LogicalExpression") {
     return true;
@@ -52,6 +62,7 @@ const requiresShellExecution = (node: any): boolean => {
   // Check commands for redirects or other shell features
   if (node.commands) {
     for (const cmd of node.commands) {
+      if (!cmd) continue;
       if (cmd.type === "Pipeline" || cmd.type === "LogicalExpression") {
         return true;
       }
@@ -62,7 +73,7 @@ const requiresShellExecution = (node: any): boolean => {
       // Check suffix for redirects
       if (cmd.suffix) {
         for (const s of cmd.suffix) {
-          if (s.type === "Redirect") {
+          if (s && s.type === "Redirect") {
             return true;
           }
         }
@@ -74,21 +85,24 @@ const requiresShellExecution = (node: any): boolean => {
 };
 
 const extractCommandInfo = (
-  node: any,
+  node: BashNode,
 ): { command: string; args: string[] } | null => {
   // For Script, get first command
   if (node.type === "Script" && node.commands && node.commands.length > 0) {
     const cmd = node.commands[0];
-    if (cmd.type === "Command") {
+    if (cmd && cmd.type === "Command") {
       // If there are environment variable assignments (prefix), require shell
       if (cmd.prefix && cmd.prefix.length > 0) {
         return null;
       }
-      const commandName = cmd.name ? cmd.name.text : "";
+      const commandName =
+        cmd.name && typeof cmd.name === "object" && cmd.name.text
+          ? cmd.name.text
+          : "";
       const args = cmd.suffix
         ? cmd.suffix
-            .filter((s: any) => s.type === "Word")
-            .map((s: any) => s.text)
+            .filter((s) => s && s.type === "Word")
+            .map((s) => s.text || "")
         : [];
       return { command: commandName, args };
     }
