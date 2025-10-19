@@ -129,62 +129,18 @@ export MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS=true
 
 ## Command Processing Flow
 
-### Step 1: Input Validation
+Commands are processed through: **Parsing → Validation → Shell Detection → Normalization**
 
-```typescript
-const trimmed = input.trim();
-if (trimmed === "") {
-  return JSON.stringify({ command: "", args: [] });
-}
-```
+1. **Parse** command using bash-parser AST
+2. **Validate** for dangerous patterns (privilege escalation, filesystem risks)
+3. **Detect** if shell execution required (pipes, redirects, logical operators, env vars)
+4. **Normalize** to either direct execution `["cmd", "arg"]` or shell execution `["sh", "-c", "cmd"]`
 
-### Step 2: AST Parsing
+## Shell vs Direct Execution
 
-```typescript
-const ast = parse(trimmed);
-```
+**Shell execution** (`sh -c`) for: pipes, redirects, logical operators (`&&`, `||`), semicolons, env vars
 
-### Step 3: Security Validation
-
-```typescript
-validateCommandAST(ast);
-```
-
-### Step 4: Shell Requirement Detection
-
-```typescript
-const requiresShell = 
-  requiresShellExecution(ast) || 
-  /(&&|\|\||\||;|>|<|<<|>>)/.test(trimmed);
-```
-
-### Step 5: Command Normalization
-
-```typescript
-if (requiresShell) {
-  return JSON.stringify({ command: "sh", args: ["-c", trimmed] });
-} else {
-  const commandInfo = extractCommandInfo(ast);
-  return JSON.stringify(commandInfo);
-}
-```
-
-## Shell Execution Detection
-
-### Requires Shell When:
-
-1. **Pipelines**: `cat file | grep pattern`
-2. **Logical Operations**: `cmd1 && cmd2`, `cmd1 || cmd2`
-3. **Redirections**: `cmd > file`, `cmd < input`
-4. **Multiple Commands**: `cmd1; cmd2`
-5. **Environment Variables**: `VAR=value cmd`
-6. **Complex Constructs**: `for i in *; do echo $i; done`
-
-### Direct Execution When:
-
-1. **Simple Commands**: `ls -la`
-2. **Single Executable**: `npm install`
-3. **Basic Arguments**: `git commit -m "message"`
+**Direct execution** for: simple commands like `ls -la`, `npm install`
 
 ## Usage Examples
 
@@ -286,109 +242,11 @@ test("detects shell requirements", () => {
 });
 ```
 
-## Performance Considerations
 
-### AST Parsing Overhead
 
-- **Cost**: ~1-2ms per command for typical commands
-- **Memory**: Minimal AST overhead
-- **Caching**: Not implemented (commands are unique)
-
-### Optimization Strategies
-
-1. **Fast Path**: Simple regex check before AST parsing
-2. **Caching**: Cache normalized results for repeated commands
-3. **Lazy Validation**: Skip validation for trusted commands
-
-### Benchmarks
-
-```typescript
-// Simple command: ~0.5ms
-normalizeCommand("ls -la")
-
-// Complex command: ~2ms
-normalizeCommand("find . -name '*.js' | xargs grep 'pattern'")
-
-// Security check: ~1ms
-normalizeCommand("sudo rm -rf /") // Throws after validation
-```
-
-## Configuration
-
-### Environment Variables
+## Environment Variables
 
 ```bash
-# Enable dangerous command bypass
+# Enable dangerous command bypass (development only)
 MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS=true
-
-# Debug mode for command parsing
-DEBUG=normalize-commands
 ```
-
-### Custom Security Rules
-
-Future extension point for custom security policies:
-
-```typescript
-interface SecurityRule {
-  name: string;
-  pattern: RegExp | string;
-  action: 'block' | 'warn' | 'allow';
-  message?: string;
-}
-
-// Future API
-addSecurityRule({
-  name: 'custom-rule',
-  pattern: /dangerous-command/,
-  action: 'block',
-  message: 'Custom dangerous command detected'
-});
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Parse Errors**: Commands with invalid bash syntax
-2. **False Positives**: Safe commands blocked by security rules
-3. **Performance**: Slow parsing for very long commands
-
-### Debug Mode
-
-```bash
-DEBUG=normalize-commands bun test packages/normalize-commands
-```
-
-### Logging
-
-```typescript
-// Add debug logging
-console.log("parse error for:", trimmed, error);
-```
-
-## Future Enhancements
-
-### Planned Features
-
-1. **Custom Security Policies**: User-defined security rules
-2. **Command Whitelisting**: Allow specific dangerous commands
-3. **Performance Caching**: Cache normalization results
-4. **Advanced Parsing**: Support for more shell constructs
-5. **Audit Logging**: Log all command attempts
-
-### Extension Points
-
-```typescript
-// Future API for custom validators
-interface CommandValidator {
-  validate(command: string, ast: BashNode): ValidationResult;
-}
-
-// Future API for custom normalizers
-interface CommandNormalizer {
-  normalize(command: string, ast: BashNode): NormalizedCommand;
-}
-```
-
-This integration guide provides comprehensive coverage of the normalize-commands package within the mcp-pty ecosystem. For specific implementation details, refer to the source code and test files.
