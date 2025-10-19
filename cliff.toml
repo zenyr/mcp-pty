@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # Changelog body
 body = """
 {% if version %}\
-## [{{ version | trim_start_matches(pat="v") }}] - {{ now | date(format="%Y-%m-%d") }}
+## [{{ version | trim_start_matches(pat="v") }}]{% if now %} - {{ now | date(format="%Y-%m-%d") }}{% endif %}
 {% else %}\
 ## [Unreleased]
 {% endif %}\
