@@ -1,8 +1,8 @@
-# mcp-pty 코드 스니펫 및 슈도코드
+# mcp-pty Code Snippets and Pseudocode
 
-## 1. 프로젝트 구조 및 설정
+## 1. Project Structure and Configuration
 
-### 1.1 루트 package.json (Bun Workspace)
+### 1.1 Root package.json (Bun Workspace)
 
 ```json
 {
@@ -44,9 +44,9 @@
 }
 ```
 
-## 2. Session Manager 패키지
+## 2. Session Manager Package
 
-### 2.1 세션 인터페이스 정의 (실제 구현시 mcp sdk 의 session 구분과 호환되도록 할 것)
+### 2.1 Session Interface Definition (Ensure compatibility with MCP SDK session distinction in actual implementation)
 
 ```typescript
 interface PTYSession {
@@ -69,7 +69,7 @@ interface SessionMetadata {
 }
 ```
 
-### 2.2 세션 매니저 구현
+### 2.2 Session Manager Implementation
 
 ```typescript
 import { nanoid } from "nanoid";
@@ -105,7 +105,7 @@ export class SessionManager {
 
     session.status = "terminating";
 
-    // Graceful shutdown 프로시저
+    // Graceful shutdown procedure
     if (session.ptyProcess) {
       await this.gracefulShutdown(session.ptyProcess);
     }
@@ -118,7 +118,7 @@ export class SessionManager {
     try {
       process.kill("SIGTERM");
 
-      // 3초 대기 후 강제 종료
+      // Wait 3 seconds then force kill
       const timeout = setTimeout(() => {
         process.kill("SIGKILL");
       }, 3000);
@@ -132,9 +132,9 @@ export class SessionManager {
 }
 ```
 
-## 3. PTY Manager 패키지
+## 3. PTY Manager Package
 
-### 3.1 PTY 프로세스 래퍼
+### 3.1 PTY Process Wrapper
 
 ```typescript
 import { isNumber } from "@sindresorhus/is";
@@ -219,9 +219,9 @@ export class PTYProcess {
 }
 ```
 
-## 4. MCP Server 패키지
+## 4. MCP Server Package
 
-### 4.1 MCP 서버 메인 클래스
+### 4.1 MCP Server Main Class
 
 ```typescript
 export class MCPPTYServer {
@@ -242,7 +242,7 @@ export class MCPPTYServer {
 
   private setupResources(server: McpServer): void {
     if (!this.resourcesEnabled) return;
-    // Resources 등록
+    // Resources registration
     server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       resources: [
         {
@@ -272,7 +272,7 @@ export class MCPPTYServer {
 
   private setupTools(server: McpServer): void {
     if (this.resourcesEnabled) return;
-    // 동적 툴 활성화
+    // Dynamic tool activation
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       if (request.params.name === "enable_subprocess_management") {
         return this.activatePTYTools(server);
@@ -284,7 +284,7 @@ export class MCPPTYServer {
 }
 ```
 
-### 4.2 전송 계층 설정
+### 4.2 Transport Layer Configuration
 
 ```typescript
 async startTransport(server: McpServer): Promise<void> {
@@ -301,7 +301,7 @@ private async startStdioTransport(server: McpServer): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  // 부모 프로세스 종료 감지
+  // Parent process termination detection
   process.on('disconnect', () => {
     this.cleanup();
   });
@@ -347,9 +347,9 @@ private async startHttpTransport(server: McpServer): Promise<void> {
 }
 ```
 
-## 5. 통합 및 실행
+## 5. Integration and Execution
 
-### 5.1 메인 진입점
+### 5.1 Main Entry Point
 
 ```typescript
 // packages/mcp-server/src/index.ts
@@ -358,7 +358,7 @@ import { MCPPTYServer } from "@pkgs/mcp-server/server";
 async function main() {
   const server = new MCPPTYServer();
 
-  // Graceful shutdown 핸들러
+  // Graceful shutdown handler
   const cleanup = () => {
     console.log("Shutting down gracefully...");
     server.cleanup().then(() => {
@@ -376,7 +376,7 @@ async function main() {
 main().catch(console.error);
 ```
 
-### 5.2 빌드 및 실행 스크립트
+### 5.2 Build and Run Scripts
 
 ```json
 {
@@ -390,9 +390,9 @@ main().catch(console.error);
 }
 ```
 
-## 6. 클라이언트 연동 예시
+## 6. Client Integration Examples
 
-### 6.1 Claude Desktop 설정
+### 6.1 Claude Desktop Configuration
 
 ```json
 {
@@ -408,19 +408,19 @@ main().catch(console.error);
 }
 ```
 
-### 6.2 HTTP 클라이언트 예시
+### 6.2 HTTP Client Example
 
 ```bash
-# 세션 초기화
+# Session initialization
 curl -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}'
 
-# PTY 명령 실행
+# PTY command execution
 curl -X POST http://localhost:3000/mcp \
   -H "Content-Type: application/json" \
   -H "mcp-session-id: YOUR_SESSION_ID" \
   -d '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"exec_pty","arguments":{"command":"ls -la"}},"id":2}'
 ```
 
-이 코드 스니펫들은 mcp-pty 프로젝트의 핵심 구현 부분을 다루며, abstract.md에서 설명한 아키텍처를 실제 TypeScript 코드로 구현하는 방법을 보여줍니다.
+These code snippets cover the core implementation parts of the mcp-pty project, showing how to implement the architecture described in abstract.md into actual TypeScript code.
