@@ -75,22 +75,37 @@ bun run packages/mcp-server/src/index.ts --transport http
 - `MCP_PTY_DEACTIVATE_RESOURCES=true`: Enable dynamic tool provisioning for clients without Resources support.
 - `XDG_CONFIG_HOME`: XDG config directory path (default: `~/.config`)
 
+## Features
+
+- **Persistent PTY Sessions**: Continuous terminal environment across multiple command invocations
+- **Dual Transport Support**: stdio for 1:1 binding, HTTP for multi-client support with Server-Sent Events
+- **Advanced Command Parsing**: normalize-commands integration for accurate bash syntax handling (pipelines, redirections, environment variables)
+- **Session Management**: ULID-based session IDs with idle timeout and graceful shutdown
+- **Resource-Based Interface**: Modern MCP resources (pty:// URIs) with fallback to tools mode
+- **Comprehensive Text Support**: Full Unicode, ANSI escape sequences, and TUI applications
+- **Interactive Input**: Real-time terminal state queries and input handling
+- **Reconnection Support**: HTTP transport maintains session continuity on client reconnect
+- **Security**: Command normalization, path validation, and resource isolation
+
 ## API Documentation
 
 ### MCP Resources
 
-- `pty://status`: Server status (n sessions with m processes)
-- `pty://list`: List PTY processes in current session
-- `pty://{id}/output`: Output history of specific PTY process in current session
-- `pty://{id}/status`: Status information of specific PTY process in current session
+- `pty://status`: Server status showing active sessions and PTY processes
+- `pty://list`: List all PTY processes in current session with status and exit codes
+- `pty://{id}/output`: Complete output history of specific PTY process
+- `pty://{id}/status`: Detailed status information including creation time, shell environment inheritance, and current state
 
 ### MCP Tools
 
-- `start`: Create new PTY instance (command and pwd required, returns with initial output)
-- `kill`: Terminate PTY instance
-- `list`: List PTY processes (when Resources deactivated)
-- `read`: Read PTY output (when Resources deactivated)
-- `activate_pty_tools`: Dynamic tool provisioning (when Resources deactivated)
+- `start_pty`: Create new PTY instance with command execution and working directory
+  - Parameters: `command` (string, required), `pwd` (string, absolute path required)
+  - Returns: PTY ID and immediate output
+- `kill_pty`: Terminate specific PTY instance
+  - Parameters: `processId` (string, required)
+- `list_pty`: List PTY processes with exit codes (fallback when Resources disabled)
+- `read_pty`: Read PTY output history (fallback when Resources disabled)
+- `activate_pty_tools`: Enable dynamic tool provisioning for legacy MCP clients
 
 ### Error Codes
 
