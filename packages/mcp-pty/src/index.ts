@@ -17,7 +17,7 @@ const { transport, port } = parseCliArgs();
 
 // Start server based on transport type (CLI args > config > default)
 const finalTransport = transport ?? config.transport ?? "stdio";
-const finalPort = port ?? config.port ?? 3000;
+const finalPort = port ?? config.port ?? 6420;
 
 // Configure consola for stdio transport (suppress stdout logs)
 if (finalTransport === "stdio") {

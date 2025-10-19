@@ -52,6 +52,11 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
     - Server: Bun.serve() (WebSockets/HTTPS/routing; no express).
     - DB: bun:sqlite (no better-sqlite3), Bun.redis (no ioredis), Bun.sql (no pg/postgres.js).
     - Other: Built-in WebSocket (no ws), Bun.file (replace node:fs), Bun.$ (replace execa); prefix node:\* modules; use Bun.spawn over node-pty.
+- **Bun 1.3.0+ Features**:
+  - **Browser Log Streaming**: `Bun.serve()` auto-streams client-side console logs to terminal (no config needed).
+  - **React Template**: `bun init --react` creates full-stack React dev server with HMR.
+  - **HTML Bundling**: `bun build ./src/index.html --outdir=dist` bundles HTML + assets directly.
+  - **Dependency Updates**: `bun update --interactive` (GUI selector), `bun update --latest` (ignore semver).
 - **Testing**:
   - Run with `bun test`:
 
@@ -91,6 +96,12 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 - **Avoid Hallucinations**: Base responses on tool results, not text descriptions.
 - **Feedback Loop**: Call tools immediately on "execute" requests; no text responses.
 - **Response Format**: Tool call + 0-1 sentence result only.
+
+### PR Guidelines
+
+- **AgentLogs Before PR**: Write AgentLog in docs/agentlogs/ following howto.md before creating PR. Ensures documentation of decisions, issues, solutions.
+- **Commit Granularity**: Use @git for logical unit commits. Avoid large monolithic commits.
+- **PR Description**: Include AgentLog reference, key changes, impact. Use English.
 
 #### Response Style Guide (Prevent Repeat Mistakes)
 

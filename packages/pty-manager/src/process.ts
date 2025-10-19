@@ -180,9 +180,22 @@ export class PtyProcess {
     screen: string;
     cursor: { x: number; y: number };
     exitCode: number | null;
+    warning?: string;
   }> {
     if (this.status === "terminated" || this.status === "terminating") {
       throw new Error(`PTY ${this.id} is not active`);
+    }
+
+    // Handle empty input gracefully with warning
+    if (data.length === 0) {
+      logger.warn(`PTY ${this.id}: Empty input received, ignoring`);
+      await Bun.sleep(waitMs);
+      return {
+        screen: this.getScreenContent(),
+        cursor: this.getCursorPosition(),
+        exitCode: this.exitCode,
+        warning: "Empty input ignored - use '\\n' for Enter key",
+      };
     }
 
     // Security checks
@@ -298,7 +311,7 @@ export class PtyProcess {
   async toPromise(): Promise<string> {
     await this.ready();
     return new Promise<string>((resolve, reject) => {
-      const _sub = this.subscribe({
+      this.subscribe({
         onData: () => {}, // data는 outputBuffer에 누적
         onError: (err) => {
           this.dispose();
