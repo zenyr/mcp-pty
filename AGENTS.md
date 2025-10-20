@@ -104,6 +104,13 @@ Then push to origin.
 - **Agent Identity**: MUST declare specific agent name in all GitHub PRs/comments/reviews. Use exact model names: Sonnet4.5/Haiku4.5/GLM4.6/KimiK2/GrokCodeFast1 etc. "TypeScript expert/git" not valid. Ask user if unclear.
 - **Communication Style**: All GitHub PRs/comments/issues MUST be in English. Sacrifice grammar for concision. Use user's language only in direct responses.
 
+### Branch Management Guidelines
+
+- **Clean Start**: ALWAYS start feature work from clean, up-to-date `develop` branch. Never work from stale or partially merged branches.
+- **Branch Hygiene**: Before creating PR, ensure working tree is clean (`git status`) and branch is based on latest `develop`.
+- **Scope Verification**: Verify PR changes match stated purpose. Remove unrelated files/changes before committing.
+- **Conflict Prevention**: Pull latest `develop` before starting work to avoid merge conflicts and outdated file conflicts.
+
 #### Response Style Guide (Prevent Repeat Mistakes)
 
 - **Analysis/Explanation Responses**: Summarize in 3-5 bullet points (1-2 sentences each). Keep total under 200-300 chars. Include code examples/improvements only on explicit user request.
