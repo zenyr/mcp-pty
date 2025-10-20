@@ -128,7 +128,7 @@ describe("Escape Sequence Handling Reproduction", () => {
     ];
 
     for (const { data, expectedByte, label } of testCases) {
-      const result = await pty.write(data, 200);
+      const _result = await pty.write(data, 200);
       const buffer = pty.getOutputBuffer();
       const lastBytes = buffer.slice(-10);
 
