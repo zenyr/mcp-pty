@@ -1,16 +1,50 @@
-# 028-fix-session-connect-bug
+# Fix Session Connect Bug
 
-## Summary
-Fixed a bug in HTTP transport where reconnection to a terminated session would fail, preventing proper session establishment after connect.
+**Date:** 2025-10-20  
+**Agent:** GLM-4.6  
+**Status:** ✅ Completed
 
 ## Problem
-In the HTTP transport layer (`packages/mcp-pty/src/transports/index.ts`), when attempting to reconnect to an existing session, the code checked for session existence in `sessionManager` but did not verify the session status. If a session was previously terminated (e.g., via DELETE endpoint or connection close), attempting to reconnect would bind to a terminated session, causing session operations to fail.
 
-## Root Cause
-The reconnection logic only checked `if (existingSession)` without considering `existingSession.status !== "terminated"`. Terminated sessions should not be reconnected to; instead, a new session should be created.
+HTTP transport was experiencing "Server not initialized" errors after initial connection. Sessions were being deleted on every request completion, causing subsequent requests to fail with session not found errors.
 
-## Solution
-Modified the reconnection condition to include status check:
+## Root Cause Analysis
+
+1. **Session Deletion on Request Completion**: The `res.on("close")` handler was deleting sessions regardless of whether the connection completed successfully or encountered an error
+2. **Improper Session State Persistence**: Sessions were not being stored immediately after creation/reconnection
+3. **Notification Handling Issues**: JSON-RPC notifications were not being processed through the transport, causing session state inconsistencies
+4. **Terminated Session Reconnection**: Previous fix addressed reconnection to terminated sessions
+
+## Solution Implementation
+
+### 1. Immediate Session Storage
+```typescript
+session = { server, transport };
+sessions.set(sessionId, session); // Ensure session is stored immediately
+```
+
+### 2. Connection-Error-Only Cleanup
+```typescript
+res.on("close", () => {
+  const transportSessionId = session?.transport.sessionId;
+  if (transportSessionId && res.writableEnded && !res.writableFinished) {
+    // Only cleanup on connection errors, not on normal request completion
+    const ptyManager = sessionManager.getPtyManager(transportSessionId);
+    ptyManager?.dispose();
+    sessionManager.updateStatus(transportSessionId, "terminated");
+    sessions.delete(transportSessionId);
+  }
+});
+```
+
+### 3. Proper Notification Handling
+```typescript
+// Process notifications through the transport to maintain session state
+await session.transport.handleRequest(req, res, jsonBody);
+const response = await toFetchResponse(res);
+```
+
+### 4. Terminated Session Check (Previous Fix)
 ```typescript
 if (existingSession && existingSession.status !== "terminated") {
   // Reconnect to existing session
@@ -19,15 +53,20 @@ if (existingSession && existingSession.status !== "terminated") {
 }
 ```
 
-## Files Changed
-- `packages/mcp-pty/src/transports/index.ts`: Added status check in reconnection logic
-
 ## Testing
-- All existing tests pass (mcp-pty: 57 tests, session-manager: 16 tests)
-- No new tests added as the fix is a simple conditional change
-- Verified session lifecycle works correctly with terminated session handling
+
+- Verified session persistence across multiple requests
+- Confirmed tool listing functionality works correctly after initial connection
+- Tested reconnection logic with terminated sessions
+- All existing tests continue to pass (mcp-pty: 57 tests, session-manager: 16 tests)
 
 ## Impact
-- Prevents reconnection to terminated sessions
-- Ensures clean session establishment after connect
-- Maintains backward compatibility for active sessions
+
+- Fixed "Server not initialized" errors in HTTP transport
+- Improved session lifecycle management
+- Enhanced reconnection reliability
+- Maintained backward compatibility
+
+## Files Changed
+
+- `packages/mcp-pty/src/transports/index.ts` - Session management fixes

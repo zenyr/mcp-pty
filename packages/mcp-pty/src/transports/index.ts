@@ -65,11 +65,11 @@ export const startHttpServer = async (
       sessions.delete(sessionHeader);
     }
 
-    // Dispose PTYs but keep session for potential reconnection
+    // Dispose PTYs and mark session as terminated
     const ptyManager = sessionManager.getPtyManager(sessionHeader);
     ptyManager?.dispose();
     sessionManager.updateStatus(sessionHeader, "terminated");
-    logServer(`Session PTYs disposed, session preserved: ${sessionHeader}`);
+    logServer(`Session terminated: ${sessionHeader}`);
     return c.json({ success: true, sessionId: sessionHeader });
   });
 
@@ -101,6 +101,7 @@ export const startHttpServer = async (
             sessionManager.updateStatus(sessionId, "active");
 
             session = { server, transport };
+            sessions.set(sessionId, session); // Ensure session is stored immediately
             logServer(`Reconnected to session: ${sessionId}`);
           } else {
             // Stale session, cleanup and create new
@@ -153,6 +154,7 @@ export const startHttpServer = async (
           sessionManager.updateStatus(sessionId, "active");
 
           session = { server, transport };
+          sessions.set(sessionId, session); // Ensure session is stored immediately
         }
       } else {
         // Type guard: sessionHeader is defined here because session exists
@@ -164,14 +166,19 @@ export const startHttpServer = async (
 
       const { req, res } = toReqRes(c.req.raw);
       const currentSessionId = sessionId;
+
+      // Only cleanup on connection errors, not on normal request completion
       res.on("close", () => {
         const transportSessionId = session?.transport.sessionId;
-        if (transportSessionId) {
-          // Dispose PTYs but keep session for reconnection
+        if (transportSessionId && res.writableEnded && !res.writableFinished) {
+          // Connection was aborted or error occurred
           const ptyManager = sessionManager.getPtyManager(transportSessionId);
           ptyManager?.dispose();
           sessionManager.updateStatus(transportSessionId, "terminated");
           sessions.delete(transportSessionId);
+          logServer(
+            `Session cleaned up due to connection error: ${transportSessionId}`,
+          );
         }
       });
       const body = (await c.req.text()).trim();
@@ -194,9 +201,16 @@ export const startHttpServer = async (
         jsonBody.method &&
         !("id" in jsonBody)
       ) {
-        logServer(`[HTTP] Handling notification: ${String(jsonBody.method)}`);
-        // For notifications, just acknowledge without calling handleRequest
-        return c.json({ jsonrpc: "2.0", result: null }, 200);
+        logServer(
+          `[HTTP] Handling notification: ${String(jsonBody.method)} (sessionId=${sessionId})`,
+        );
+        // Process notifications through the transport to maintain session state
+        await session.transport.handleRequest(req, res, jsonBody);
+        const response = await toFetchResponse(res);
+        if (!sessionHeader) {
+          response.headers.set("mcp-session-id", currentSessionId);
+        }
+        return response;
       }
 
       await session.transport.handleRequest(req, res, jsonBody);
