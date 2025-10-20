@@ -72,6 +72,13 @@ jobs:
       run: |
         bun x --bun git-cliff --unreleased --tag v${{ steps.version.outputs.new_version }} -o CHANGELOG.md
 
+    - name: Create release branch
+      id: release_branch
+      run: |
+        BRANCH_NAME="release/v${{ steps.version.outputs.new_version }}"
+        echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        git checkout -b "$BRANCH_NAME"
+
     - name: Commit version bump and CHANGELOG
       run: |
         git add packages/mcp-pty/package.json
@@ -109,13 +116,54 @@ jobs:
         echo "🔍 Dry run mode - skipping NPM publish"
         echo "Would publish version ${{ steps.version.outputs.new_version }}"
 
-    - name: Push changes to develop
+    - name: Push release branch and tag
       if: ${{ github.event.inputs.dry_run != 'true' }}
       run: |
-        git push origin develop
+        git push origin ${{ steps.release_branch.outputs.branch_name }}
         git push origin "v${{ steps.version.outputs.new_version }}"
 
-    - name: Create PR to main
+    - name: Create PR to develop
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      id: pr_develop
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        PR_URL=$(gh pr create \
+          --base develop \
+          --head ${{ steps.release_branch.outputs.branch_name }} \
+          --title "chore: bump version to ${{ steps.version.outputs.new_version }}" \
+          --body "Auto-generated version bump PR for v${{ steps.version.outputs.new_version }}" \
+          --label "release")
+        echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+        echo "pr_number=$(echo $PR_URL | grep -oE '[0-9]+$')" >> $GITHUB_OUTPUT
+        echo "Created develop PR: $PR_URL"
+
+    - name: Enable auto-merge for develop PR
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh pr merge ${{ steps.pr_develop.outputs.pr_url }} --auto --squash --delete-branch=true
+
+    - name: Wait for develop PR to merge
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "Waiting for PR #${{ steps.pr_develop.outputs.pr_number }} to merge..."
+        for i in {1..60}; do
+          STATE=$(gh pr view ${{ steps.pr_develop.outputs.pr_number }} --json state --jq .state)
+          if [ "$STATE" = "MERGED" ]; then
+            echo "✓ PR merged successfully"
+            exit 0
+          fi
+          echo "Current state: $STATE (attempt $i/60)"
+          sleep 10
+        done
+        echo "✗ Timeout waiting for PR merge"
+        exit 1
+
+    - name: Create PR from develop to main
       if: ${{ github.event.inputs.dry_run != 'true' }}
       id: pr_main
       env:
@@ -128,9 +176,9 @@ jobs:
           --body "Auto-generated release PR for v${{ steps.version.outputs.new_version }}" \
           --label "release")
         echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
-        echo "Created PR: $PR_URL"
+        echo "Created main PR: $PR_URL"
 
-    - name: Enable auto-merge and merge PR
+    - name: Enable auto-merge for main PR
       if: ${{ github.event.inputs.dry_run != 'true' }}
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
