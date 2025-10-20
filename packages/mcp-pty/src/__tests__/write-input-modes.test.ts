@@ -1,7 +1,7 @@
-import { test, expect, describe } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { withTestSessionManager } from "@pkgs/session-manager";
-import { createToolHandlers, bindSessionToServer } from "../tools";
+import { bindSessionToServer, createToolHandlers } from "../tools";
 
 /**
  * Test new input/ctrlCode split API modes
