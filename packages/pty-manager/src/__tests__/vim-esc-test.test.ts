@@ -11,7 +11,7 @@ describe("Vim ESC Key Handling", () => {
     try {
       pty = new PtyProcess({ command: "vim -u NONE", cwd: process.cwd() });
       await pty.ready();
-      await Bun.sleep(1000); // Wait for vim to start
+      await Bun.sleep(10); // Wait for vim to start
 
       // Safety check: ensure pty is still active
       if (!pty || pty.status !== "active") {

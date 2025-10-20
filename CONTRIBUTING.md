@@ -216,21 +216,67 @@ export const createPty = async (
 - **Security Tests**: Test command validation and security
 - **E2E Tests**: Test complete user workflows
 
+### Test Isolation Rules (Critical for Concurrent Tests)
+
+**ZERO shared state between tests**. All instances must be created and destroyed within test scope:
+
+❌ **FORBIDDEN** - Describe-scoped variables:
+```typescript
+describe("MyTests", () => {
+  let pty: PtyProcess | null = null;  // ❌ SHARED STATE
+  let manager: PtyManager | null = null;  // ❌ Causes races
+  
+  afterEach(async () => {
+    if (pty) await pty.dispose();
+  });
+  
+  test("test 1", async () => {
+    pty = new PtyProcess("cmd");  // ❌ Shared reference
+  });
+});
+```
+
+✅ **REQUIRED** - Test-scoped variables with test utilities:
+```typescript
+describe("MyTests", () => {
+  test("test 1", async () => {
+    await withTestPtyProcess("cmd", async (pty) => {
+      // pty is isolated to this test, cleaned up after
+      expect(pty).toBeDefined();
+    });
+  });
+});
+```
+
+**Guidelines:**
+- Use `withTestPtyManager()`, `withTestPtyProcess()`, `withTestSessionManager()` for all tests
+- Never declare PTY/Manager/Session variables at describe scope
+- Use try/finally in test body if not using utility wrappers
+- Each test owns its resources completely
+- Cleanup happens immediately after test via callback exit
+
 ### Test Utilities
 
-Each package includes test utilities in `__tests__/`:
+Each package includes test utilities in `src/test-utils.ts`:
 
 ```typescript
 // Use provided test utilities
 import { withTestPtyManager } from "@pkgs/pty-manager";
 
 test("PTY process lifecycle", async () => {
-  await withTestPtyManager(async (manager) => {
-    const pty = await manager.createPty("echo hello");
-    expect(pty.getOutput()).toContain("hello");
+  await withTestPtyManager("session-id", async (manager) => {
+    const { processId } = await manager.createPty("echo hello");
+    expect(processId).toBeDefined();
+    // Cleanup happens automatically
   });
 });
 ```
+
+**Available Utilities:**
+- `withTestPtyProcess()` - Isolated PTY process per test
+- `withTestPtyManager()` - Isolated manager with session
+- `withTestPtyManagerAndProcesses()` - Manager + multiple processes
+- `withTestSessionManager()` - Isolated session tracking
 
 ### Test Coverage
 

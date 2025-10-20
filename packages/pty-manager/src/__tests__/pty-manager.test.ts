@@ -364,7 +364,7 @@ test("PtyProcess autoDisposeOnExit triggers cleanup on process exit", async () =
     { command: "true", cwd: process.cwd(), autoDisposeOnExit: true },
     async (pty) => {
       expect(pty.status).toBe("active");
-      await Bun.sleep(600);
+      await Bun.sleep(50);
       expect(["terminated", "terminating"]).toContain(pty.status);
     },
   );
@@ -372,7 +372,7 @@ test("PtyProcess autoDisposeOnExit triggers cleanup on process exit", async () =
 
 test("PtyProcess onOutput callback receives output data", async () => {
   await withTestPtyProcess("echo hello", async (pty) => {
-    await Bun.sleep(100);
+    await Bun.sleep(10);
     const buffer = pty.getOutputBuffer();
     expect(buffer.length).toBeGreaterThan(0);
   });
@@ -380,11 +380,11 @@ test("PtyProcess onOutput callback receives output data", async () => {
 
 test("PtyManager tracks process lifecycle through status updates", async () => {
   await withTestPtyManager("lifecycle-test", async (manager) => {
-    const { processId } = await manager.createPty("sleep 5");
+    const { processId } = await manager.createPty("sleep 0.05");
     const instance = manager.getPty(processId);
     expect(["active", "terminated"]).toContain(instance?.status ?? "");
 
-    await Bun.sleep(100);
+    await Bun.sleep(10);
     const updatedInstance = manager.getPty(processId);
     if (updatedInstance) {
       expect(["active", "terminated"]).toContain(updatedInstance.status);
