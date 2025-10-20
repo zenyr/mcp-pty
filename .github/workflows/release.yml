@@ -52,7 +52,7 @@ jobs:
       run: |
         cd packages/mcp-pty
         OLD_VERSION=$(node -p "require('./package.json').version")
-        bun x --bun semver -i ${{ github.event.inputs.version_type || 'minor' }} $OLD_VERSION > new_version.txt
+        bun x --bun semver -i ${{ github.event.inputs.version_type }} $OLD_VERSION > new_version.txt
         NEW_VERSION=$(cat new_version.txt)
         echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
         echo "old_version=$OLD_VERSION" >> $GITHUB_OUTPUT
@@ -109,27 +109,33 @@ jobs:
         echo "🔍 Dry run mode - skipping NPM publish"
         echo "Would publish version ${{ steps.version.outputs.new_version }}"
 
-    - name: Push tag
+    - name: Push changes to develop
       if: ${{ github.event.inputs.dry_run != 'true' }}
       run: |
+        git push origin develop
         git push origin "v${{ steps.version.outputs.new_version }}"
 
-    - name: Update main branch
+    - name: Create PR to main
       if: ${{ github.event.inputs.dry_run != 'true' }}
+      id: pr_main
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git fetch origin main
-        git checkout main
-        git reset --hard origin/develop
-        git commit --allow-empty -m "chore: release v${{ steps.version.outputs.new_version }}"
-        git push -f origin main
+        PR_URL=$(gh pr create \
+          --base main \
+          --head develop \
+          --title "chore: release v${{ steps.version.outputs.new_version }}" \
+          --body "Auto-generated release PR for v${{ steps.version.outputs.new_version }}" \
+          --label "release")
+        echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+        echo "Created PR: $PR_URL"
 
-    - name: Sync back to develop
+    - name: Enable auto-merge and merge PR
       if: ${{ github.event.inputs.dry_run != 'true' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        git fetch origin develop
-        git checkout develop
-        git merge --ff-only origin/main
-        git push -f origin develop
+        gh pr merge ${{ steps.pr_main.outputs.pr_url }} --auto --squash --delete-branch=false
 
     - name: Create GitHub Release
       if: ${{ github.event.inputs.dry_run != 'true' }}
