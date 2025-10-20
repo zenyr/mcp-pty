@@ -35,68 +35,40 @@ export const ListPtyInputSchema = z.object({});
 
 export const ReadPtyInputSchema = z.object({ processId: z.string() });
 
-export const WriteInputSchema = z
-  .object({
-    processId: z.string(),
+export const WriteInputSchema = z.object({
+  processId: z.string(),
 
-    // Plain text input (no escape sequences - literal text only)
-    input: z
-      .string()
-      .optional()
-      .describe(
-        "Plain text input without escape sequences. Use this for typing regular text. Examples: 'hello', 'print(2+2)', 'cd /tmp'. DO NOT include \\n or \\t here - use ctrlCode instead.",
-      ),
+  // Plain text input (no escape sequences - literal text only)
+  input: z
+    .string()
+    .optional()
+    .describe(
+      "Plain text input without escape sequences. Use this for typing regular text. Examples: 'hello', 'print(2+2)', 'cd /tmp'. DO NOT include \\n or \\t here - use ctrlCode instead.",
+    ),
 
-    // Control codes (named or raw bytes)
-    ctrlCode: z
-      .string()
-      .optional()
-      .describe(
-        "Control code to send after input. Supports named codes (e.g., 'Enter', 'Escape', 'Ctrl+C') or raw sequences (e.g., '\\n', '\\x1b', '\\x03'). Named codes: Enter, Escape, Tab, Ctrl+A-Z, ArrowUp/Down/Left/Right, etc. This is sent AFTER input field.",
-      ),
+  // Control codes (named or raw bytes)
+  ctrlCode: z
+    .string()
+    .optional()
+    .describe(
+      "Control code to send after input. Supports named codes (e.g., 'Enter', 'Escape', 'Ctrl+C') or raw sequences (e.g., '\\n', '\\x1b', '\\x03'). Named codes: Enter, Escape, Tab, Ctrl+A-Z, ArrowUp/Down/Left/Right, etc. This is sent AFTER input field.",
+    ),
 
-    // Raw data field (for advanced use cases)
-    data: z
-      .string()
-      .optional()
-      .describe(
-        "Raw input data with escape sequences. Use this for: (1) multiline text with actual newlines, (2) ANSI escape codes in text, (3) binary data. Takes precedence over input+ctrlCode. Examples: 'cat << EOF\\nhello\\nEOF\\n', '\\x1b[31mRED\\x1b[0m', 'print(1)\\nprint(2)\\n'.",
-      ),
+  // Raw data field (for advanced use cases)
+  data: z
+    .string()
+    .optional()
+    .describe(
+      "Raw input data with escape sequences. Use this for: (1) multiline text with actual newlines, (2) ANSI escape codes in text, (3) binary data. Takes precedence over input+ctrlCode. Examples: 'cat << EOF\\nhello\\nEOF\\n', '\\x1b[31mRED\\x1b[0m', 'print(1)\\nprint(2)\\n'.",
+    ),
 
-    waitMs: z
-      .number()
-      .int()
-      .positive()
-      .default(1000)
-      .describe("Wait time for output (ms)"),
-  })
-  .refine(
-    (data) => {
-      // At least one of: input, ctrlCode, or data must be present
-      return (
-        data.input !== undefined ||
-        data.ctrlCode !== undefined ||
-        data.data !== undefined
-      );
-    },
-    {
-      message:
-        "At least one of 'input', 'ctrlCode', or 'data' must be provided",
-    },
-  )
-  .refine(
-    (params) => {
-      // data and (input/ctrlCode) are mutually exclusive
-      const hasData = params.data !== undefined;
-      const hasInputOrCtrl =
-        params.input !== undefined || params.ctrlCode !== undefined;
-      return !(hasData && hasInputOrCtrl);
-    },
-    {
-      message:
-        "Cannot use 'data' together with 'input' or 'ctrlCode'. Use either data (raw mode) OR input+ctrlCode (safe mode).",
-    },
-  );
+  waitMs: z
+    .number()
+    .int()
+    .positive()
+    .default(1000)
+    .describe("Wait time for output (ms)"),
+});
 
 /**
  * PTY tool output schemas

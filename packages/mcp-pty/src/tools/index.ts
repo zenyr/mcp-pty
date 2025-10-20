@@ -183,6 +183,22 @@ export const createToolHandlers = (server: McpServer) => {
         );
       }
 
+      // Additional validation: at least one of input, ctrlCode, or data must be present
+      if (input === undefined && ctrlCode === undefined && data === undefined) {
+        throw new Error(
+          "At least one of 'input', 'ctrlCode', or 'data' must be provided",
+        );
+      }
+
+      // Additional validation: data and (input/ctrlCode) are mutually exclusive
+      const hasData = data !== undefined;
+      const hasInputOrCtrl = input !== undefined || ctrlCode !== undefined;
+      if (hasData && hasInputOrCtrl) {
+        throw new Error(
+          "Cannot use 'data' together with 'input' or 'ctrlCode'. Use either data (raw mode) OR input+ctrlCode (safe mode).",
+        );
+      }
+
       // Build final data to write
       let finalData: string;
 

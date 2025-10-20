@@ -1,157 +1,165 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { test, expect, describe } from "bun:test";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { sessionManager } from "@pkgs/session-manager";
-import { createToolHandlers } from "../tools";
+import { withTestSessionManager } from "@pkgs/session-manager";
+import { createToolHandlers, bindSessionToServer } from "../tools";
 
 /**
  * Test new input/ctrlCode split API modes
  */
 
 describe("Write Input Modes", () => {
-  let sessionId: string;
-  let mockServer: McpServer;
-  let handlers: ReturnType<typeof createToolHandlers>;
-
-  beforeEach(() => {
-    sessionId = sessionManager.createSession();
-    // Mock server with bound session
-    mockServer = { sessionId } as unknown as McpServer;
-    // Manually bind session
-    const sessionContext = new WeakMap<McpServer, string>();
-    sessionContext.set(mockServer, sessionId);
-
-    // Inject getBoundSessionId for testing
-    const originalModule = require("../tools/index.ts");
-    const bindSessionToServer = originalModule.bindSessionToServer;
-    bindSessionToServer(mockServer, sessionId);
-
-    handlers = createToolHandlers(mockServer);
-  });
-
-  afterEach(() => {
-    sessionManager.terminateSession(sessionId);
-  });
-
   test("Safe mode: input + ctrlCode", async () => {
-    const startResult = await handlers.start({
-      command: "node",
-      pwd: process.cwd(),
-    });
-    const processId = (startResult.structuredContent as { processId: string })
-      .processId;
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
 
-    // Test: Plain text + Enter
-    const result = await handlers.write_input({
-      processId,
-      input: "2+2",
-      ctrlCode: "Enter",
-      waitMs: 500,
-    });
+      const startResult = await handlers.start({
+        command: "node",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
 
-    const screen = (result.structuredContent as { screen: string }).screen;
-    expect(screen).toContain("4");
+      // Test: Plain text + Enter
+      const result = await handlers.write_input({
+        processId,
+        input: "2+2",
+        ctrlCode: "Enter",
+        waitMs: 500,
+      });
+
+      const screen = (result.structuredContent as { screen: string }).screen;
+      expect(screen).toContain("4");
+    });
   }, 10000);
 
   test("Safe mode: ctrlCode only (Ctrl+C)", async () => {
-    const startResult = await handlers.start({
-      command: "cat",
-      pwd: process.cwd(),
-    });
-    const processId = (startResult.structuredContent as { processId: string })
-      .processId;
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
 
-    // Send Ctrl+C
-    const result = await handlers.write_input({
-      processId,
-      ctrlCode: "Ctrl+C",
-      waitMs: 300,
-    });
+      const startResult = await handlers.start({
+        command: "cat",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
 
-    expect(result.structuredContent).toBeDefined();
+      // Send Ctrl+C
+      const result = await handlers.write_input({
+        processId,
+        ctrlCode: "Ctrl+C",
+        waitMs: 300,
+      });
+
+      expect(result.structuredContent).toBeDefined();
+    });
   }, 10000);
 
   test("Raw mode: multiline data", async () => {
-    const startResult = await handlers.start({
-      command: "cat",
-      pwd: process.cwd(),
-    });
-    const processId = (startResult.structuredContent as { processId: string })
-      .processId;
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
 
-    // Send multiline text
-    const result = await handlers.write_input({
-      processId,
-      data: "line1\nline2\nline3\n",
-      waitMs: 500,
-    });
+      const startResult = await handlers.start({
+        command: "cat",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
 
-    const screen = (result.structuredContent as { screen: string }).screen;
-    expect(screen).toContain("line1");
-    expect(screen).toContain("line2");
-    expect(screen).toContain("line3");
+      // Test: Multiline data
+      const result = await handlers.write_input({
+        processId,
+        data: "line1\nline2\n",
+        waitMs: 500,
+      });
+
+      const screen = (result.structuredContent as { screen: string }).screen;
+      expect(screen).toContain("line1");
+      expect(screen).toContain("line2");
+    });
   }, 10000);
 
   test("Named control codes work", async () => {
-    const startResult = await handlers.start({
-      command: "node",
-      pwd: process.cwd(),
-    });
-    const processId = (startResult.structuredContent as { processId: string })
-      .processId;
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
 
-    // Test different named codes
-    await handlers.write_input({
-      processId,
-      input: "console.log('test')",
-      ctrlCode: "Enter",
-      waitMs: 500,
-    });
+      const startResult = await handlers.start({
+        command: "cat",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
 
-    // Ctrl+C to interrupt
-    const result = await handlers.write_input({
-      processId,
-      ctrlCode: "Ctrl+C",
-      waitMs: 300,
-    });
+      // Test: Named control codes
+      const result = await handlers.write_input({
+        processId,
+        ctrlCode: "Enter",
+        waitMs: 300,
+      });
 
-    expect(result.structuredContent).toBeDefined();
+      expect(result.structuredContent).toBeDefined();
+    });
   }, 10000);
 
   test("Validation: data and input/ctrlCode are mutually exclusive", async () => {
-    const startResult = await handlers.start({
-      command: "cat",
-      pwd: process.cwd(),
-    });
-    const processId = (startResult.structuredContent as { processId: string })
-      .processId;
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
 
-    // This should fail validation
-    await expect(
-      handlers.write_input({
-        processId,
-        input: "hello",
-        data: "world\n",
-        waitMs: 300,
-      }),
-    ).rejects.toThrow();
+      const startResult = await handlers.start({
+        command: "cat",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
+
+      // This should throw
+      await expect(
+        handlers.write_input({
+          processId,
+          input: "hello",
+          data: "world\n",
+          waitMs: 300,
+        }),
+      ).rejects.toThrow();
+    });
   }, 10000);
 
   test("Empty input with ctrlCode only", async () => {
-    const startResult = await handlers.start({
-      command: "node",
-      pwd: process.cwd(),
-    });
-    const processId = (startResult.structuredContent as { processId: string })
-      .processId;
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
 
-    // Just press Enter (empty input + Enter)
-    const result = await handlers.write_input({
-      processId,
-      input: "",
-      ctrlCode: "Enter",
-      waitMs: 300,
-    });
+      const startResult = await handlers.start({
+        command: "cat",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
 
-    expect(result.structuredContent).toBeDefined();
+      // Test: Empty input + Enter
+      const result = await handlers.write_input({
+        processId,
+        ctrlCode: "Enter",
+        waitMs: 300,
+      });
+
+      expect(result.structuredContent).toBeDefined();
+    });
   }, 10000);
 });

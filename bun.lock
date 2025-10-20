@@ -37,7 +37,7 @@
     },
     "packages/logger": {
       "name": "@pkgs/logger",
-      "version": "0.0.1",
+      "version": "0.0.4",
       "dependencies": {
         "consola": "^3.4.2",
       },
@@ -47,7 +47,7 @@
     },
     "packages/mcp-pty": {
       "name": "mcp-pty",
-      "version": "0.0.3",
+      "version": "0.5.3",
       "bin": {
         "mcp-pty": "dist/index.js",
       },
@@ -71,7 +71,7 @@
     },
     "packages/normalize-commands": {
       "name": "@pkgs/normalize-commands",
-      "version": "0.0.1",
+      "version": "0.0.4",
       "dependencies": {
         "bash-parser": "0.5.0",
       },
@@ -81,7 +81,7 @@
     },
     "packages/pty-manager": {
       "name": "@pkgs/pty-manager",
-      "version": "0.0.1",
+      "version": "0.0.4",
       "dependencies": {
         "@pkgs/logger": "workspace:*",
         "@pkgs/normalize-commands": "workspace:*",
@@ -98,7 +98,7 @@
     },
     "packages/session-manager": {
       "name": "@pkgs/session-manager",
-      "version": "0.0.1",
+      "version": "0.0.4",
       "dependencies": {
         "@pkgs/logger": "workspace:*",
         "@pkgs/pty-manager": "workspace:*",
