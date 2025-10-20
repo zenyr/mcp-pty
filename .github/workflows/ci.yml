@@ -3,8 +3,22 @@ name: CI
 on:
   push:
     branches: [develop, main]
+    paths:
+      - 'packages/!(website)/src/**'
+      - '.github/workflows/ci.yml'
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'bun.lock'
+      - 'biome.json'
   pull_request:
     branches: [develop, main]
+    paths:
+      - 'packages/!(website)/src/**'
+      - '.github/workflows/ci.yml'
+      - 'package.json'
+      - 'tsconfig.json'
+      - 'bun.lock'
+      - 'biome.json'
 
 jobs:
   check-changes:
