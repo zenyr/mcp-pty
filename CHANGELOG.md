@@ -7,22 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- PTY input handling for empty strings and newline characters (#15)
-  - Empty input now returns a warning message instead of throwing ArrayBufferView error
-  - Added proper validation and graceful handling for edge cases
-  - Updated return types to include optional warning field
-
 ### Added
-- Comprehensive test coverage for empty input and newline handling scenarios
-- Warning system for edge cases in PTY input operations
+- feat: wait for main PR merge before creating GitHub Release (#54)
 
-### Changed
-- Enhanced PTY write method with better error handling and user feedback
-- Updated MCP tool schemas to support warning responses
+### Fixed
+- fix: remove non-existent release label from workflow (#53)
+- fix: adapt release workflow for protected develop branch (#51)
 
----
-
-## [Previous Versions]
-
-*Initial release with basic PTY functionality*
+### Miscellaneous Tasks
+- chore: bump version to 0.5.2 (#52)
+- chore: sync version to 0.5.0 to match NPM registry
