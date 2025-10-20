@@ -6,3 +6,8 @@ export {
   withTestPtyProcess,
 } from "./test-utils";
 export * from "./types";
+export {
+  withTestPtyManager,
+  withTestPtyProcess,
+  withTestPtyManagerAndProcesses,
+} from "./test-utils";

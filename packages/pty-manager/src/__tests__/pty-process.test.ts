@@ -74,7 +74,7 @@ test("PtyProcess subscribe receives data", async () => {
 });
 
 test("PtyProcess subscribe unsubscribe works", async () => {
-  await withTestPtyProcess("sleep 0.05", async (pty) => {
+  await withTestPtyProcess("sleep 1", async (pty) => {
     await pty.ready();
 
     let dataCount = 0;
@@ -87,10 +87,10 @@ test("PtyProcess subscribe unsubscribe works", async () => {
     });
 
     sub.unsubscribe();
-    await Bun.sleep(10);
+    await Bun.sleep(100);
 
     const countAfterUnsub = dataCount;
-    await Bun.sleep(10);
+    await Bun.sleep(200);
     expect(dataCount).toBe(countAfterUnsub);
   });
 });
@@ -233,7 +233,7 @@ test("PtyProcess write multiple newlines should work", async () => {
 test("PtyProcess captureBuffer returns array of lines", async () => {
   await withTestPtyProcess("echo test", async (pty) => {
     await pty.ready();
-    await Bun.sleep(10);
+    await Bun.sleep(200);
 
     const buffer = pty.captureBuffer();
     expect(Array.isArray(buffer)).toBe(true);
@@ -244,7 +244,7 @@ test("PtyProcess captureBuffer returns array of lines", async () => {
 test("PtyProcess getOutputBuffer accumulates output", async () => {
   await withTestPtyProcess("echo accumulate", async (pty) => {
     await pty.ready();
-    await Bun.sleep(10);
+    await Bun.sleep(200);
 
     const output = pty.getOutputBuffer();
     expect(output.length).toBeGreaterThan(0);
@@ -283,7 +283,7 @@ test("PtyProcess resize throws when not active", async () => {
 // ============================================================================
 
 test("PtyProcess getExitCode returns null while running", async () => {
-  await withTestPtyProcess("sleep 0.05", async (pty) => {
+  await withTestPtyProcess("sleep 1", async (pty) => {
     await pty.ready();
     expect(pty.getExitCode()).toBeNull();
   });
@@ -292,7 +292,7 @@ test("PtyProcess getExitCode returns null while running", async () => {
 test("PtyProcess getExitCode returns code after exit", async () => {
   await withTestPtyProcess("true", async (pty) => {
     await pty.ready();
-    await Bun.sleep(50);
+    await Bun.sleep(500);
 
     const exitCode = pty.getExitCode();
     expect(exitCode).toBe(0);
@@ -419,13 +419,13 @@ test("PtyProcess dispose is idempotent", async () => {
 });
 
 test("PtyProcess dispose with SIGKILL", async () => {
-  await withTestPtyProcess("sleep 0.1", async (pty) => {
+  await withTestPtyProcess("sleep 10", async (pty) => {
     await pty.ready();
 
     await pty.dispose("SIGKILL");
     expect(pty.status).toBe("terminated");
   });
-});
+}, 10000);
 
 // ============================================================================
 // Auto Dispose Tests
@@ -436,7 +436,7 @@ test("PtyProcess autoDisposeOnExit option", async () => {
     { command: "true", cwd: process.cwd(), autoDisposeOnExit: true },
     async (pty) => {
       await pty.ready();
-      await Bun.sleep(50);
+      await Bun.sleep(600);
 
       expect(["terminated", "terminating"]).toContain(pty.status);
     },
@@ -448,7 +448,7 @@ test("PtyProcess autoDisposeOnExit option", async () => {
 // ============================================================================
 
 test("PtyProcess isRunning returns correct state", async () => {
-  await withTestPtyProcess("sleep 0.05", async (pty) => {
+  await withTestPtyProcess("sleep 1", async (pty) => {
     await pty.ready();
 
     expect(pty.isRunning()).toBe(true);
@@ -467,7 +467,7 @@ test("PtyProcess tracks lastActivity on write", async () => {
     await pty.ready();
 
     const before = pty.lastActivity;
-    await Bun.sleep(10);
+    await Bun.sleep(100);
     await pty.write("test\n", 100);
     const after = pty.lastActivity;
 

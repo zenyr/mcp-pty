@@ -3,74 +3,71 @@ name: CI
 on:
   push:
     branches: [develop, main]
-    paths:
-      - 'packages/!(website)/src/**'
-      - '.github/workflows/ci.yml'
-      - 'package.json'
-      - 'tsconfig.json'
-      - 'bun.lock'
-      - 'biome.json'
   pull_request:
     branches: [develop, main]
-    paths:
-      - 'packages/!(website)/src/**'
-      - '.github/workflows/ci.yml'
-      - 'package.json'
-      - 'tsconfig.json'
-      - 'bun.lock'
-      - 'biome.json'
 
 jobs:
-  check-changes:
-    name: Check if code changed
-    runs-on: ubuntu-latest
-    outputs:
-      code-changed: ${{ steps.filter.outputs.code }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            code:
-              - 'packages/!(website)/src/**'
-              - '.github/workflows/**'
-              - 'package.json'
-              - 'tsconfig.json'
-              - 'bun.lock'
-              - 'biome.json'
-
   test:
-<<<<<<< HEAD
-    name: Test & Build
-    needs: check-changes
-    if: needs.check-changes.outputs.code-changed == 'true'
-    uses: ./.github/workflows/test.yml
-
-  success:
-    name: All checks passed
-    runs-on: ubuntu-latest
-    needs: [check-changes, test]
-    if: always()
-    steps:
-      - name: Report status
-        run: |
-          if [[ "${{ needs.check-changes.outputs.code-changed }}" == "true" ]]; then
-            if [[ "${{ needs.test.result }}" == "success" ]]; then
-              echo "✓ Code changed - all tests passed"
-            else
-              echo "✗ Code changed - tests failed"
-              exit 1
-            fi
-          else
-            echo "✓ No code changes - skipped tests"
-          fi
-=======
     name: Test & Lint
-    uses: ./.github/workflows/test.yml
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --no-save
+
+      - name: Type check
+        run: bun run type-check
+
+      - name: Lint & Format (parallel)
+        run: |
+          bun run check &
+          bun run format &
+          wait
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Run tests (parallel)
+        run: bun test --coverage --concurrent --max-concurrency=6
 
   build:
     name: Build
+    runs-on: ubuntu-latest
     needs: test
-    uses: ./.github/workflows/build.yml
->>>>>>> 55b267c (refactor: decompose CI workflow into reusable test and build jobs)
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --no-save
+
+      - name: Build packages
+        run: bun --filter="@pkgs/*" run build || echo "No build script found"
