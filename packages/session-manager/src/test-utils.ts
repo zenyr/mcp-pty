@@ -1,4 +1,4 @@
-import { SessionManager, sessionManager } from "./index.ts";
+import { type SessionManager, sessionManager } from "./index.ts";
 
 /**
  * Test utilities for SessionManager with COMPLETE isolation.
