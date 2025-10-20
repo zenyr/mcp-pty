@@ -1,11 +1,11 @@
-# mcp-pty-server
+# mcp-pty
 
 MCP (Model Context Protocol) server for PTY session management with Bun runtime.
 
 ## Installation
 
 ```bash
-bun add mcp-pty-server
+bun add mcp-pty
 ```
 
 ## Usage
