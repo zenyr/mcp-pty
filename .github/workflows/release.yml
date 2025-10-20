@@ -172,9 +172,9 @@ jobs:
           --base main \
           --head develop \
           --title "chore: release v${{ steps.version.outputs.new_version }}" \
-          --body "Auto-generated release PR for v${{ steps.version.outputs.new_version }}" \
-          --label "release")
+          --body "Auto-generated release PR for v${{ steps.version.outputs.new_version }}")
         echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+        echo "pr_number=$(echo $PR_URL | grep -oE '[0-9]+$')" >> $GITHUB_OUTPUT
         echo "Created main PR: $PR_URL"
 
     - name: Enable auto-merge for main PR
@@ -183,6 +183,24 @@ jobs:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         gh pr merge ${{ steps.pr_main.outputs.pr_url }} --auto --squash --delete-branch=false
+
+    - name: Wait for main PR to merge
+      if: ${{ github.event.inputs.dry_run != 'true' }}
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        echo "Waiting for PR #${{ steps.pr_main.outputs.pr_number }} to merge..."
+        for i in {1..60}; do
+          STATE=$(gh pr view ${{ steps.pr_main.outputs.pr_number }} --json state --jq .state)
+          if [ "$STATE" = "MERGED" ]; then
+            echo "✓ PR merged successfully"
+            exit 0
+          fi
+          echo "Current state: $STATE (attempt $i/60)"
+          sleep 10
+        done
+        echo "✗ Timeout waiting for PR merge"
+        exit 1
 
     - name: Create GitHub Release
       if: ${{ github.event.inputs.dry_run != 'true' }}
