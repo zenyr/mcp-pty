@@ -31,7 +31,7 @@ describe.skip("Escape Sequence Handling Reproduction", () => {
   test("Node.js REPL - newline handling", async () => {
     ptyNode = new PtyProcess({ command: "node", cwd: process.cwd() });
     await ptyNode.ready();
-    await Bun.sleep(500); // Wait for REPL prompt
+    await Bun.sleep(50); // Wait for REPL prompt
 
     // Test 1: Simple expression with \n
     if (ptyNode.status !== "active") {
@@ -67,7 +67,7 @@ describe.skip("Escape Sequence Handling Reproduction", () => {
   test("Python REPL - newline handling", async () => {
     ptyPython = new PtyProcess({ command: "python3", cwd: process.cwd() });
     await ptyPython.ready();
-    await Bun.sleep(500); // Wait for REPL prompt
+    await Bun.sleep(50); // Wait for REPL prompt
 
     // Test 1: Simple expression with \n
     const result1 = await ptyPython.write("2+2\n", 500);
