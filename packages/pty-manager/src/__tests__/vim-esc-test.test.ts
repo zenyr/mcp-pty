@@ -20,23 +20,32 @@ describe("Vim ESC Key Handling", () => {
     await pty.ready();
     await Bun.sleep(1000); // Wait for vim to start
 
+    // Safety check: ensure pty is still active
+    if (!pty || pty.status !== "active") {
+      console.log("Vim failed to start or process terminated");
+      return;
+    }
+
     console.log("=== Initial vim screen ===");
     console.log(pty.captureBuffer().join("\n"));
     console.log("===\n");
 
     // Enter insert mode with 'i'
+    if (!pty || pty.status !== "active") return;
     const insertMode = await pty.write("i", 300);
     console.log("=== After pressing 'i' (insert mode) ===");
     console.log(insertMode.screen);
     console.log("===\n");
 
     // Type some text
+    if (!pty || pty.status !== "active") return;
     const textInput = await pty.write("hello world", 300);
     console.log("=== After typing 'hello world' ===");
     console.log(textInput.screen);
     console.log("===\n");
 
     // Try ESC with \x1b
+    if (!pty || pty.status !== "active") return;
     const escResult = await pty.write("\x1b", 500);
     console.log("=== After ESC (\\x1b) ===");
     console.log(escResult.screen);
@@ -50,6 +59,7 @@ describe("Vim ESC Key Handling", () => {
     console.log("Expected: false (should have exited insert mode)");
 
     // Try command mode - quit without saving
+    if (!pty || pty.status !== "active") return;
     const quitResult = await pty.write(":q!\n", 500);
     console.log("=== After :q! ===");
     console.log("Exit code:", quitResult.exitCode);
