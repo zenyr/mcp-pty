@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { PtyProcess } from "../process";
 
 /**
@@ -6,64 +6,62 @@ import { PtyProcess } from "../process";
  */
 
 describe("Vim ESC Key Handling", () => {
-  let pty: PtyProcess | null = null;
-
-  afterEach(async () => {
-    if (pty) {
-      await pty.dispose();
-      pty = null;
-    }
-  });
-
   test("vim insert mode - ESC key with \\x1b", async () => {
-    pty = new PtyProcess({ command: "vim -u NONE", cwd: process.cwd() });
-    await pty.ready();
-    await Bun.sleep(1000); // Wait for vim to start
+    let pty: PtyProcess | null = null;
+    try {
+      pty = new PtyProcess({ command: "vim -u NONE", cwd: process.cwd() });
+      await pty.ready();
+      await Bun.sleep(1000); // Wait for vim to start
 
-    // Safety check: ensure pty is still active
-    if (!pty || pty.status !== "active") {
-      console.log("Vim failed to start or process terminated");
-      return;
+      // Safety check: ensure pty is still active
+      if (!pty || pty.status !== "active") {
+        console.log("Vim failed to start or process terminated");
+        return;
+      }
+
+      console.log("=== Initial vim screen ===");
+      console.log(pty.captureBuffer().join("\n"));
+      console.log("===\n");
+
+      // Enter insert mode with 'i'
+      if (!pty || pty.status !== "active") return;
+      const insertMode = await pty.write("i", 300);
+      console.log("=== After pressing 'i' (insert mode) ===");
+      console.log(insertMode.screen);
+      console.log("===\n");
+
+      // Type some text
+      if (!pty || pty.status !== "active") return;
+      const textInput = await pty.write("hello world", 300);
+      console.log("=== After typing 'hello world' ===");
+      console.log(textInput.screen);
+      console.log("===\n");
+
+      // Try ESC with \x1b
+      if (!pty || pty.status !== "active") return;
+      const escResult = await pty.write("\x1b", 500);
+      console.log("=== After ESC (\\x1b) ===");
+      console.log(escResult.screen);
+      console.log("Raw buffer (last 200 chars):");
+      console.log(JSON.stringify(pty.getOutputBuffer().slice(-200)));
+      console.log("===\n");
+
+      // Check if still in insert mode by looking for -- INSERT --
+      const hasInsertMode = escResult.screen.includes("-- INSERT --");
+      console.log("Still in INSERT mode?", hasInsertMode);
+      console.log("Expected: false (should have exited insert mode)");
+
+      // Try command mode - quit without saving
+      if (!pty || pty.status !== "active") return;
+      const quitResult = await pty.write(":q!\n", 500);
+      console.log("=== After :q! ===");
+      console.log("Exit code:", quitResult.exitCode);
+      console.log("===\n");
+    } finally {
+      if (pty) {
+        await pty.dispose();
+      }
     }
-
-    console.log("=== Initial vim screen ===");
-    console.log(pty.captureBuffer().join("\n"));
-    console.log("===\n");
-
-    // Enter insert mode with 'i'
-    if (!pty || pty.status !== "active") return;
-    const insertMode = await pty.write("i", 300);
-    console.log("=== After pressing 'i' (insert mode) ===");
-    console.log(insertMode.screen);
-    console.log("===\n");
-
-    // Type some text
-    if (!pty || pty.status !== "active") return;
-    const textInput = await pty.write("hello world", 300);
-    console.log("=== After typing 'hello world' ===");
-    console.log(textInput.screen);
-    console.log("===\n");
-
-    // Try ESC with \x1b
-    if (!pty || pty.status !== "active") return;
-    const escResult = await pty.write("\x1b", 500);
-    console.log("=== After ESC (\\x1b) ===");
-    console.log(escResult.screen);
-    console.log("Raw buffer (last 200 chars):");
-    console.log(JSON.stringify(pty.getOutputBuffer().slice(-200)));
-    console.log("===\n");
-
-    // Check if still in insert mode by looking for -- INSERT --
-    const hasInsertMode = escResult.screen.includes("-- INSERT --");
-    console.log("Still in INSERT mode?", hasInsertMode);
-    console.log("Expected: false (should have exited insert mode)");
-
-    // Try command mode - quit without saving
-    if (!pty || pty.status !== "active") return;
-    const quitResult = await pty.write(":q!\n", 500);
-    console.log("=== After :q! ===");
-    console.log("Exit code:", quitResult.exitCode);
-    console.log("===\n");
   }, 15000);
 
   test("Compare different ESC representations", async () => {
