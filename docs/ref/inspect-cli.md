@@ -71,11 +71,19 @@ Authentication / session token
 
 Main default tools (project example)
 
-- start: input { command: string } → { processId, screen }
+- start: input { command: string, pwd: string } → { processId, screen, exitCode }
 - kill: input { processId } → { success }
-- list: input none → { ptys: [ { id, status, createdAt, lastActivity } ] }
+- list: input none → { ptys: [ { id, status, createdAt, lastActivity, exitCode } ] }
 - read: input { processId } → { screen }
-- write_input: input { processId, data, waitMs? } → { screen, cursor:{x,y}, exitCode }
+- write_input: TWO MODES (mutually exclusive)
+  - Safe mode (RECOMMENDED): { processId, input?, ctrlCode?, waitMs? }
+    - input: Plain text without escape sequences (e.g., "print(2+2)")
+    - ctrlCode: Named control codes (e.g., "Enter", "Escape", "Ctrl+C") or raw bytes (e.g., "\n", "\x1b")
+    - Example: --tool-arg processId=proc_123 --tool-arg input="2+2" --tool-arg ctrlCode="Enter"
+  - Raw mode: { processId, data, waitMs? }
+    - data: Raw bytes with escape sequences (e.g., "line1\nline2\n")
+    - Example: --tool-arg processId=proc_123 --tool-arg 'data="hello\nworld\n"'
+  - Output: { screen, cursor:{x,y}, exitCode, warning? }
 
 Output·debugging
 

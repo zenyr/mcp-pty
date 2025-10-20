@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// Re-export control codes
+export * from "./control-codes";
+
 /**
  * MCP server configuration interface
  */
@@ -14,7 +17,11 @@ export interface McpServerConfig {
  * sessionId is optional - automatically resolved from transport connection
  */
 export const StartPtyInputSchema = z.object({
-  command: z.string(),
+  command: z
+    .string()
+    .describe(
+      "Command to execute in PTY. Supports: (1) Interactive shells: 'bash', 'zsh', 'python3', 'node', 'irb'. (2) Long-running processes: 'npm run dev', 'bun dev', 'cargo run'. (3) TUI applications: 'vim file.txt', 'htop', 'less file.log'. (4) Shell commands: 'ls -la', 'git status', 'cat file.txt'. Arguments included in command string. Executed via shell ($SHELL or /bin/sh).",
+    ),
   pwd: z
     .string()
     .describe(
@@ -28,32 +35,88 @@ export const ListPtyInputSchema = z.object({});
 
 export const ReadPtyInputSchema = z.object({ processId: z.string() });
 
-export const WriteInputSchema = z.object({
-  processId: z.string(),
-  data: z
-    .string()
-    .describe(
-      "Input data. Examples: 'ls\\n', 'hello\\nworld', '\\x03' (Ctrl+C), '안녕하세요 👋'. NOTE: Use actual escape sequences like '\\x03' (single byte 0x03), NOT literal strings like '\\\\x03' (6 characters)",
-    ),
-  waitMs: z
-    .number()
-    .int()
-    .positive()
-    .default(1000)
-    .describe("Wait time for output (ms)"),
-});
+export const WriteInputSchema = z
+  .object({
+    processId: z.string(),
+
+    // Plain text input (no escape sequences - literal text only)
+    input: z
+      .string()
+      .optional()
+      .describe(
+        "Plain text input without escape sequences. Use this for typing regular text. Examples: 'hello', 'print(2+2)', 'cd /tmp'. DO NOT include \\n or \\t here - use ctrlCode instead.",
+      ),
+
+    // Control codes (named or raw bytes)
+    ctrlCode: z
+      .string()
+      .optional()
+      .describe(
+        "Control code to send after input. Supports named codes (e.g., 'Enter', 'Escape', 'Ctrl+C') or raw sequences (e.g., '\\n', '\\x1b', '\\x03'). Named codes: Enter, Escape, Tab, Ctrl+A-Z, ArrowUp/Down/Left/Right, etc. This is sent AFTER input field.",
+      ),
+
+    // Raw data field (for advanced use cases)
+    data: z
+      .string()
+      .optional()
+      .describe(
+        "Raw input data with escape sequences. Use this for: (1) multiline text with actual newlines, (2) ANSI escape codes in text, (3) binary data. Takes precedence over input+ctrlCode. Examples: 'cat << EOF\\nhello\\nEOF\\n', '\\x1b[31mRED\\x1b[0m', 'print(1)\\nprint(2)\\n'.",
+      ),
+
+    waitMs: z
+      .number()
+      .int()
+      .positive()
+      .default(1000)
+      .describe("Wait time for output (ms)"),
+  })
+  .refine(
+    (data) => {
+      // At least one of: input, ctrlCode, or data must be present
+      return (
+        data.input !== undefined ||
+        data.ctrlCode !== undefined ||
+        data.data !== undefined
+      );
+    },
+    {
+      message:
+        "At least one of 'input', 'ctrlCode', or 'data' must be provided",
+    },
+  )
+  .refine(
+    (params) => {
+      // data and (input/ctrlCode) are mutually exclusive
+      const hasData = params.data !== undefined;
+      const hasInputOrCtrl =
+        params.input !== undefined || params.ctrlCode !== undefined;
+      return !(hasData && hasInputOrCtrl);
+    },
+    {
+      message:
+        "Cannot use 'data' together with 'input' or 'ctrlCode'. Use either data (raw mode) OR input+ctrlCode (safe mode).",
+    },
+  );
 
 /**
  * PTY tool output schemas
  */
 export const StartPtyOutputSchema = z.object({
-  processId: z.string(),
-  screen: z.string().describe("Initial terminal screen content"),
+  processId: z
+    .string()
+    .describe(
+      "Unique process identifier. Use this ID for subsequent operations: write_input (send input), read (get output), kill (terminate).",
+    ),
+  screen: z
+    .string()
+    .describe(
+      "Initial terminal screen content after command start. May include welcome messages, prompts, or command output. Empty for background processes.",
+    ),
   exitCode: z
     .number()
     .nullable()
     .describe(
-      "Process exit code (null if still running, non-null if already terminated)",
+      "Process exit code. null = still running (interactive shells, servers, TUI apps). non-null = already terminated (quick commands like 'ls'). 0 = success, non-zero = error.",
     ),
 });
 

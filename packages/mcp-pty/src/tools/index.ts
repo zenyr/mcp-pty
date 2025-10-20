@@ -150,11 +150,15 @@ export const createToolHandlers = (server: McpServer) => {
 
     write_input: async ({
       processId,
+      input,
+      ctrlCode,
       data,
       waitMs = 1000,
     }: {
       processId: string;
-      data: string;
+      input?: string;
+      ctrlCode?: string;
+      data?: string;
       waitMs?: number;
     }): Promise<ToolResult> => {
       const sessionId = getBoundSessionId(server);
@@ -162,7 +166,21 @@ export const createToolHandlers = (server: McpServer) => {
       if (!ptyManager) throw new Error("Session not found");
       const pty = ptyManager.getPty(processId);
       if (!pty) throw new Error("PTY not found");
-      const result = await pty.write(data, waitMs);
+
+      // Build final data to write
+      let finalData: string;
+
+      if (data !== undefined) {
+        // Legacy mode: use data field as-is
+        finalData = data;
+      } else {
+        // New mode: combine input + ctrlCode
+        const { resolveControlCode } = await import("../types/control-codes");
+        finalData =
+          (input ?? "") + (ctrlCode ? resolveControlCode(ctrlCode) : "");
+      }
+
+      const result = await pty.write(finalData, waitMs);
       return {
         content: [{ type: "text", text: JSON.stringify(result) }],
         structuredContent: result,
@@ -184,7 +202,7 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Start PTY",
       description:
-        "Create new PTY instance with shell execution (using $SHELL or /bin/sh). Returns processId and initial output.",
+        "Create new PTY instance and execute command. Supports interactive shells (bash/python/node), long-running processes (dev servers), TUI apps (vim/htop), and shell commands (ls/git). Returns processId for subsequent operations (write_input, read, kill) and initial screen output. Command runs in specified working directory (pwd). Use write_input to send input, read to get output, kill to terminate.",
       inputSchema: StartPtyInputSchema.shape,
       outputSchema: StartPtyOutputSchema.shape,
     },
@@ -233,7 +251,7 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Write Input to PTY",
       description:
-        'Write data to PTY stdin and return terminal state. Supports plain text, CJK, Emoji, multiline (\\n), and ANSI control codes (e.g., \\x03 for Ctrl+C). IMPORTANT: Control characters must be actual escape sequences in JSON strings, not literal text - use "\\x03" (actual Ctrl+C byte), NOT "\\\\x03" (6 literal characters).',
+        "Write input to PTY stdin and return terminal state. TWO MODES: (1) Safe mode [RECOMMENDED]: Use 'input' (plain text) + 'ctrlCode' (Enter/Escape/Ctrl+C) separately to avoid escape sequence confusion. Example: {input: 'print(2+2)', ctrlCode: 'Enter'}. (2) Raw mode: Use 'data' field for multiline text, ANSI codes, or binary data. Example: {data: 'line1\\nline2\\n'}. Modes are mutually exclusive.",
       inputSchema: WriteInputSchema.shape,
       outputSchema: WriteInputOutputSchema.shape,
     },
