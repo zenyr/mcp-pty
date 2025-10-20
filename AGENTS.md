@@ -46,7 +46,7 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 
 ### Absolute No's
 
-1. Node.js modules (child_process, cluster). 2. External PTY (node-pty). 3. Global state (encapsulate in classes). 4. Sync code (readFileSync, execSync). 5. Hardcoded paths (inject via config). 6. Ignored errors (typed errors & logging required).
+1. Node.js modules (child_process, cluster). 2. External PTY (node-pty). 3. Global state (encapsulate in classes). 4. Sync code (readFileSync, execSync). 5. Hardcoded paths (inject via config). 6. Ignored errors (typed errors & logging required). 7. Destructive worktree operations (e.g. `git reset --hard`, `git clean -fdx`).
 
 ### Code Review: Auto-Reject
 
