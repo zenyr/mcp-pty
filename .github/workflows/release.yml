@@ -123,14 +123,7 @@ jobs:
             --base main \
             --head develop \
             --title "chore: release v${{ steps.version.outputs.new_version }}" \
-            --body "🤖 Auto-generated release PR
-
-## Release v${{ steps.version.outputs.new_version }}
-
-- NPM: \`@jinhyeok/mcp-pty@${{ steps.version.outputs.new_version }}\`
-- Tag: \`v${{ steps.version.outputs.new_version }}\`
-
-This PR synchronizes develop → main after successful NPM publish." \
+            --body "Auto-generated release PR for v${{ steps.version.outputs.new_version }}" \
             --label "release")
           echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
           echo "Created PR: $PR_URL"
