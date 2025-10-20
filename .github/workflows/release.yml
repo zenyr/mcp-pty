@@ -27,6 +27,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      pull-requests: write
     
     steps:
       - name: Checkout
@@ -34,6 +35,7 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: 'develop'
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -43,84 +45,110 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-       - name: Install dependencies
-         run: bun install --frozen-lockfile
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-       - name: Bump version
-         id: version
-         run: |
-           cd packages/mcp-pty
-           OLD_VERSION=$(node -p "require('./package.json').version")
-           bun x --bun semver -i ${{ github.event.inputs.version_type }} $OLD_VERSION > new_version.txt
-           NEW_VERSION=$(cat new_version.txt)
-           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-           echo "old_version=$OLD_VERSION" >> $GITHUB_OUTPUT
-           
-           # Update package.json
-           node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version='$NEW_VERSION';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
+      - name: Bump version
+        id: version
+        run: |
+          cd packages/mcp-pty
+          OLD_VERSION=$(node -p "require('./package.json').version")
+          bun x --bun semver -i ${{ github.event.inputs.version_type }} $OLD_VERSION > new_version.txt
+          NEW_VERSION=$(cat new_version.txt)
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "old_version=$OLD_VERSION" >> $GITHUB_OUTPUT
+          
+          # Update package.json
+          node -e "const fs=require('fs');const p=JSON.parse(fs.readFileSync('package.json','utf8'));p.version='$NEW_VERSION';fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n')"
 
-       - name: Build & Test
-         run: |
-           cd packages/mcp-pty
-           bun run check
-           bun test
-           bun run build
+      - name: Build & Test
+        run: |
+          cd packages/mcp-pty
+          bun run check
+          bun test
+          bun run build
 
-        - name: Publish to NPM
-          id: npm_publish
-          if: ${{ github.event.inputs.dry_run != 'true' }}
-          continue-on-error: true
-          env:
-            NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          run: |
-            cd packages/mcp-pty
-            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
-            npm publish --access public
-        
-        - name: Rollback on NPM failure
-          if: ${{ steps.npm_publish.outcome == 'failure' }}
-          run: |
-            git reset --hard HEAD~1
-            exit 1
+      - name: Publish to NPM
+        id: npm_publish
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        continue-on-error: true
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd packages/mcp-pty
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          npm publish --access public
+      
+      - name: Rollback on NPM failure
+        if: ${{ steps.npm_publish.outcome == 'failure' }}
+        run: |
+          git reset --hard HEAD~1
+          exit 1
 
-        - name: Dry run - Skip NPM publish
-          if: ${{ github.event.inputs.dry_run == 'true' }}
-          run: |
-            echo "🔍 Dry run mode - skipping NPM publish"
-            echo "Would publish version ${{ steps.version.outputs.new_version }}"
+      - name: Dry run - Skip NPM publish
+        if: ${{ github.event.inputs.dry_run == 'true' }}
+        run: |
+          echo "🔍 Dry run mode - skipping NPM publish"
+          echo "Would publish version ${{ steps.version.outputs.new_version }}"
 
-        - name: Commit version bump
-          run: |
-            git add packages/mcp-pty/package.json
-            git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
+      - name: Commit version bump
+        run: |
+          git add packages/mcp-pty/package.json
+          git commit -m "chore: bump version to ${{ steps.version.outputs.new_version }}"
 
-        - name: Generate CHANGELOG
-          if: ${{ github.event.inputs.dry_run != 'true' }}
-          run: |
-            bun x --bun git-cliff --tag v${{ steps.version.outputs.new_version }} -o CHANGELOG.md
+      - name: Generate CHANGELOG
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          bun x --bun git-cliff --tag v${{ steps.version.outputs.new_version }} -o CHANGELOG.md
 
-        - name: Commit CHANGELOG
-          if: ${{ github.event.inputs.dry_run != 'true' }}
-          run: |
-            git add CHANGELOG.md
-            git commit -m "chore(release): update CHANGELOG for v${{ steps.version.outputs.new_version }}"
+      - name: Commit CHANGELOG
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git add CHANGELOG.md
+          git commit -m "chore(release): update CHANGELOG for v${{ steps.version.outputs.new_version }}"
 
-        - name: Create GitHub Release
-          if: ${{ github.event.inputs.dry_run != 'true' }}
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          run: |
-            gh release create v${{ steps.version.outputs.new_version }} \
-              --title "v${{ steps.version.outputs.new_version }}" \
-              --generate-notes
+      - name: Push changes to develop
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git push origin develop
+          git push origin "v${{ steps.version.outputs.new_version }}"
 
-        - name: Sync version to develop
-          if: ${{ github.event.inputs.dry_run != 'true' }}
-          run: |
-            git fetch origin main
-            git fetch origin develop
-            git checkout develop
-            git merge --no-ff origin/main -m "chore: sync main after release v${{ steps.version.outputs.new_version }}"
-            git push origin develop
+      - name: Create PR to main
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        id: pr_main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --base main \
+            --head develop \
+            --title "chore: release v${{ steps.version.outputs.new_version }}" \
+            --body "🤖 Auto-generated release PR
+
+## Release v${{ steps.version.outputs.new_version }}
+
+- NPM: \`@jinhyeok/mcp-pty@${{ steps.version.outputs.new_version }}\`
+- Tag: \`v${{ steps.version.outputs.new_version }}\`
+
+This PR synchronizes develop → main after successful NPM publish." \
+            --label "release")
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+          echo "Created PR: $PR_URL"
+
+      - name: Enable auto-merge and merge PR
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr merge ${{ steps.pr_main.outputs.pr_url }} --auto --squash --delete-branch=false
+
+      - name: Create GitHub Release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create v${{ steps.version.outputs.new_version }} \
+            --title "v${{ steps.version.outputs.new_version }}" \
+            --generate-notes
 
 
