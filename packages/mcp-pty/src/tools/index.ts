@@ -167,6 +167,22 @@ export const createToolHandlers = (server: McpServer) => {
       const pty = ptyManager.getPty(processId);
       if (!pty) throw new Error("PTY not found");
 
+      // Validate input parameters using schema
+      const validationResult = WriteInputSchema.safeParse({
+        processId,
+        input,
+        ctrlCode,
+        data,
+        waitMs,
+      });
+      if (!validationResult.success) {
+        throw new Error(
+          `Invalid input: ${validationResult.error.issues
+            .map((i) => i.message)
+            .join(", ")}`,
+        );
+      }
+
       // Build final data to write
       let finalData: string;
 
