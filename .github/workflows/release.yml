@@ -132,8 +132,7 @@ jobs:
           --base develop \
           --head ${{ steps.release_branch.outputs.branch_name }} \
           --title "chore: bump version to ${{ steps.version.outputs.new_version }}" \
-          --body "Auto-generated version bump PR for v${{ steps.version.outputs.new_version }}" \
-          --label "release")
+          --body "Auto-generated version bump PR for v${{ steps.version.outputs.new_version }}")
         echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
         echo "pr_number=$(echo $PR_URL | grep -oE '[0-9]+$')" >> $GITHUB_OUTPUT
         echo "Created develop PR: $PR_URL"
