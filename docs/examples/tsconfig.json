@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "mcp-pty": ["../../packages/mcp-pty/src"],
+      "mcp-pty/*": ["../../packages/mcp-pty/src/*"]
+    }
+  },
+  "include": ["*.ts", "*.tsx"],
+  "exclude": ["node_modules"]
+}
