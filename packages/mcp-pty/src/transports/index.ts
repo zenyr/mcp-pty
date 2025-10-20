@@ -83,7 +83,7 @@ export const startHttpServer = async (
         if (sessionHeader) {
           // Check if session exists in sessionManager (for reconnection)
           const existingSession = sessionManager.getSession(sessionHeader);
-          if (existingSession) {
+          if (existingSession && existingSession.status !== "terminated") {
             // Reconnect to existing session
             sessionId = sessionHeader;
             const server = serverFactory();
