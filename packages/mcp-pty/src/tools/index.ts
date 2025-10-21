@@ -1,5 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { sessionManager } from "@pkgs/session-manager";
+import {
+  sessionManager as globalSessionManager,
+  type SessionManager,
+} from "@pkgs/session-manager";
 import {
   KillPtyInputSchema,
   KillPtyOutputSchema,
@@ -13,12 +16,11 @@ import {
   WriteInputSchema,
 } from "../types";
 import { normalizeWorkingDirectory } from "../utils";
-
-/**
- * Session context holder for bound session ID
- * Maps server instance to its bound session ID
- */
-const sessionContext = new WeakMap<McpServer, string>();
+import {
+  SESSION_ID_SYMBOL,
+  SESSION_MANAGER_SYMBOL,
+  type ServerWithContext,
+} from "../utils/server-context";
 
 /**
  * Bind session ID to server instance
@@ -27,21 +29,35 @@ const sessionContext = new WeakMap<McpServer, string>();
 export const bindSessionToServer = (
   server: McpServer,
   sessionId: string,
+  sessionManager?: SessionManager,
 ): void => {
-  sessionContext.set(server, sessionId);
+  const serverWithContext = server as ServerWithContext;
+  serverWithContext[SESSION_ID_SYMBOL] = sessionId;
+  if (sessionManager) {
+    serverWithContext[SESSION_MANAGER_SYMBOL] = sessionManager;
+  }
 };
 
 /**
  * Get bound session ID from server instance
  */
 const getBoundSessionId = (server: McpServer): string => {
-  const sessionId = sessionContext.get(server);
+  const serverWithContext = server as ServerWithContext;
+  const sessionId = serverWithContext[SESSION_ID_SYMBOL];
   if (!sessionId) {
     throw new Error(
       "No session bound to server - transport initialization failed",
     );
   }
   return sessionId;
+};
+
+/**
+ * Get SessionManager for server instance
+ */
+const getSessionManager = (server: McpServer): SessionManager => {
+  const serverWithContext = server as ServerWithContext;
+  return serverWithContext[SESSION_MANAGER_SYMBOL] || globalSessionManager;
 };
 
 /**
@@ -67,6 +83,7 @@ export const createToolHandlers = (server: McpServer) => {
       command: string;
       pwd: string;
     }): Promise<ToolResult> => {
+      const sessionManager = getSessionManager(server);
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
@@ -105,6 +122,7 @@ export const createToolHandlers = (server: McpServer) => {
     },
 
     kill: async ({ processId }: { processId: string }): Promise<ToolResult> => {
+      const sessionManager = getSessionManager(server);
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
@@ -117,6 +135,7 @@ export const createToolHandlers = (server: McpServer) => {
     },
 
     list: async (_input: Record<string, never>): Promise<ToolResult> => {
+      const sessionManager = getSessionManager(server);
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
@@ -136,6 +155,7 @@ export const createToolHandlers = (server: McpServer) => {
     },
 
     read: async ({ processId }: { processId: string }): Promise<ToolResult> => {
+      const sessionManager = getSessionManager(server);
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
@@ -161,6 +181,7 @@ export const createToolHandlers = (server: McpServer) => {
       data?: string;
       waitMs?: number;
     }): Promise<ToolResult> => {
+      const sessionManager = getSessionManager(server);
       const sessionId = getBoundSessionId(server);
       const ptyManager = sessionManager.getPtyManager(sessionId);
       if (!ptyManager) throw new Error("Session not found");
