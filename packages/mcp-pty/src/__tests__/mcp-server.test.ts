@@ -100,8 +100,8 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
-        bindSessionToServerResources(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
+        bindSessionToServerResources(server, sessionId, sessionManager);
 
         const handlers = createResourceHandlers(server);
         const result = await handlers.status();
@@ -135,8 +135,8 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
-        bindSessionToServerResources(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
+        bindSessionToServerResources(server, sessionId, sessionManager);
 
         const handlers = createResourceHandlers(server);
         const result = await handlers.processes();
@@ -168,8 +168,8 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
-        bindSessionToServerResources(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
+        bindSessionToServerResources(server, sessionId, sessionManager);
 
         const { processId } = await ptyManager.createPty("echo test");
         sessionManager.addPty(sessionId, processId);
@@ -202,8 +202,8 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
-        bindSessionToServerResources(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
+        bindSessionToServerResources(server, sessionId, sessionManager);
 
         const { processId } = await ptyManager.createPty("echo test");
         sessionManager.addPty(sessionId, processId);
@@ -236,8 +236,8 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
-        bindSessionToServerResources(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
+        bindSessionToServerResources(server, sessionId, sessionManager);
 
         const handlers = createResourceHandlers(server);
         const uri = new URL("pty://processes/non-existent");
@@ -277,7 +277,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { start } = createToolHandlers(server);
         const result = await start({
@@ -321,7 +321,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { start } = createToolHandlers(server);
         await expect(
@@ -346,7 +346,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { start } = createToolHandlers(server);
         await expect(
@@ -383,7 +383,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { processId } = await ptyManager.createPty("sleep 10");
         sessionManager.addPty(sessionId, processId);
@@ -411,7 +411,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { kill } = createToolHandlers(server);
         const result = await kill({ processId: "non-existent" });
@@ -435,7 +435,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { list } = createToolHandlers(server);
         const result = await list({});
@@ -462,7 +462,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { processId } = await ptyManager.createPty("echo test");
         sessionManager.addPty(sessionId, processId);
@@ -500,7 +500,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { processId } = await ptyManager.createPty("echo test");
         sessionManager.addPty(sessionId, processId);
@@ -529,7 +529,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { read } = createToolHandlers(server);
         await expect(read({ processId: "non-existent" })).rejects.toThrow(
@@ -552,7 +552,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { processId } = await ptyManager.createPty("cat");
         sessionManager.addPty(sessionId, processId);
@@ -595,7 +595,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { processId } = await ptyManager.createPty("cat");
         sessionManager.addPty(sessionId, processId);
@@ -627,7 +627,7 @@ describe("MCP Server", () => {
         const ptyManager = sessionManager.getPtyManager(sessionId);
         if (!ptyManager) throw new Error("Failed to get PtyManager");
 
-        bindSessionToServer(server, sessionId);
+        bindSessionToServer(server, sessionId, sessionManager);
 
         const { write_input } = createToolHandlers(server);
         await expect(

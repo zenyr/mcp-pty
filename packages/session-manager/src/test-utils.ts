@@ -24,14 +24,30 @@ import { type SessionManager, sessionManager } from "./index.ts";
 export const withTestSessionManager = async <T>(
   cb: (manager: SessionManager) => T | Promise<T>,
 ): Promise<T> => {
+  // Track sessions created DURING this test via Proxy
+  const createdSessions = new Set<string>();
+
+  // Wrap sessionManager to intercept createSession
+  const wrappedManager = new Proxy(sessionManager, {
+    get(target, prop) {
+      if (prop === "createSession") {
+        return () => {
+          const sessionId = target.createSession();
+          createdSessions.add(sessionId);
+          return sessionId;
+        };
+      }
+      return target[prop as keyof SessionManager];
+    },
+  });
+
   try {
-    return await cb(sessionManager);
+    return await cb(wrappedManager);
   } finally {
-    // Cleanup all sessions created in this test
-    const sessions = sessionManager.getAllSessions();
+    // Only cleanup sessions actually created by this test
     await Promise.all(
-      sessions.map((session) =>
-        sessionManager.disposeSession(session.id).catch(() => {
+      Array.from(createdSessions).map((sessionId) =>
+        sessionManager.disposeSession(sessionId).catch(() => {
           /* suppress cleanup errors */
         }),
       ),
