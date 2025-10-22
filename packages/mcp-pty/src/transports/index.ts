@@ -201,7 +201,7 @@ export const startHttpServer = async (
             return res;
           }
         } else {
-          // New session
+          // New session - defer server.connect() until handleRequest()
           sessionId = sessionManager.createSession();
           const server = serverFactory();
           const transport = new StreamableHTTPServerTransport({
@@ -211,11 +211,11 @@ export const startHttpServer = async (
 
           bindSessionToServer(server, sessionId);
           bindSessionToServerResources(server, sessionId);
-          await server.connect(transport);
-          sessionManager.updateStatus(sessionId, "active");
+          // DON'T call server.connect() yet - let it happen via handleRequest()
 
           session = { server, transport };
           sessions.set(sessionId, session);
+          logServer(`Created new session (pending init): ${sessionId}`);
         }
       } else {
         // Type guard: sessionHeader is defined here because session exists
@@ -225,25 +225,7 @@ export const startHttpServer = async (
         sessionId = sessionHeader;
       }
 
-      const { req, res } = toReqRes(c.req.raw);
       const currentSessionId = sessionId;
-
-      // Only cleanup on connection errors, not on normal request completion
-      res.on("close", () => {
-        const transportSessionId = session?.transport.sessionId;
-        if (transportSessionId && res.writableEnded && !res.writableFinished) {
-          // Connection was aborted or error occurred
-          const ptyManager = sessionManager.getPtyManager(transportSessionId);
-          ptyManager?.dispose();
-          sessionManager.updateStatus(transportSessionId, "terminated");
-          sessions.delete(transportSessionId);
-          logServer(
-            `Session cleaned up due to connection error: ${transportSessionId}`,
-          );
-        }
-      });
-      const body = (await c.req.text()).trim();
-      let jsonBody: unknown;
 
       // Handle GET requests without body
       if (c.req.method === "GET") {
@@ -296,38 +278,37 @@ export const startHttpServer = async (
         return res;
       }
 
-      // Parse body if present, otherwise undefined
-      if (body) {
-        try {
-          jsonBody = JSON.parse(body);
-        } catch (parseError) {
-          logError(
-            `[HTTP] Invalid JSON in request body (sessionId=${sessionId})`,
-            parseError,
+      // For POST/PUT requests, use raw request (do NOT read body with c.req.text())
+      // The transport layer needs the original stream to handle JSON-RPC parsing
+      const { req, res } = toReqRes(c.req.raw);
+
+      // Only cleanup on connection errors, not on normal request completion
+      res.on("close", () => {
+        const transportSessionId = session?.transport.sessionId;
+        if (transportSessionId && res.writableEnded && !res.writableFinished) {
+          // Connection was aborted or error occurred
+          const ptyManager = sessionManager.getPtyManager(transportSessionId);
+          ptyManager?.dispose();
+          sessionManager.updateStatus(transportSessionId, "terminated");
+          sessions.delete(transportSessionId);
+          logServer(
+            `Session cleaned up due to connection error: ${transportSessionId}`,
           );
-          return c.json(createJsonRpcError(-32700, "Parse error"), 400);
         }
-      }
+      });
 
-      // Handle notifications (messages without id)
-      if (
-        jsonBody &&
-        typeof jsonBody === "object" &&
-        "method" in jsonBody &&
-        jsonBody.method &&
-        !("id" in jsonBody)
-      ) {
+      // Initialize server if not yet connected (deferred initialization)
+      const sessionStatus = sessionManager.getSession(currentSessionId);
+      if (sessionStatus && sessionStatus.status === "initializing") {
+        await session.server.connect(session.transport);
+        sessionManager.updateStatus(currentSessionId, "active");
         logServer(
-          `[HTTP] Handling notification: ${String(jsonBody.method)} (sessionId=${sessionId})`,
+          `Initialized session before handleRequest: ${currentSessionId}`,
         );
-        // Process notifications through the transport to maintain session state
-        await session.transport.handleRequest(req, res, jsonBody);
-        const response = await toFetchResponse(res);
-        response.headers.set("mcp-session-id", currentSessionId);
-        return response;
       }
 
-      await session.transport.handleRequest(req, res, jsonBody);
+      // Pass raw request to transport handler - it will parse the body itself
+      await session.transport.handleRequest(req, res);
       const response = await toFetchResponse(res);
       // Ensure session ID header is set for client to reuse
       response.headers.set("mcp-session-id", currentSessionId);

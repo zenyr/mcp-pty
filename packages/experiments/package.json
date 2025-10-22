@@ -8,6 +8,7 @@
     "start": "bun run src/index.ts",
     "dev": "bun run --watch src/index.ts",
     "test": "bun test",
+    "test:mcp": "bun run src/mcp-client-test.ts",
     "check": "tsc --noEmit",
     "format": "prettier --write src"
   },
@@ -16,6 +17,7 @@
   },
   "dependencies": {
     "@fxts/core": "^1.17.0",
+    "@modelcontextprotocol/sdk": "1.20.0",
     "@sindresorhus/is": "^7.1.0",
     "@xterm/addon-serialize": "^0.13.0",
     "@xterm/headless": "^5.5.0",
