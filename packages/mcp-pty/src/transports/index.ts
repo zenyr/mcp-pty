@@ -101,14 +101,22 @@ export const startHttpServer = async (
             sessions.set(sessionId, session);
             logServer(`Reconnected to session: ${sessionId}`);
           } else {
-            // Session is terminated or doesn't exist, reject reconnection
+            // Session is terminated or doesn't exist, return JSON-RPC error with HTTP 200
             logServer(
               `Cannot reconnect to terminated session: ${sessionHeader}`,
             );
-            return c.json(
-              { error: "Session expired or invalid", sessionId: sessionHeader },
-              410, // Gone status
-            );
+            return c.json({
+              jsonrpc: "2.0",
+              error: {
+                code: -32001,
+                message: "Session expired or invalid",
+                data: {
+                  requiresNewSession: true,
+                  expiredSessionId: sessionHeader,
+                },
+              },
+              id: null,
+            });
           }
         } else {
           // New session
