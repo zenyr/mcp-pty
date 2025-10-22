@@ -65,8 +65,12 @@ export const withTestSessionManager = async <T>(
     // Only cleanup sessions actually created by this test
     await Promise.all(
       Array.from(createdSessions).map((sessionId) =>
-        sessionManager.disposeSession(sessionId).catch(() => {
-          /* suppress cleanup errors */
+        sessionManager.disposeSession(sessionId).catch((err: unknown) => {
+          const error = err instanceof Error ? err : new Error(String(err));
+          console.error(
+            `[test-utils] cleanup error for session ${sessionId}:`,
+            error,
+          );
         }),
       ),
     );

@@ -56,6 +56,47 @@ const createJsonRpcError = (
 };
 
 /**
+ * Create HTTP 404 error response with session ID header
+ * Used when session not found/expired to send new session ID to client
+ */
+const createSessionNotFoundResponse = (newSessionId: string) => {
+  return new Response(
+    JSON.stringify(createJsonRpcError(-32001, "Session not found")),
+    {
+      status: 404,
+      headers: {
+        "Content-Type": "application/json",
+        "mcp-session-id": newSessionId,
+      },
+    },
+  );
+};
+
+/**
+ * Create StreamableHTTPServerTransport with session ID generator
+ */
+const createHttpTransport = (
+  sessionId: string,
+): StreamableHTTPServerTransport => {
+  return new StreamableHTTPServerTransport({
+    sessionIdGenerator: () => sessionId,
+    enableJsonResponse: true,
+  });
+};
+
+/**
+ * Initialize session with server bindings
+ * Sets up tools and resources for PTY management
+ */
+const initializeSessionBindings = (
+  server: McpServer,
+  sessionId: string,
+): void => {
+  bindSessionToServer(server, sessionId);
+  bindSessionToServerResources(server, sessionId);
+};
+
+/**
  * Start stdio server
  * @param server McpServer instance
  */
@@ -85,10 +126,18 @@ export const startHttpServer = async (
   port: number,
 ): Promise<void> => {
   const app = new Hono();
-  const sessions = new Map<
-    string,
-    { server: McpServer; transport: StreamableHTTPServerTransport }
-  >();
+
+  /**
+   * Session with typed transport sessionId
+   * Extends StreamableHTTPServerTransport to ensure sessionId is tracked
+   */
+  interface HttpSession {
+    server: McpServer;
+    transport: StreamableHTTPServerTransport & { sessionId?: string };
+    isConnecting?: boolean;
+  }
+
+  const sessions = new Map<string, HttpSession>();
 
   app.use(logger());
   app.use(cors({ origin: "*", exposeHeaders: ["mcp-session-id"] }));
@@ -149,13 +198,9 @@ export const startHttpServer = async (
             } else {
               // Reconnect to existing active session - create new transport
               const server = serverFactory();
-              const transport = new StreamableHTTPServerTransport({
-                sessionIdGenerator: () => sessionId,
-                enableJsonResponse: true,
-              });
+              const transport = createHttpTransport(sessionId);
 
-              bindSessionToServer(server, sessionId);
-              bindSessionToServerResources(server, sessionId);
+              initializeSessionBindings(server, sessionId);
               await server.connect(transport);
               sessionManager.updateStatus(sessionId, "active");
 
@@ -172,13 +217,9 @@ export const startHttpServer = async (
 
             const newSessionId = sessionManager.createSession();
             const newServer = serverFactory();
-            const newTransport = new StreamableHTTPServerTransport({
-              sessionIdGenerator: () => newSessionId,
-              enableJsonResponse: true,
-            });
+            const newTransport = createHttpTransport(newSessionId);
 
-            bindSessionToServer(newServer, newSessionId);
-            bindSessionToServerResources(newServer, newSessionId);
+            initializeSessionBindings(newServer, newSessionId);
             // DON'T call server.connect() yet - let it happen when client sends first request with new ID
 
             const newSession = { server: newServer, transport: newTransport };
@@ -188,29 +229,15 @@ export const startHttpServer = async (
 
             // Return 404 with new session ID in header
             // Client will retry with this new session ID
-            const res = new Response(
-              JSON.stringify(createJsonRpcError(-32001, "Session not found")),
-              {
-                status: 404,
-                headers: {
-                  "Content-Type": "application/json",
-                  "mcp-session-id": newSessionId,
-                },
-              },
-            );
-            return res;
+            return createSessionNotFoundResponse(newSessionId);
           }
         } else {
           // New session - defer server.connect() until handleRequest()
           sessionId = sessionManager.createSession();
           const server = serverFactory();
-          const transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => sessionId,
-            enableJsonResponse: true,
-          });
+          const transport = createHttpTransport(sessionId);
 
-          bindSessionToServer(server, sessionId);
-          bindSessionToServerResources(server, sessionId);
+          initializeSessionBindings(server, sessionId);
           // DON'T call server.connect() yet - let it happen via handleRequest()
 
           session = { server, transport };
@@ -248,13 +275,9 @@ export const startHttpServer = async (
         // Session not found, create new session ID for client to use
         const newSessionId = sessionManager.createSession();
         const newServer = serverFactory();
-        const newTransport = new StreamableHTTPServerTransport({
-          sessionIdGenerator: () => newSessionId,
-          enableJsonResponse: true,
-        });
+        const newTransport = createHttpTransport(newSessionId);
 
-        bindSessionToServer(newServer, newSessionId);
-        bindSessionToServerResources(newServer, newSessionId);
+        initializeSessionBindings(newServer, newSessionId);
         // DON'T call server.connect() yet - let it happen when client sends first request with new ID
 
         const newSession = { server: newServer, transport: newTransport };
@@ -265,17 +288,7 @@ export const startHttpServer = async (
         );
 
         // Return 404 with new session ID in header so client can retry
-        const res = new Response(
-          JSON.stringify(createJsonRpcError(-32001, "Session not found")),
-          {
-            status: 404,
-            headers: {
-              "Content-Type": "application/json",
-              "mcp-session-id": newSessionId,
-            },
-          },
-        );
-        return res;
+        return createSessionNotFoundResponse(newSessionId);
       }
 
       // For POST/PUT requests, use raw request (do NOT read body with c.req.text())
@@ -298,13 +311,23 @@ export const startHttpServer = async (
       });
 
       // Initialize server if not yet connected (deferred initialization)
+      // Prevent race condition: only one thread should call server.connect()
       const sessionStatus = sessionManager.getSession(currentSessionId);
-      if (sessionStatus && sessionStatus.status === "initializing") {
-        await session.server.connect(session.transport);
-        sessionManager.updateStatus(currentSessionId, "active");
-        logServer(
-          `Initialized session before handleRequest: ${currentSessionId}`,
-        );
+      if (
+        sessionStatus &&
+        sessionStatus.status === "initializing" &&
+        !session.isConnecting
+      ) {
+        session.isConnecting = true;
+        try {
+          await session.server.connect(session.transport);
+          sessionManager.updateStatus(currentSessionId, "active");
+          logServer(
+            `Initialized session before handleRequest: ${currentSessionId}`,
+          );
+        } finally {
+          session.isConnecting = false;
+        }
       }
 
       // Pass raw request to transport handler - it will parse the body itself
@@ -313,7 +336,8 @@ export const startHttpServer = async (
       // Ensure session ID header is set for client to reuse
       response.headers.set("mcp-session-id", currentSessionId);
       return response;
-    } catch (error) {
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
       logError(`[HTTP] Error (sessionId=${sessionId})`, error);
       return c.json(createJsonRpcError(-32603, "Internal error"), 500);
     }
