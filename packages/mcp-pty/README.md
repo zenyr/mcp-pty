@@ -107,6 +107,35 @@ For advanced use cases (multiline text, ANSI codes, binary data):
 
 **Note:** `data` and `input`/`ctrlCode` are mutually exclusive.
 
+## Platform-Specific Limitations
+
+### Windows SSH Interactive Sessions
+
+⚠️ **Known Issue**: Interactive SSH sessions to Windows hosts (e.g., `ssh zblade14`) may not return command output in PTY sessions.
+
+**Root Cause**: Windows CMD stdout is not properly captured in interactive PTY emulation over SSH.
+
+**Workaround**:
+1. **Use non-interactive mode** (Recommended):
+   ```bash
+   # ✅ Works - Direct command execution
+   ssh zblade14 whoami
+   ```
+   
+2. **Use PowerShell or WSL** instead of CMD:
+   ```bash
+   # ✅ Better compatibility
+   ssh -t zblade14 pwsh -c "whoami"
+   ssh -t zblade14 wsl whoami
+   ```
+
+3. **Force PTY allocation** (Partial fix):
+   ```bash
+   ssh -t -t zblade14  # May improve but not guaranteed
+   ```
+
+**Status**: Under investigation. See [Issue #65](https://github.com/zenyr/mcp-pty/issues/65) for details.
+
 ## Requirements
 
 - Bun >= 1.0.0
