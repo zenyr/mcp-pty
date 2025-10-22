@@ -117,14 +117,15 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
 };
 
 /**
- * Start HTTP server
+ * Start HTTP server with graceful error handling
  * @param serverFactory Factory function to create MCP servers
  * @param port HTTP server port
+ * @returns Server instance for lifecycle management
  */
 export const startHttpServer = async (
   serverFactory: () => McpServer,
   port: number,
-): Promise<void> => {
+): Promise<ReturnType<typeof Bun.serve>> => {
   const app = new Hono();
 
   /**
@@ -176,8 +177,19 @@ export const startHttpServer = async (
   app.all("/mcp", async (c) => {
     const sessionHeader = c.req.header("mcp-session-id");
     let sessionId: string = "N/A";
+    console.log(
+      `[DEBUG] Incoming request - sessionHeader: ${sessionHeader ?? "null"}, method: ${c.req.method}`,
+    );
     try {
       let session = sessionHeader ? sessions.get(sessionHeader) : undefined;
+      console.log(
+        `[DEBUG] session exists: ${!!session}, sessionHeader: ${sessionHeader ?? "null"}`,
+      );
+      if (sessionHeader && !session) {
+        console.log(
+          `[DEBUG] Session not found in memory map for ${sessionHeader}. Sessions in map: ${Array.from(sessions.keys()).join(", ")}`,
+        );
+      }
 
       if (!session) {
         if (sessionHeader) {
@@ -210,7 +222,7 @@ export const startHttpServer = async (
             }
           } else {
             // Session is terminated or doesn't exist
-            // Create new session and register it, but defer server.connect() until first client request
+            // Create new session, initialize it, and return 404 with new session ID
             logServer(
               `Cannot reconnect to terminated session: ${sessionHeader}, creating new session`,
             );
@@ -220,15 +232,20 @@ export const startHttpServer = async (
             const newTransport = createHttpTransport(newSessionId);
 
             initializeSessionBindings(newServer, newSessionId);
-            // DON'T call server.connect() yet - let it happen when client sends first request with new ID
+
+            // DON'T connect here - let deferred initialization handle it on next request
+            // This avoids potential issues with transport state across HTTP connections
 
             const newSession = { server: newServer, transport: newTransport };
             sessions.set(newSessionId, newSession);
 
-            logServer(`Created new session for reconnection: ${newSessionId}`);
+            logServer(
+              `Created new session for reconnection (pending init): ${newSessionId}`,
+            );
 
             // Return 404 with new session ID in header
             // Client will retry with this new session ID
+            // Deferred initialization will connect on next request
             return createSessionNotFoundResponse(newSessionId);
           }
         } else {
@@ -249,6 +266,7 @@ export const startHttpServer = async (
         if (!sessionHeader) {
           throw new Error("Session exists but sessionHeader is undefined");
         }
+        console.log(`[DEBUG] Session exists for ${sessionHeader}, reusing it`);
         sessionId = sessionHeader;
       }
 
@@ -311,27 +329,78 @@ export const startHttpServer = async (
       });
 
       // Initialize server if not yet connected (deferred initialization)
-      // Prevent race condition: only one thread should call server.connect()
+      // Prevent race condition: ensure server is connected before handleRequest()
       const sessionStatus = sessionManager.getSession(currentSessionId);
-      if (
-        sessionStatus &&
-        sessionStatus.status === "initializing" &&
-        !session.isConnecting
-      ) {
-        session.isConnecting = true;
-        try {
-          await session.server.connect(session.transport);
-          sessionManager.updateStatus(currentSessionId, "active");
-          logServer(
-            `Initialized session before handleRequest: ${currentSessionId}`,
-          );
-        } finally {
-          session.isConnecting = false;
+      if (sessionStatus && sessionStatus.status === "initializing") {
+        if (!session.isConnecting) {
+          session.isConnecting = true;
+          try {
+            await session.server.connect(session.transport);
+            sessionManager.updateStatus(currentSessionId, "active");
+            logServer(
+              `Initialized session before handleRequest: ${currentSessionId}`,
+            );
+          } catch (error) {
+            logError(`Failed to initialize session ${currentSessionId}`, error);
+            throw error;
+          } finally {
+            session.isConnecting = false;
+          }
+        } else {
+          // Another request is already connecting - wait for it to complete
+          let waitCount = 0;
+          while (
+            session.isConnecting &&
+            waitCount < 10 // Max 100ms (10 * 10ms)
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+            waitCount++;
+          }
+          if (session.isConnecting) {
+            throw new Error(
+              "Session initialization timeout - server still connecting",
+            );
+          }
+
+          // After waiting, verify status has actually updated to active
+          const statusAfterWait = sessionManager.getSession(currentSessionId);
+          if (!statusAfterWait || statusAfterWait.status !== "active") {
+            throw new Error(
+              `Session ${currentSessionId} still not active after waiting (status: ${statusAfterWait?.status})`,
+            );
+          }
         }
       }
 
+      // Verify session is active before handling request
+      const finalSessionStatus = sessionManager.getSession(currentSessionId);
+      console.log(
+        `[DEBUG] Before handleRequest: sessionId=${currentSessionId}, status=${finalSessionStatus?.status}, sessionExists=${!!session}`,
+      );
+      if (!finalSessionStatus || finalSessionStatus.status !== "active") {
+        throw new Error(
+          `Session ${currentSessionId} not active (status: ${finalSessionStatus?.status})`,
+        );
+      }
+
       // Pass raw request to transport handler - it will parse the body itself
-      await session.transport.handleRequest(req, res);
+      console.log(
+        `[DEBUG] About to call handleRequest - session.server type: ${typeof session.server}, session.transport type: ${typeof session.transport}`,
+      );
+      try {
+        await session.transport.handleRequest(req, res);
+      } catch (handleError: unknown) {
+        const error =
+          handleError instanceof Error
+            ? handleError
+            : new Error(String(handleError));
+        logError(
+          `[HTTP] handleRequest failed (sessionId=${currentSessionId}): ${error.message}`,
+          error,
+        );
+        console.error("[DEBUG] handleRequest error stack:", error.stack);
+        throw error;
+      }
       const response = await toFetchResponse(res);
       // Ensure session ID header is set for client to reuse
       response.headers.set("mcp-session-id", currentSessionId);
@@ -339,10 +408,38 @@ export const startHttpServer = async (
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       logError(`[HTTP] Error (sessionId=${sessionId})`, error);
+      console.error("[DEBUG] Full error response:", {
+        sessionId,
+        errorMsg: error.message,
+        errorStack: error.stack,
+      });
       return c.json(createJsonRpcError(-32603, "Internal error"), 500);
     }
   });
 
-  logServer(`MCP PTY server started via HTTP on port ${port}`);
-  Bun.serve({ port, fetch: app.fetch });
+  try {
+    const server = Bun.serve({ port, fetch: app.fetch });
+    logServer(`MCP PTY server started via HTTP on port ${port}`);
+    return server;
+  } catch (error: unknown) {
+    const errorMsg =
+      error instanceof Error
+        ? error.message
+        : `Failed to start HTTP server on port ${port}`;
+
+    // Check if error is port in use
+    if (
+      errorMsg.includes("EADDRINUSE") ||
+      errorMsg.includes("Address already in use")
+    ) {
+      logError(
+        `Port ${port} is already in use. Please specify a different port using --port flag or MCP_PTY_PORT environment variable.`,
+        error,
+      );
+    } else {
+      logError(`Failed to start HTTP server on port ${port}`, error);
+    }
+
+    process.exit(1);
+  }
 };
