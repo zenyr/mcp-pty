@@ -40,8 +40,8 @@ const serverFactory = new McpServerFactory({
 });
 
 if (finalTransport === "http") {
-  startHttpServer(() => serverFactory.createServer(), finalPort);
+  await startHttpServer(() => serverFactory.createServer(), finalPort);
 } else {
   const server = serverFactory.createServer();
-  startStdioServer(server);
+  await startStdioServer(server);
 }

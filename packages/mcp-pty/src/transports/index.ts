@@ -117,7 +117,7 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
 };
 
 /**
- * Start HTTP server
+ * Start HTTP server with graceful error handling
  * @param serverFactory Factory function to create MCP servers
  * @param port HTTP server port
  */
@@ -343,6 +343,28 @@ export const startHttpServer = async (
     }
   });
 
-  logServer(`MCP PTY server started via HTTP on port ${port}`);
-  Bun.serve({ port, fetch: app.fetch });
+  try {
+    Bun.serve({ port, fetch: app.fetch });
+    logServer(`MCP PTY server started via HTTP on port ${port}`);
+  } catch (error: unknown) {
+    const errorMsg =
+      error instanceof Error
+        ? error.message
+        : `Failed to start HTTP server on port ${port}`;
+
+    // Check if error is port in use
+    if (
+      errorMsg.includes("EADDRINUSE") ||
+      errorMsg.includes("Address already in use")
+    ) {
+      logError(
+        `Port ${port} is already in use. Please specify a different port using --port flag or MCP_PTY_PORT environment variable.`,
+        error,
+      );
+    } else {
+      logError(`Failed to start HTTP server on port ${port}`, error);
+    }
+
+    process.exit(1);
+  }
 };
