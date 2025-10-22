@@ -84,15 +84,12 @@ export const startHttpServer = async (
           // Check if session exists in sessionManager (for reconnection)
           const existingSession = sessionManager.getSession(sessionHeader);
           if (existingSession && existingSession.status !== "terminated") {
-            // Reconnect to existing session
+            // Reconnect to existing session - reuse sessionHeader
             sessionId = sessionHeader;
             const server = serverFactory();
             const transport = new StreamableHTTPServerTransport({
               sessionIdGenerator: () => sessionId,
               enableJsonResponse: true,
-              onsessioninitialized: (id) => {
-                sessions.set(id, { server, transport });
-              },
             });
 
             bindSessionToServer(server, sessionId);
@@ -101,40 +98,20 @@ export const startHttpServer = async (
             sessionManager.updateStatus(sessionId, "active");
 
             session = { server, transport };
-            sessions.set(sessionId, session); // Ensure session is stored immediately
+            sessions.set(sessionId, session);
             logServer(`Reconnected to session: ${sessionId}`);
           } else {
-            // Stale session, cleanup and create new
-            const oldSession = sessions.get(sessionHeader);
-            if (oldSession) {
-              try {
-                await oldSession.transport.close();
-              } catch {
-                // Ignore errors during close
-              }
-              sessions.delete(sessionHeader);
-            }
+            // Session is terminated or doesn't exist, reject reconnection
             logServer(
-              `Cleaned up stale session for new connection: ${sessionHeader}`,
+              `Cannot reconnect to terminated session: ${sessionHeader}`,
             );
-
-            // Create new session
-            sessionId = sessionManager.createSession();
-            const server = serverFactory();
-            const transport = new StreamableHTTPServerTransport({
-              sessionIdGenerator: () => sessionId,
-              enableJsonResponse: true,
-              onsessioninitialized: (id) => {
-                sessions.set(id, { server, transport });
+            return c.json(
+              {
+                error: "Session terminated or not found",
+                sessionId: sessionHeader,
               },
-            });
-
-            bindSessionToServer(server, sessionId);
-            bindSessionToServerResources(server, sessionId);
-            await server.connect(transport);
-            sessionManager.updateStatus(sessionId, "active");
-
-            session = { server, transport };
+              410, // Gone status
+            );
           }
         } else {
           // New session
@@ -143,9 +120,6 @@ export const startHttpServer = async (
           const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => sessionId,
             enableJsonResponse: true,
-            onsessioninitialized: (id) => {
-              sessions.set(id, { server, transport });
-            },
           });
 
           bindSessionToServer(server, sessionId);
@@ -154,7 +128,7 @@ export const startHttpServer = async (
           sessionManager.updateStatus(sessionId, "active");
 
           session = { server, transport };
-          sessions.set(sessionId, session); // Ensure session is stored immediately
+          sessions.set(sessionId, session);
         }
       } else {
         // Type guard: sessionHeader is defined here because session exists
@@ -183,14 +157,42 @@ export const startHttpServer = async (
       });
       const body = (await c.req.text()).trim();
       let jsonBody: unknown;
-      try {
-        jsonBody = body ? JSON.parse(body) : undefined;
-      } catch (parseError) {
-        logError(
-          `[HTTP] Invalid JSON in request body (sessionId=${sessionId})`,
-          parseError,
+
+      // Handle GET requests without body
+      if (c.req.method === "GET") {
+        if (!sessionHeader) {
+          return c.json({
+            success: true,
+            message: "MCP PTY server is running",
+            version: "0.1.0",
+          });
+        }
+        // Check session status
+        const existingSession = sessionManager.getSession(sessionHeader);
+        if (existingSession) {
+          return c.json({
+            success: true,
+            sessionId: sessionHeader,
+            status: existingSession.status,
+          });
+        }
+        return c.json(
+          { error: "Session not found", sessionId: sessionHeader },
+          404,
         );
-        return c.json({ error: "Invalid JSON in request body" }, 400);
+      }
+
+      // Parse body if present, otherwise undefined
+      if (body) {
+        try {
+          jsonBody = JSON.parse(body);
+        } catch (parseError) {
+          logError(
+            `[HTTP] Invalid JSON in request body (sessionId=${sessionId})`,
+            parseError,
+          );
+          return c.json({ error: "Invalid JSON in request body" }, 400);
+        }
       }
 
       // Handle notifications (messages without id)
@@ -207,18 +209,14 @@ export const startHttpServer = async (
         // Process notifications through the transport to maintain session state
         await session.transport.handleRequest(req, res, jsonBody);
         const response = await toFetchResponse(res);
-        if (!sessionHeader) {
-          response.headers.set("mcp-session-id", currentSessionId);
-        }
+        response.headers.set("mcp-session-id", currentSessionId);
         return response;
       }
 
       await session.transport.handleRequest(req, res, jsonBody);
       const response = await toFetchResponse(res);
       // Ensure session ID header is set for client to reuse
-      if (!sessionHeader) {
-        response.headers.set("mcp-session-id", currentSessionId);
-      }
+      response.headers.set("mcp-session-id", currentSessionId);
       return response;
     } catch (error) {
       logError(`[HTTP] Error (sessionId=${sessionId})`, error);
