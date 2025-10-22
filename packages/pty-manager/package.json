@@ -14,7 +14,7 @@
     "@pkgs/logger": "workspace:*",
     "@pkgs/normalize-commands": "workspace:*",
     "@xterm/headless": "^5.5.0",
-    "@zenyr/bun-pty": "^0.4.3",
+    "@zenyr/bun-pty": "^0.4.4",
     "consola": "^3.4.2",
     "nanoid": "^5.1.6",
     "strip-ansi": "^7.1.2",

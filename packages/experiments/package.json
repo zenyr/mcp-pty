@@ -19,7 +19,7 @@
     "@sindresorhus/is": "^7.1.0",
     "@xterm/addon-serialize": "^0.13.0",
     "@xterm/headless": "^5.5.0",
-    "@zenyr/bun-pty": "^0.4.3",
+    "@zenyr/bun-pty": "^0.4.4",
     "consola": "^3.4.2"
   }
 }
