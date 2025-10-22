@@ -132,34 +132,58 @@ export const startHttpServer = async (
 
       if (!session) {
         if (sessionHeader) {
-          // Check if session exists in sessionManager (for reconnection)
+          // Check if session exists in sessionManager (for reconnection or deferred initialization)
           const existingSession = sessionManager.getSession(sessionHeader);
           if (existingSession && existingSession.status !== "terminated") {
-            // Reconnect to existing session - reuse sessionHeader
+            // Session exists - reuse it if already in map (deferred init case)
             sessionId = sessionHeader;
-            const server = serverFactory();
-            const transport = new StreamableHTTPServerTransport({
-              sessionIdGenerator: () => sessionId,
-              enableJsonResponse: true,
-            });
 
-            bindSessionToServer(server, sessionId);
-            bindSessionToServerResources(server, sessionId);
-            await server.connect(transport);
-            sessionManager.updateStatus(sessionId, "active");
+            // Check if session was pre-registered but not yet initialized
+            const deferredSession = sessions.get(sessionId);
+            if (deferredSession) {
+              // Session already exists in map - just need to initialize
+              session = deferredSession;
+              await session.server.connect(session.transport);
+              sessionManager.updateStatus(sessionId, "active");
+              logServer(`Initialized deferred session: ${sessionId}`);
+            } else {
+              // Reconnect to existing active session - create new transport
+              const server = serverFactory();
+              const transport = new StreamableHTTPServerTransport({
+                sessionIdGenerator: () => sessionId,
+                enableJsonResponse: true,
+              });
 
-            session = { server, transport };
-            sessions.set(sessionId, session);
-            logServer(`Reconnected to session: ${sessionId}`);
+              bindSessionToServer(server, sessionId);
+              bindSessionToServerResources(server, sessionId);
+              await server.connect(transport);
+              sessionManager.updateStatus(sessionId, "active");
+
+              session = { server, transport };
+              sessions.set(sessionId, session);
+              logServer(`Reconnected to session: ${sessionId}`);
+            }
           } else {
             // Session is terminated or doesn't exist
-            // Create new session ID but DON'T initialize server yet
-            // (server will initialize on first request from client with new ID)
+            // Create new session and register it, but defer server.connect() until first client request
             logServer(
               `Cannot reconnect to terminated session: ${sessionHeader}, creating new session`,
             );
 
             const newSessionId = sessionManager.createSession();
+            const newServer = serverFactory();
+            const newTransport = new StreamableHTTPServerTransport({
+              sessionIdGenerator: () => newSessionId,
+              enableJsonResponse: true,
+            });
+
+            bindSessionToServer(newServer, newSessionId);
+            bindSessionToServerResources(newServer, newSessionId);
+            // DON'T call server.connect() yet - let it happen when client sends first request with new ID
+
+            const newSession = { server: newServer, transport: newTransport };
+            sessions.set(newSessionId, newSession);
+
             logServer(`Created new session for reconnection: ${newSessionId}`);
 
             // Return 404 with new session ID in header
@@ -240,8 +264,20 @@ export const startHttpServer = async (
           });
         }
         // Session not found, create new session ID for client to use
-        // Don't initialize yet - let client initialize with new ID
         const newSessionId = sessionManager.createSession();
+        const newServer = serverFactory();
+        const newTransport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => newSessionId,
+          enableJsonResponse: true,
+        });
+
+        bindSessionToServer(newServer, newSessionId);
+        bindSessionToServerResources(newServer, newSessionId);
+        // DON'T call server.connect() yet - let it happen when client sends first request with new ID
+
+        const newSession = { server: newServer, transport: newTransport };
+        sessions.set(newSessionId, newSession);
+
         logServer(
           `Session ${sessionHeader} not found, created new session: ${newSessionId}`,
         );
