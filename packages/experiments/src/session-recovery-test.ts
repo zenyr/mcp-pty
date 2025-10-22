@@ -10,15 +10,15 @@ const testSessionRecovery = async () => {
   try {
     // Test 1: First connection - should get new session ID
     console.log("1️⃣ First connection - expecting new session ID");
-    const transport1 = new StreamableHTTPClientTransport({
-      url: new URL(serverUrl),
-    });
+    const transport1 = new StreamableHTTPClientTransport(new URL(serverUrl));
 
     const client1 = new Client({ name: "test-client-1", version: "1.0.0" });
     await client1.connect(transport1);
 
     const version1 = await client1.getServerVersion();
-    console.log("✓ Connected to server:", version1.name, version1.version);
+    const versionName = version1?.name || "unknown";
+    const versionNum = version1?.version || "unknown";
+    console.log("✓ Connected to server:", versionName, versionNum);
 
     // Get session ID from transport
     const sessionId1 = (transport1 as unknown as { _sessionId?: string })
@@ -28,10 +28,14 @@ const testSessionRecovery = async () => {
     // Test 2: Use invalid session ID - should get 404 + new session ID
     console.log("2️⃣ Testing invalid session ID - expecting 404 + recovery");
     try {
-      const invalidTransport = new StreamableHTTPClientTransport({
-        url: new URL(serverUrl),
-        headers: { "mcp-session-id": "invalid-session-id-12345" },
-      });
+      const invalidTransport = new StreamableHTTPClientTransport(
+        new URL(serverUrl),
+        {
+          requestInit: {
+            headers: { "mcp-session-id": "invalid-session-id-12345" },
+          },
+        },
+      );
 
       const invalidClient = new Client({
         name: "invalid-test",
@@ -49,9 +53,7 @@ const testSessionRecovery = async () => {
 
     // Test 3: Second fresh connection - should work independently
     console.log("3️⃣ Second fresh connection");
-    const transport2 = new StreamableHTTPClientTransport({
-      url: new URL(serverUrl),
-    });
+    const transport2 = new StreamableHTTPClientTransport(new URL(serverUrl));
 
     const client2 = new Client({ name: "test-client-2", version: "1.0.0" });
     await client2.connect(transport2);
