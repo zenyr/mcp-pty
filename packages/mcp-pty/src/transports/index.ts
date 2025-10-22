@@ -11,41 +11,49 @@ import { bindSessionToServer } from "../tools";
 import { logError, logServer } from "../utils";
 
 /**
- * MCP HTTP Transport Error Handling Strategy
+ * MCP Streamable HTTP Error Handling Strategy
  *
- * IMPORTANT: All MCP protocol errors MUST return HTTP 200 with JSON-RPC error objects.
- * This prevents client retry loops that occur with HTTP 4xx/5xx status codes.
+ * Follows MCP Streamable HTTP specification for error responses.
+ * Based on: https://spec.modelcontextprotocol.io/specification/2025-03-26/basic/protocols/streamable-http/
  *
- * Why HTTP 200 for errors?
- * - MCP clients treat HTTP 4xx/5xx as transport errors and retry with same session ID
- * - This causes infinite retry loops and client crashes
- * - JSON-RPC errors within HTTP 200 allow proper protocol-level error handling
+ * Error HTTP Status Codes:
+ * - 400: Bad Request (missing/invalid headers, parse errors)
+ * - 404: Session Not Found (invalid/expired session ID)
+ * - 406: Not Acceptable (invalid Accept/Content-Type headers)
+ * - 415: Unsupported Media Type
  *
- * Transport-level errors (actual HTTP issues) are handled by Hono/framework automatically.
- *
- * References:
- * - MCP Spec: Session management errors are protocol-level, not transport-level
- * - JSON-RPC 2.0: Defines standard error codes (-32700, -32600, -32001, etc.)
+ * Response Format:
+ * All errors return JSON-RPC 2.0 error object.
+ * Standard error codes:
+ * - -32000: Server error
+ * - -32001: Session error (when session not found/expired)
+ * - -32600: Invalid Request
+ * - -32700: Parse error
  */
 
 /**
- * Create MCP-compliant JSON-RPC error response
+ * Create MCP-compliant JSON-RPC error response object
  *
- * All MCP protocol errors must use HTTP 200 to prevent client retry loops.
- * This function ensures consistent error handling across all endpoints.
+ * Follows JSON-RPC 2.0 spec: https://www.jsonrpc.org/specification
  *
- * @param code JSON-RPC error code
+ * @param code JSON-RPC error code (e.g., -32001 for session errors)
  * @param message Error message
- * @param data Optional error data
- * @param id JSON-RPC request ID (null for notifications)
- * @returns Response object with HTTP 200 and JSON-RPC error
+ * @param data Optional error data (not included if undefined)
+ * @param id JSON-RPC request ID (null for notifications/errors without request)
+ * @returns JSON-RPC error object conforming to spec
  */
-const createMcpError = (
+const createJsonRpcError = (
   code: number,
   message: string,
   data?: unknown,
   id: unknown = null,
-) => ({ jsonrpc: "2.0" as const, error: { code, message, data }, id });
+) => {
+  const error: Record<string, unknown> = { code, message };
+  if (data !== undefined) {
+    error.data = data;
+  }
+  return { jsonrpc: "2.0" as const, error, id };
+};
 
 /**
  * Start stdio server
@@ -69,7 +77,7 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
 
 /**
  * Start HTTP server
- * @param server McpServer instance
+ * @param serverFactory Factory function to create MCP servers
  * @param port HTTP server port
  */
 export const startHttpServer = async (
@@ -90,9 +98,11 @@ export const startHttpServer = async (
     const sessionHeader = c.req.header("mcp-session-id");
     if (!sessionHeader) {
       return c.json(
-        createMcpError(-32600, "Missing mcp-session-id header", {
-          requiresNewSession: true,
-        }),
+        createJsonRpcError(
+          -32600,
+          "Invalid Request: Missing mcp-session-id header",
+        ),
+        400,
       );
     }
 
@@ -142,16 +152,11 @@ export const startHttpServer = async (
             sessions.set(sessionId, session);
             logServer(`Reconnected to session: ${sessionId}`);
           } else {
-            // Session is terminated or doesn't exist, return JSON-RPC error with HTTP 200
+            // Session is terminated or doesn't exist, return HTTP 404 with JSON-RPC error
             logServer(
               `Cannot reconnect to terminated session: ${sessionHeader}`,
             );
-            return c.json(
-              createMcpError(-32001, "Session expired or invalid", {
-                requiresNewSession: true,
-                expiredSessionId: sessionHeader,
-              }),
-            );
+            return c.json(createJsonRpcError(-32001, "Session not found"), 404);
           }
         } else {
           // New session
@@ -216,12 +221,8 @@ export const startHttpServer = async (
             status: existingSession.status,
           });
         }
-        return c.json(
-          createMcpError(-32001, "Session not found", {
-            requiresNewSession: true,
-            expiredSessionId: sessionHeader,
-          }),
-        );
+        // Session not found, return HTTP 404 with JSON-RPC error
+        return c.json(createJsonRpcError(-32001, "Session not found"), 404);
       }
 
       // Parse body if present, otherwise undefined
@@ -233,13 +234,7 @@ export const startHttpServer = async (
             `[HTTP] Invalid JSON in request body (sessionId=${sessionId})`,
             parseError,
           );
-          return c.json(
-            createMcpError(
-              -32700,
-              "Parse error",
-              "Invalid JSON in request body",
-            ),
-          );
+          return c.json(createJsonRpcError(-32700, "Parse error"), 400);
         }
       }
 
@@ -268,9 +263,7 @@ export const startHttpServer = async (
       return response;
     } catch (error) {
       logError(`[HTTP] Error (sessionId=${sessionId})`, error);
-      return c.json(
-        createMcpError(-32603, "Internal error", "MCP server error"),
-      );
+      return c.json(createJsonRpcError(-32603, "Internal error"), 500);
     }
   });
 
