@@ -255,56 +255,52 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Start PTY",
       description:
-        "Create new PTY instance and execute command. Supports interactive shells (bash/python/node), long-running processes (dev servers), TUI apps (vim/htop), and shell commands (ls/git). Returns processId for subsequent operations (write_input, read, kill) and initial screen output. Command runs in specified working directory (pwd). Use write_input to send input, read to get output, kill to terminate.",
+        "Create PTY, execute command, return processId & screen. Supports bash/python/node, dev servers, vim/htop, shell cmds. Use write_input for stdin, read for output, kill to terminate.",
       inputSchema: StartPtyInputSchema.shape,
       outputSchema: StartPtyOutputSchema.shape,
     },
     handlers.start,
   );
 
-  // Register kill tool
   server.registerTool(
     "kill",
     {
       title: "Kill PTY",
-      description: "Terminate PTY instance",
+      description: "Terminate PTY process",
       inputSchema: KillPtyInputSchema.shape,
       outputSchema: KillPtyOutputSchema.shape,
     },
     handlers.kill,
   );
 
-  // Register list tool
   server.registerTool(
     "list",
     {
-      title: "List PTY",
-      description: "List PTY processes",
+      title: "List PTYs",
+      description: "List running PTY processes in session",
       inputSchema: ListPtyInputSchema.shape,
       outputSchema: ListPtyOutputSchema.shape,
     },
     handlers.list,
   );
 
-  // Register read tool
   server.registerTool(
     "read",
     {
       title: "Read PTY",
-      description: "Read PTY output",
+      description: "Read PTY screen buffer",
       inputSchema: ReadPtyInputSchema.shape,
       outputSchema: ReadPtyOutputSchema.shape,
     },
     handlers.read,
   );
 
-  // Register write_input tool
   server.registerTool(
     "write_input",
     {
       title: "Write Input to PTY",
       description:
-        "Write input to PTY stdin and return terminal state. TWO MODES: (1) Safe mode [RECOMMENDED]: Use 'input' (plain text) + 'ctrlCode' (Enter/Escape/Ctrl+C) separately to avoid escape sequence confusion. Example: {input: 'print(2+2)', ctrlCode: 'Enter'}. (2) Raw mode: Use 'data' field for multiline text, ANSI codes, or binary data. Example: {data: 'line1\\nline2\\n'}. Modes are mutually exclusive.",
+        "Send input to PTY stdin, return screen state. Two modes: Safe (input + ctrlCode) or Raw (data). Ex: {input: 'ls', ctrlCode: 'Enter'} or {data: 'ls\\n'}. Windows SSH: use CRLF (\\r\\n) not LF.",
       inputSchema: WriteInputSchema.shape,
       outputSchema: WriteInputOutputSchema.shape,
     },

@@ -123,36 +123,24 @@ export const createResourceHandlers = (server: McpServer) => {
 export const registerPtyResources = (server: McpServer): void => {
   const handlers = createResourceHandlers(server);
 
-  // Register global status resource (all sessions)
   server.registerResource(
     "status",
     "pty://status",
-    {
-      title: "Global Server Status",
-      description: "Server status including all sessions and process counts",
-    },
+    { title: "Server Status", description: "Session & process counts" },
     handlers.status,
   );
 
-  // Register processes resource (PTY process list)
   server.registerResource(
     "processes",
     "pty://processes",
-    {
-      title: "PTY Processes",
-      description: "List of PTY processes in current session",
-    },
+    { title: "Session Processes", description: "List running PTYs in session" },
     handlers.processes,
   );
 
-  // Register process output resource template (specific process output)
   server.registerResource(
     "process-output",
     new ResourceTemplate("pty://processes/{processId}", { list: undefined }),
-    {
-      title: "PTY Process Output",
-      description: "Output buffer for a specific PTY process",
-    },
+    { title: "Process Output", description: "Output buffer for PTY process" },
     handlers.processOutput,
   );
 };
