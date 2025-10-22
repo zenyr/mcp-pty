@@ -210,7 +210,7 @@ export const startHttpServer = async (
             }
           } else {
             // Session is terminated or doesn't exist
-            // Create new session and register it, but defer server.connect() until first client request
+            // Create new session, initialize it, and return 404 with new session ID
             logServer(
               `Cannot reconnect to terminated session: ${sessionHeader}, creating new session`,
             );
@@ -220,15 +220,32 @@ export const startHttpServer = async (
             const newTransport = createHttpTransport(newSessionId);
 
             initializeSessionBindings(newServer, newSessionId);
-            // DON'T call server.connect() yet - let it happen when client sends first request with new ID
+
+            // Connect immediately so client can use new sessionId right away
+            try {
+              await newServer.connect(newTransport);
+              sessionManager.updateStatus(newSessionId, "active");
+              logServer(
+                `Initialized new session for reconnection: ${newSessionId}`,
+              );
+            } catch (error) {
+              logError(
+                `Failed to initialize new session ${newSessionId}`,
+                error,
+              );
+              sessionManager.updateStatus(newSessionId, "terminated");
+              throw error;
+            }
 
             const newSession = { server: newServer, transport: newTransport };
             sessions.set(newSessionId, newSession);
 
-            logServer(`Created new session for reconnection: ${newSessionId}`);
+            logServer(
+              `Created and initialized new session for reconnection: ${newSessionId}`,
+            );
 
             // Return 404 with new session ID in header
-            // Client will retry with this new session ID
+            // Client will retry with this new session ID and find it ready
             return createSessionNotFoundResponse(newSessionId);
           }
         } else {
@@ -333,7 +350,7 @@ export const startHttpServer = async (
           let waitCount = 0;
           while (
             session.isConnecting &&
-            waitCount < 10 // Max 100ms (10 * 10ms) - should be way more than enough
+            waitCount < 10 // Max 100ms (10 * 10ms)
           ) {
             await new Promise((resolve) => setTimeout(resolve, 10));
             waitCount++;
@@ -341,6 +358,14 @@ export const startHttpServer = async (
           if (session.isConnecting) {
             throw new Error(
               "Session initialization timeout - server still connecting",
+            );
+          }
+
+          // After waiting, verify status has actually updated to active
+          const statusAfterWait = sessionManager.getSession(currentSessionId);
+          if (!statusAfterWait || statusAfterWait.status !== "active") {
+            throw new Error(
+              `Session ${currentSessionId} still not active after waiting (status: ${statusAfterWait?.status})`,
             );
           }
         }
