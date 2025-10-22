@@ -333,9 +333,9 @@ export const startHttpServer = async (
           let waitCount = 0;
           while (
             session.isConnecting &&
-            waitCount < 50 // Max 5 seconds (50 * 100ms)
+            waitCount < 10 // Max 100ms (10 * 10ms) - should be way more than enough
           ) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
+            await new Promise((resolve) => setTimeout(resolve, 10));
             waitCount++;
           }
           if (session.isConnecting) {
