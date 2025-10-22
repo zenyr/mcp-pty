@@ -6,29 +6,62 @@ on:
     paths:
       - 'docs/**'
       - '**.md'
+      - '.github/workflows/docs.yml'
   pull_request:
     branches: [develop, main]
     paths:
       - 'docs/**'
       - '**.md'
+      - '.github/workflows/docs.yml'
 
 jobs:
-  validate:
-    name: Validate Docs
+  validate-markdown:
+    name: Validate Markdown
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate markdown
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install markdownlint
+        run: npm install -g markdownlint-cli
+
+      - name: Lint markdown files
         run: |
-          # Basic markdown validation - check for broken links, syntax errors
-          find docs -name "*.md" -type f | while read file; do
-            echo "Checking $file"
-            # Simple check: ensure file isn't empty
+          markdownlint 'docs/**/*.md' '*.md' \
+            --ignore 'node_modules' \
+            --config .markdownlint.json || true
+
+      - name: Check for broken markdown syntax
+        run: |
+          echo "Checking markdown syntax..."
+          find docs -name "*.md" -type f -o -name "*.md" -type f | while read file; do
             if [ ! -s "$file" ]; then
               echo "ERROR: $file is empty"
               exit 1
             fi
+            # Check for unclosed code blocks
+            open_ticks=$(grep -o '```' "$file" | wc -l)
+            if [ $((open_ticks % 2)) -ne 0 ]; then
+              echo "ERROR: Unclosed code block in $file"
+              exit 1
+            fi
           done
           echo "✓ All markdown files validated"
+
+      - name: Check links in markdown
+        run: |
+          echo "Checking internal links..."
+          # Find all markdown links and validate they reference existing files
+          grep -r '\[.*\](.*\.md)' docs/*.md 2>/dev/null | while read line; do
+            file=$(echo "$line" | cut -d: -f1)
+            link=$(echo "$line" | grep -o '\[.*\](.*\.md)' | head -1 | sed 's/.*(\(.*\)).*/\1/')
+            if [ ! -z "$link" ] && [ ! -f "docs/$link" ] && [ ! -f "$link" ]; then
+              echo "WARNING: Broken link in $file: $link"
+            fi
+          done
+          echo "✓ Link validation complete"
