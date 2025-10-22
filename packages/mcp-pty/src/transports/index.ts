@@ -311,23 +311,47 @@ export const startHttpServer = async (
       });
 
       // Initialize server if not yet connected (deferred initialization)
-      // Prevent race condition: only one thread should call server.connect()
+      // Prevent race condition: ensure server is connected before handleRequest()
       const sessionStatus = sessionManager.getSession(currentSessionId);
-      if (
-        sessionStatus &&
-        sessionStatus.status === "initializing" &&
-        !session.isConnecting
-      ) {
-        session.isConnecting = true;
-        try {
-          await session.server.connect(session.transport);
-          sessionManager.updateStatus(currentSessionId, "active");
-          logServer(
-            `Initialized session before handleRequest: ${currentSessionId}`,
-          );
-        } finally {
-          session.isConnecting = false;
+      if (sessionStatus && sessionStatus.status === "initializing") {
+        if (!session.isConnecting) {
+          session.isConnecting = true;
+          try {
+            await session.server.connect(session.transport);
+            sessionManager.updateStatus(currentSessionId, "active");
+            logServer(
+              `Initialized session before handleRequest: ${currentSessionId}`,
+            );
+          } catch (error) {
+            logError(`Failed to initialize session ${currentSessionId}`, error);
+            throw error;
+          } finally {
+            session.isConnecting = false;
+          }
+        } else {
+          // Another request is already connecting - wait for it to complete
+          let waitCount = 0;
+          while (
+            session.isConnecting &&
+            waitCount < 50 // Max 5 seconds (50 * 100ms)
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            waitCount++;
+          }
+          if (session.isConnecting) {
+            throw new Error(
+              "Session initialization timeout - server still connecting",
+            );
+          }
         }
+      }
+
+      // Verify session is active before handling request
+      const finalSessionStatus = sessionManager.getSession(currentSessionId);
+      if (!finalSessionStatus || finalSessionStatus.status !== "active") {
+        throw new Error(
+          `Session ${currentSessionId} not active (status: ${finalSessionStatus?.status})`,
+        );
       }
 
       // Pass raw request to transport handler - it will parse the body itself
