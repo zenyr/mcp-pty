@@ -11,6 +11,43 @@ import { bindSessionToServer } from "../tools";
 import { logError, logServer } from "../utils";
 
 /**
+ * MCP HTTP Transport Error Handling Strategy
+ *
+ * IMPORTANT: All MCP protocol errors MUST return HTTP 200 with JSON-RPC error objects.
+ * This prevents client retry loops that occur with HTTP 4xx/5xx status codes.
+ *
+ * Why HTTP 200 for errors?
+ * - MCP clients treat HTTP 4xx/5xx as transport errors and retry with same session ID
+ * - This causes infinite retry loops and client crashes
+ * - JSON-RPC errors within HTTP 200 allow proper protocol-level error handling
+ *
+ * Transport-level errors (actual HTTP issues) are handled by Hono/framework automatically.
+ *
+ * References:
+ * - MCP Spec: Session management errors are protocol-level, not transport-level
+ * - JSON-RPC 2.0: Defines standard error codes (-32700, -32600, -32001, etc.)
+ */
+
+/**
+ * Create MCP-compliant JSON-RPC error response
+ *
+ * All MCP protocol errors must use HTTP 200 to prevent client retry loops.
+ * This function ensures consistent error handling across all endpoints.
+ *
+ * @param code JSON-RPC error code
+ * @param message Error message
+ * @param data Optional error data
+ * @param id JSON-RPC request ID (null for notifications)
+ * @returns Response object with HTTP 200 and JSON-RPC error
+ */
+const createMcpError = (
+  code: number,
+  message: string,
+  data?: unknown,
+  id: unknown = null,
+) => ({ jsonrpc: "2.0" as const, error: { code, message, data }, id });
+
+/**
  * Start stdio server
  * @param server McpServer instance
  */
@@ -52,7 +89,11 @@ export const startHttpServer = async (
   app.delete("/mcp", async (c) => {
     const sessionHeader = c.req.header("mcp-session-id");
     if (!sessionHeader) {
-      return c.json({ error: "Missing mcp-session-id header" }, 400);
+      return c.json(
+        createMcpError(-32600, "Missing mcp-session-id header", {
+          requiresNewSession: true,
+        }),
+      );
     }
 
     const session = sessions.get(sessionHeader);
@@ -105,18 +146,12 @@ export const startHttpServer = async (
             logServer(
               `Cannot reconnect to terminated session: ${sessionHeader}`,
             );
-            return c.json({
-              jsonrpc: "2.0",
-              error: {
-                code: -32001,
-                message: "Session expired or invalid",
-                data: {
-                  requiresNewSession: true,
-                  expiredSessionId: sessionHeader,
-                },
-              },
-              id: null,
-            });
+            return c.json(
+              createMcpError(-32001, "Session expired or invalid", {
+                requiresNewSession: true,
+                expiredSessionId: sessionHeader,
+              }),
+            );
           }
         } else {
           // New session
@@ -182,8 +217,10 @@ export const startHttpServer = async (
           });
         }
         return c.json(
-          { error: "Session not found", sessionId: sessionHeader },
-          404,
+          createMcpError(-32001, "Session not found", {
+            requiresNewSession: true,
+            expiredSessionId: sessionHeader,
+          }),
         );
       }
 
@@ -196,7 +233,13 @@ export const startHttpServer = async (
             `[HTTP] Invalid JSON in request body (sessionId=${sessionId})`,
             parseError,
           );
-          return c.json({ error: "Invalid JSON in request body" }, 400);
+          return c.json(
+            createMcpError(
+              -32700,
+              "Parse error",
+              "Invalid JSON in request body",
+            ),
+          );
         }
       }
 
@@ -225,7 +268,9 @@ export const startHttpServer = async (
       return response;
     } catch (error) {
       logError(`[HTTP] Error (sessionId=${sessionId})`, error);
-      return c.json({ error: "MCP server error" }, 500);
+      return c.json(
+        createMcpError(-32603, "Internal error", "MCP server error"),
+      );
     }
   });
 
