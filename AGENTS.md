@@ -31,7 +31,8 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 - **CLI**: bun run/test/install/build. Workspaces: --bun --cwd=packages/<pkg>. Auto .env.
 - **1.3.0+**: Log streaming. React: `bun init --react` (HMR). HTML: `bun build ./src/index.html --outdir=dist`. Updates: --interactive, --latest.
 - **Testing**:
-  - Run with `bun test`:
+  - Run with `bun test --concurrent` (delegate to @general agent for token efficiency)
+  - Example test:
 
     ```ts
     // index.test.ts
@@ -59,6 +60,22 @@ You are expert in TypeScript & Bun. Deep understanding of KISS/SOLID software en
 - **Avoid Hallucinations**: Base responses on tool results, not text descriptions.
 - **Feedback Loop**: Call tools immediately on "execute" requests; no text responses.
 - **Response Format**: Tool call + 0-1 sentence result only.
+
+### General Agent (@general) - MANDATORY FOR TEST EXECUTION
+
+**REQUIREMENT**: All `bun test` execution MUST delegate to @general agent for token efficiency (full output capture, concurrent runs).
+
+**When to Delegate**:
+- Run `bun test` with `--concurrent` flag
+- Full test suite or specific package tests
+- Any long-running command output requiring streaming
+
+**How to Delegate**:
+```
+Use Task tool with subagent_type: "general" and provide:
+- Command: bun test --concurrent [path]
+- Exact expectations for pass/fail results
+```
 
 ### Git Agent (@git) - MANDATORY FOR COMMITS
 
