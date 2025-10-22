@@ -176,8 +176,19 @@ export const startHttpServer = async (
   app.all("/mcp", async (c) => {
     const sessionHeader = c.req.header("mcp-session-id");
     let sessionId: string = "N/A";
+    console.log(
+      `[DEBUG] Incoming request - sessionHeader: ${sessionHeader ?? "null"}, method: ${c.req.method}`,
+    );
     try {
       let session = sessionHeader ? sessions.get(sessionHeader) : undefined;
+      console.log(
+        `[DEBUG] session exists: ${!!session}, sessionHeader: ${sessionHeader ?? "null"}`,
+      );
+      if (sessionHeader && !session) {
+        console.log(
+          `[DEBUG] Session not found in memory map for ${sessionHeader}. Sessions in map: ${Array.from(sessions.keys()).join(", ")}`,
+        );
+      }
 
       if (!session) {
         if (sessionHeader) {
@@ -221,31 +232,19 @@ export const startHttpServer = async (
 
             initializeSessionBindings(newServer, newSessionId);
 
-            // Connect immediately so client can use new sessionId right away
-            try {
-              await newServer.connect(newTransport);
-              sessionManager.updateStatus(newSessionId, "active");
-              logServer(
-                `Initialized new session for reconnection: ${newSessionId}`,
-              );
-            } catch (error) {
-              logError(
-                `Failed to initialize new session ${newSessionId}`,
-                error,
-              );
-              sessionManager.updateStatus(newSessionId, "terminated");
-              throw error;
-            }
+            // DON'T connect here - let deferred initialization handle it on next request
+            // This avoids potential issues with transport state across HTTP connections
 
             const newSession = { server: newServer, transport: newTransport };
             sessions.set(newSessionId, newSession);
 
             logServer(
-              `Created and initialized new session for reconnection: ${newSessionId}`,
+              `Created new session for reconnection (pending init): ${newSessionId}`,
             );
 
             // Return 404 with new session ID in header
-            // Client will retry with this new session ID and find it ready
+            // Client will retry with this new session ID
+            // Deferred initialization will connect on next request
             return createSessionNotFoundResponse(newSessionId);
           }
         } else {
@@ -266,6 +265,7 @@ export const startHttpServer = async (
         if (!sessionHeader) {
           throw new Error("Session exists but sessionHeader is undefined");
         }
+        console.log(`[DEBUG] Session exists for ${sessionHeader}, reusing it`);
         sessionId = sessionHeader;
       }
 
@@ -373,6 +373,9 @@ export const startHttpServer = async (
 
       // Verify session is active before handling request
       const finalSessionStatus = sessionManager.getSession(currentSessionId);
+      console.log(
+        `[DEBUG] Before handleRequest: sessionId=${currentSessionId}, status=${finalSessionStatus?.status}, sessionExists=${!!session}`,
+      );
       if (!finalSessionStatus || finalSessionStatus.status !== "active") {
         throw new Error(
           `Session ${currentSessionId} not active (status: ${finalSessionStatus?.status})`,
@@ -380,6 +383,9 @@ export const startHttpServer = async (
       }
 
       // Pass raw request to transport handler - it will parse the body itself
+      console.log(
+        `[DEBUG] About to call handleRequest - session.server type: ${typeof session.server}, session.transport type: ${typeof session.transport}`,
+      );
       await session.transport.handleRequest(req, res);
       const response = await toFetchResponse(res);
       // Ensure session ID header is set for client to reuse

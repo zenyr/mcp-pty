@@ -40,6 +40,7 @@
     "packages/*"
   ],
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.20.1",
     "@xterm/headless": "^5.5.0",
     "@xterm/xterm": "^5.5.0",
     "@zenyr/bun-pty": "0.4.3",
