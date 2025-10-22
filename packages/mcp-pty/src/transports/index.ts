@@ -120,11 +120,12 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
  * Start HTTP server with graceful error handling
  * @param serverFactory Factory function to create MCP servers
  * @param port HTTP server port
+ * @returns Server instance for lifecycle management
  */
 export const startHttpServer = async (
   serverFactory: () => McpServer,
   port: number,
-): Promise<void> => {
+): Promise<ReturnType<typeof Bun.serve>> => {
   const app = new Hono();
 
   /**
@@ -386,7 +387,20 @@ export const startHttpServer = async (
       console.log(
         `[DEBUG] About to call handleRequest - session.server type: ${typeof session.server}, session.transport type: ${typeof session.transport}`,
       );
-      await session.transport.handleRequest(req, res);
+      try {
+        await session.transport.handleRequest(req, res);
+      } catch (handleError: unknown) {
+        const error =
+          handleError instanceof Error
+            ? handleError
+            : new Error(String(handleError));
+        logError(
+          `[HTTP] handleRequest failed (sessionId=${currentSessionId}): ${error.message}`,
+          error,
+        );
+        console.error("[DEBUG] handleRequest error stack:", error.stack);
+        throw error;
+      }
       const response = await toFetchResponse(res);
       // Ensure session ID header is set for client to reuse
       response.headers.set("mcp-session-id", currentSessionId);
@@ -394,13 +408,19 @@ export const startHttpServer = async (
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       logError(`[HTTP] Error (sessionId=${sessionId})`, error);
+      console.error("[DEBUG] Full error response:", {
+        sessionId,
+        errorMsg: error.message,
+        errorStack: error.stack,
+      });
       return c.json(createJsonRpcError(-32603, "Internal error"), 500);
     }
   });
 
   try {
-    Bun.serve({ port, fetch: app.fetch });
+    const server = Bun.serve({ port, fetch: app.fetch });
     logServer(`MCP PTY server started via HTTP on port ${port}`);
+    return server;
   } catch (error: unknown) {
     const errorMsg =
       error instanceof Error
