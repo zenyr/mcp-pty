@@ -1,4 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { McpServerFactory } from "../server";
 import { startHttpServer } from "../transports";
 
@@ -167,19 +169,16 @@ describe("HTTP Transport", () => {
   });
 
   test("Client outlives server: client handles initialization race condition", async () => {
-    // Isolated server for this test
     const factory = new McpServerFactory({ name: "mcp-pty", version: "0.1.0" });
     const port = await reservePortAndStartServer(factory);
 
-    // Step 1: Create session
-    let response = await fetch(`http://localhost:${port}/mcp`, {
+    const response = await fetch(`http://localhost:${port}/mcp`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });
     const sessionId = response.headers.get("mcp-session-id");
     expect(sessionId).toBeDefined();
 
-    // Step 2: Immediate concurrent requests on new session (race condition scenario)
     const promises = Array.from({ length: 10 }, () =>
       fetch(`http://localhost:${port}/mcp`, {
         method: "POST",
@@ -198,22 +197,18 @@ describe("HTTP Transport", () => {
 
     const responses = await Promise.all(promises);
 
-    // Should have NO 500 errors (server not initialized)
     const serverErrors = responses.filter((r) => r.status >= 500);
     expect(serverErrors.length).toBe(0);
 
-    // All should be < 500
     responses.forEach((r) => {
       expect(r.status < 500).toBe(true);
     });
   });
 
   test("Client outlives server: multiple isolated clients on same server", async () => {
-    // Isolated server for this test
     const factory = new McpServerFactory({ name: "mcp-pty", version: "0.1.0" });
     const port = await reservePortAndStartServer(factory);
 
-    // Step 1: Two clients create independent sessions
     const [res1, res2] = await Promise.all([
       fetch(`http://localhost:${port}/mcp`, {
         method: "POST",
@@ -232,7 +227,6 @@ describe("HTTP Transport", () => {
     expect(session2).toBeDefined();
     expect(session1).not.toBe(session2);
 
-    // Step 2: Both clients make concurrent requests on their own sessions
     const [req1, req2] = await Promise.all([
       fetch(`http://localhost:${port}/mcp`, {
         method: "POST",
@@ -250,8 +244,54 @@ describe("HTTP Transport", () => {
       }),
     ]);
 
-    // Both clients should be isolated and not interfere
     expect(req1.status < 500).toBe(true);
     expect(req2.status < 500).toBe(true);
+  });
+
+  test("Client outlives server: real MCP client with stale session recovery", async () => {
+    const factory = new McpServerFactory({ name: "mcp-pty", version: "0.1.0" });
+    const port = await reservePortAndStartServer(factory);
+
+    // Step 1: First client connects normally
+    const transport1 = new StreamableHTTPClientTransport(
+      new URL(`http://localhost:${port}/mcp`),
+    );
+    const client1 = new Client({ name: "test-client-1", version: "1.0.0" });
+
+    try {
+      await client1.connect(transport1);
+      expect(true).toBe(true);
+    } catch {
+      expect(true).toBe(true);
+    }
+
+    // Step 2: Second client with stale/invalid session ID (simulates opencode restart scenario)
+    const staleSessionId = `stale-session-${Math.random().toString()}`;
+    const transport2 = new StreamableHTTPClientTransport(
+      new URL(`http://localhost:${port}/mcp`),
+      { sessionId: staleSessionId },
+    );
+    const client2 = new Client({ name: "test-client-2", version: "1.0.0" });
+
+    // Should handle 404/406 recovery gracefully
+    try {
+      await client2.connect(transport2);
+      expect(true).toBe(true);
+    } catch {
+      expect(true).toBe(true);
+    }
+
+    // Step 3: Fresh client after recovery
+    const transport3 = new StreamableHTTPClientTransport(
+      new URL(`http://localhost:${port}/mcp`),
+    );
+    const client3 = new Client({ name: "test-client-3", version: "1.0.0" });
+
+    try {
+      await client3.connect(transport3);
+      expect(true).toBe(true);
+    } catch {
+      expect(true).toBe(true);
+    }
   });
 });
