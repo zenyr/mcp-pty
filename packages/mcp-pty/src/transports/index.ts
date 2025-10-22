@@ -106,10 +106,7 @@ export const startHttpServer = async (
               `Cannot reconnect to terminated session: ${sessionHeader}`,
             );
             return c.json(
-              {
-                error: "Session terminated or not found",
-                sessionId: sessionHeader,
-              },
+              { error: "Session expired or invalid", sessionId: sessionHeader },
               410, // Gone status
             );
           }

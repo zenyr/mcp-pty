@@ -19,8 +19,21 @@ const reservePortAndStartServer = (
 
     startHttpServer(() => factory.createServer(), port);
 
-    // Wait for server to start
-    setTimeout(() => resolve(port), 150);
+    // Poll for server readiness instead of fixed delay
+    const pollServer = async () => {
+      for (let i = 0; i < 10; i++) {
+        try {
+          await fetch(`http://localhost:${port}/mcp`);
+          resolve(port);
+          return;
+        } catch {
+          await Bun.sleep(50);
+        }
+      }
+      resolve(port); // Fallback if polling fails
+    };
+
+    void pollServer();
   });
 };
 
