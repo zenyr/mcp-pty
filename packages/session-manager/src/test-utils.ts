@@ -27,7 +27,7 @@ export const withTestSessionManager = async <T>(
   // Track sessions created DURING this test via Proxy
   const createdSessions = new Set<string>();
 
-  // Wrap sessionManager to intercept createSession
+  // Wrap sessionManager to intercept createSession, disposeSession, getAllSessions, getSessionCount
   const wrappedManager = new Proxy(sessionManager, {
     get(target, prop) {
       if (prop === "createSession") {
@@ -36,6 +36,24 @@ export const withTestSessionManager = async <T>(
           createdSessions.add(sessionId);
           return sessionId;
         };
+      }
+      // Intercept disposeSession to remove from tracking
+      if (prop === "disposeSession") {
+        return async (sessionId: string) => {
+          createdSessions.delete(sessionId);
+          return target.disposeSession(sessionId);
+        };
+      }
+      // Intercept getAllSessions to only return sessions created by this test
+      if (prop === "getAllSessions") {
+        return () => {
+          const allSessions = target.getAllSessions();
+          return allSessions.filter((s) => createdSessions.has(s.id));
+        };
+      }
+      // Intercept getSessionCount to only count sessions created by this test
+      if (prop === "getSessionCount") {
+        return () => createdSessions.size;
       }
       return target[prop as keyof SessionManager];
     },
