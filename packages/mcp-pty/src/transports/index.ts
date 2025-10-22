@@ -152,11 +152,29 @@ export const startHttpServer = async (
             sessions.set(sessionId, session);
             logServer(`Reconnected to session: ${sessionId}`);
           } else {
-            // Session is terminated or doesn't exist, return HTTP 404 with JSON-RPC error
+            // Session is terminated or doesn't exist
+            // Create new session ID but DON'T initialize server yet
+            // (server will initialize on first request from client with new ID)
             logServer(
-              `Cannot reconnect to terminated session: ${sessionHeader}`,
+              `Cannot reconnect to terminated session: ${sessionHeader}, creating new session`,
             );
-            return c.json(createJsonRpcError(-32001, "Session not found"), 404);
+
+            const newSessionId = sessionManager.createSession();
+            logServer(`Created new session for reconnection: ${newSessionId}`);
+
+            // Return 404 with new session ID in header
+            // Client will retry with this new session ID
+            const res = new Response(
+              JSON.stringify(createJsonRpcError(-32001, "Session not found")),
+              {
+                status: 404,
+                headers: {
+                  "Content-Type": "application/json",
+                  "mcp-session-id": newSessionId,
+                },
+              },
+            );
+            return res;
           }
         } else {
           // New session
@@ -221,8 +239,25 @@ export const startHttpServer = async (
             status: existingSession.status,
           });
         }
-        // Session not found, return HTTP 404 with JSON-RPC error
-        return c.json(createJsonRpcError(-32001, "Session not found"), 404);
+        // Session not found, create new session ID for client to use
+        // Don't initialize yet - let client initialize with new ID
+        const newSessionId = sessionManager.createSession();
+        logServer(
+          `Session ${sessionHeader} not found, created new session: ${newSessionId}`,
+        );
+
+        // Return 404 with new session ID in header so client can retry
+        const res = new Response(
+          JSON.stringify(createJsonRpcError(-32001, "Session not found")),
+          {
+            status: 404,
+            headers: {
+              "Content-Type": "application/json",
+              "mcp-session-id": newSessionId,
+            },
+          },
+        );
+        return res;
       }
 
       // Parse body if present, otherwise undefined

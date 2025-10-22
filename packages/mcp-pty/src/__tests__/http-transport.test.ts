@@ -73,7 +73,7 @@ describe("HTTP Transport", () => {
     expect(sessionId).toBeDefined();
   });
 
-  test("POST /mcp with invalid session returns HTTP 404", async () => {
+  test("POST /mcp with invalid session returns HTTP 404 with new session ID", async () => {
     const factory = new McpServerFactory({ name: "mcp-pty", version: "0.1.0" });
 
     const port = await reservePortAndStartServer(factory);
@@ -103,6 +103,11 @@ describe("HTTP Transport", () => {
     const error = data.error as Record<string, unknown>;
     expect(error.code).toBe(-32001);
     expect(error.message).toBe("Session not found");
+
+    // Verify new session ID is provided in response header
+    const newSessionId = response.headers.get("mcp-session-id");
+    expect(newSessionId).toBeDefined();
+    expect(newSessionId).not.toBe(invalidSessionId);
   });
 
   test("POST /mcp with valid session can reconnect", async () => {
@@ -132,7 +137,7 @@ describe("HTTP Transport", () => {
     expect(reconnectSessionId).toBe(sessionId);
   });
 
-  test("GET /mcp with invalid session returns HTTP 404", async () => {
+  test("GET /mcp with invalid session returns HTTP 404 with new session ID", async () => {
     const factory = new McpServerFactory({ name: "mcp-pty", version: "0.1.0" });
 
     const port = await reservePortAndStartServer(factory);
@@ -152,6 +157,11 @@ describe("HTTP Transport", () => {
     const error = data.error as Record<string, unknown>;
     expect(error.code).toBe(-32001);
     expect(error.message).toBe("Session not found");
+
+    // Verify new session ID is provided in response header
+    const newSessionId = response.headers.get("mcp-session-id");
+    expect(newSessionId).toBeDefined();
+    expect(newSessionId).not.toBe(invalidSessionId);
   });
 
   test("DELETE /mcp without session header returns 400", async () => {
