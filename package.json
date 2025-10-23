@@ -31,6 +31,7 @@
     "dev": "bun --filter=\"@pkgs/*\" run dev",
     "dev:website": "bun --cwd=packages/website run dev",
     "start": "bun --filter=\"mcp-pty\" run start",
+    "restart": "bun restart.ts",
     "publish": "bun --filter=\"mcp-pty\" run prepublishOnly && cd packages/mcp-pty && npm publish",
     "prepare": "husky",
     "dedupe": "bun pm cache rm && bun install"
