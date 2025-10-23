@@ -92,20 +92,23 @@ bun run packages/mcp-server/src/index.ts --transport http
 ### MCP Resources
 
 - `pty://status`: Server status showing active sessions and PTY processes
-- `pty://list`: List all PTY processes in current session with status and exit codes
-- `pty://{id}/output`: Complete output history of specific PTY process
-- `pty://{id}/status`: Detailed status information including creation time, shell environment inheritance, and current state
+- `pty://processes`: List all PTY processes in current session with status and exit codes
+- `pty://processes/{processId}`: Complete output history of specific PTY process
+- `pty://control-codes`: Reference for all available control codes (named codes for write_input tool)
 
 ### MCP Tools
 
-- `start_pty`: Create new PTY instance with command execution and working directory
+- `start`: Create new PTY instance with command execution and working directory
   - Parameters: `command` (string, required), `pwd` (string, absolute path required)
   - Returns: PTY ID and immediate output
-- `kill_pty`: Terminate specific PTY instance
+- `kill`: Terminate specific PTY instance
   - Parameters: `processId` (string, required)
-- `list_pty`: List PTY processes with exit codes (fallback when Resources disabled)
-- `read_pty`: Read PTY output history (fallback when Resources disabled)
-- `activate_pty_tools`: Enable dynamic tool provisioning for legacy MCP clients
+- `list`: List PTY processes with exit codes
+- `read`: Read PTY output/screen buffer
+- `write_input`: Send input to PTY stdin, return screen state
+  - Modes: Safe (input + ctrlCode) or Raw (data)
+  - Parameters: `processId`, `input` (optional), `ctrlCode` (optional), `data` (optional), `asCRLF` (optional, for Windows SSH)
+  - Returns: screen, cursor position, exitCode
 
 ### Error Codes
 

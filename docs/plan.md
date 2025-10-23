@@ -42,8 +42,8 @@
 #### Phase 4: MCP Server (@pkgs/mcp-server)
 - ✅ Core server (MCP SDK, dual transports, detection)
 - ✅ Session integration (client mapping, cleanup)
-- ✅ Resources: status, sessions/list, session/{id}/output, session/{id}/status
-- ✅ Tools: start_pty (shellMode), kill_pty, list_pty, read_pty, activate_pty_tools
+- ✅ Resources: status, processes, processes/{processId}, control-codes
+- ✅ Tools: start, kill, list, read, write_input (w/ asCRLF for Windows SSH)
 - ✅ SessionManager + PtyManager integration
 - ✅ Error handling, logging, MCP responses
 - ✅ Tests (unit, integration, type checks)
@@ -57,7 +57,7 @@
 
 #### 5.1 User Documentation
 - ✅ README.md: overview, install, config (stdio/HTTP), env vars, XDG
-- ✅ API docs: resources/tools schema, error codes
+- ✅ API docs: resources/tools schema, error codes, control-codes reference
 
 #### 5.2 Developer Documentation
 - [ ] Architecture deep-dive
@@ -211,6 +211,9 @@ Phase 1 (Infrastructure) ✅
 - ✅ normalize-commands integration (pty-manager)
 - ✅ Test enhancement (env vars, arg parsing)
 - ✅ Accurate pwd (mandatory in start tool)
+- ✅ Control codes resource (pty://control-codes w/ descriptions & examples)
+- ✅ asCRLF support (Windows SSH CRLF conversion)
+- ✅ Enhanced tool/schema descriptions (LLM-friendly guidance)
 
 ### In Progress
 - 5.1 User docs (README update w/ latest features)
