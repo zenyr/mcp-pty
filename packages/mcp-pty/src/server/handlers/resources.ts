@@ -1,7 +1,7 @@
 import type {
+  FixedResourceHandler,
   HandlerContext,
   ResourceResult,
-  FixedResourceHandler,
   TemplateResourceHandler,
 } from "../types";
 

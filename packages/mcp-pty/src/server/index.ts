@@ -6,13 +6,13 @@ import {
 import { registerPtyResources } from "../resources";
 import { registerPtyTools } from "../tools";
 import type { McpServerConfig } from "../types";
-import type { HandlerContext } from "./types";
-import { registerTools, registerResources } from "./registrar";
 import {
   SESSION_ID_SYMBOL,
   SESSION_MANAGER_SYMBOL,
   type ServerWithContext,
 } from "../utils/server-context";
+import { registerResources, registerTools } from "./registrar";
+import type { HandlerContext } from "./types";
 
 /**
  * MCP server factory class

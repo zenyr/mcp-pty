@@ -1,20 +1,20 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
-import type { HandlerContext } from "./types";
-import { toolHandlers } from "./handlers/tools";
 import { resourceHandlers } from "./handlers/resources";
+import { toolHandlers } from "./handlers/tools";
 import {
-  StartPtyInputSchema,
   KillPtyInputSchema,
-  ListPtyInputSchema,
-  ReadPtyInputSchema,
-  WriteInputSchema,
-  StartPtyOutputSchema,
   KillPtyOutputSchema,
+  ListPtyInputSchema,
   ListPtyOutputSchema,
+  ReadPtyInputSchema,
   ReadPtyOutputSchema,
+  StartPtyInputSchema,
+  StartPtyOutputSchema,
   WriteInputOutputSchema,
+  WriteInputSchema,
 } from "./schemas";
+import type { HandlerContext } from "./types";
 
 /**
  * Register all PTY tools to MCP server
