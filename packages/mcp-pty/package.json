@@ -1,6 +1,6 @@
 {
   "name": "mcp-pty",
-  "version": "0.5.3",
+  "version": "0.1.4",
   "description": "MCP server for PTY session management with Bun runtime",
   "type": "module",
   "main": "dist/index.js",
@@ -47,7 +47,7 @@
     "@pkgs/pty-manager": "workspace:*",
     "@pkgs/session-manager": "workspace:*",
     "@xterm/headless": "^5.5.0",
-    "@zenyr/bun-pty": "^0.4.4",
+    "@zenyr/bun-pty": "^0.4.3",
     "consola": "^3.4.2",
     "fetch-to-node": "^2.1.0",
     "hono": "^4.9.10",
