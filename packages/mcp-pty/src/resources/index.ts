@@ -7,6 +7,11 @@ import {
   type SessionManager,
 } from "@pkgs/session-manager";
 import {
+  CONTROL_CODES,
+  CONTROL_CODE_DESCRIPTIONS,
+  CONTROL_CODE_EXAMPLES,
+} from "../types/control-codes.js";
+import {
   SESSION_ID_SYMBOL,
   SESSION_MANAGER_SYMBOL,
   type ServerWithContext,
@@ -56,6 +61,48 @@ const getSessionManager = (server: McpServer): SessionManager => {
  */
 export const createResourceHandlers = (server: McpServer) => {
   return {
+    controlCodes: async () => {
+      const codes = Object.entries(CONTROL_CODES).map(([name, value]) => {
+        const charCode = value.charCodeAt(0);
+        const hex =
+          value.length === 1
+            ? `0x${charCode.toString(16).padStart(2, "0").toUpperCase()}`
+            : `0x${Array.from(value)
+                .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+                .join("")
+                .toUpperCase()}`;
+
+        return {
+          name,
+          byte: value,
+          hex,
+          description:
+            CONTROL_CODE_DESCRIPTIONS[name as keyof typeof CONTROL_CODES],
+          example:
+            CONTROL_CODE_EXAMPLES[name as keyof typeof CONTROL_CODE_EXAMPLES],
+        };
+      });
+
+      return {
+        contents: [
+          {
+            uri: "pty://control-codes",
+            text: JSON.stringify(
+              {
+                title: "Available Control Codes for write_input",
+                overview:
+                  "Use these named codes in ctrlCode parameter. All codes are case-sensitive.",
+                usage:
+                  "Example: {processId, input: 'ls', ctrlCode: 'Enter'} or just {processId, ctrlCode: 'Ctrl+C'}",
+                codes,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    },
     status: async () => {
       const sessionManager = getSessionManager(server);
       return {
@@ -122,6 +169,16 @@ export const createResourceHandlers = (server: McpServer) => {
  */
 export const registerPtyResources = (server: McpServer): void => {
   const handlers = createResourceHandlers(server);
+
+  server.registerResource(
+    "control-codes",
+    "pty://control-codes",
+    {
+      title: "Control Codes Reference",
+      description: "Available control codes for write_input tool (named codes)",
+    },
+    handlers.controlCodes,
+  );
 
   server.registerResource(
     "status",

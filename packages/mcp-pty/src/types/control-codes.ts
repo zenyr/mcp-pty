@@ -93,3 +93,61 @@ export const resolveControlCode = (code: string): string => {
 export const getAvailableControlCodes = (): ControlCodeName[] => {
   return Object.keys(CONTROL_CODES) as ControlCodeName[];
 };
+
+/**
+ * Descriptions for control codes (for LLM guidance)
+ */
+export const CONTROL_CODE_DESCRIPTIONS: Record<ControlCodeName, string> = {
+  Enter: "Execute command / send newline. Most common in REPL & shell",
+  "Ctrl+C": "Interrupt running process (SIGINT). Stop long-running commands",
+  "Ctrl+D": "End of file / logout. Exit shells, REPL, or input mode",
+  Tab: "Auto-completion in shell. Suggest filenames or commands",
+  Escape: "Exit insert mode in vim/nano. Switch to normal/command mode",
+  "Ctrl+[": "Alternative to Escape. Same as Escape key",
+  "Ctrl+A": "Move cursor to beginning of line in shell",
+  "Ctrl+E": "Move cursor to end of line in shell",
+  "Ctrl+U": "Delete all text before cursor (clear line start)",
+  "Ctrl+K": "Delete all text after cursor (clear line end)",
+  "Ctrl+W": "Delete previous word in shell",
+  "Ctrl+L": "Clear entire screen / redraw terminal",
+  ArrowUp: "Previous command in shell history. Also move up in vim",
+  ArrowDown: "Next command in shell history. Also move down in vim",
+  ArrowRight: "Move cursor right in shell or vim",
+  ArrowLeft: "Move cursor left in shell or vim",
+  Backspace: "Delete character before cursor",
+  "Ctrl+Z": "Suspend process (SIGTSTP). Put fg job in background",
+  "Ctrl+R": "Reverse search in bash history",
+  Return: "Carriage return (CR). Used in raw mode for line endings",
+  EOF: "Alias for Ctrl+D (end of file)",
+  EOT: "Alias for Ctrl+D (end of transmission)",
+  Interrupt: "Alias for Ctrl+C (interrupt process)",
+} as const;
+
+/**
+ * Example use cases for control codes
+ */
+export const CONTROL_CODE_EXAMPLES: Record<ControlCodeName, string> = {
+  Enter: "Execute command: {input: 'ls', ctrlCode: 'Enter'}",
+  "Ctrl+C": "Stop hanging process: {ctrlCode: 'Ctrl+C'}",
+  "Ctrl+D": "Exit Python REPL: {ctrlCode: 'Ctrl+D'}",
+  Tab: "Complete filename: {input: 'cd /h', ctrlCode: 'Tab'}",
+  Escape: "Exit vim insert: {ctrlCode: 'Escape'} then {data: ':wq\\n'}",
+  "Ctrl+[": "Same as Escape in vim",
+  "Ctrl+A": "Go to line start: {ctrlCode: 'Ctrl+A'}",
+  "Ctrl+E": "Go to line end: {ctrlCode: 'Ctrl+E'}",
+  "Ctrl+U": "Clear command: {ctrlCode: 'Ctrl+U'} after typing wrong cmd",
+  "Ctrl+K": "Delete to end: {ctrlCode: 'Ctrl+K'}",
+  "Ctrl+W": "Delete word: {ctrlCode: 'Ctrl+W'}",
+  "Ctrl+L": "Refresh screen: {ctrlCode: 'Ctrl+L'}",
+  ArrowUp: "Previous cmd: {ctrlCode: 'ArrowUp'} then {ctrlCode: 'Enter'}",
+  ArrowDown: "Next cmd: {ctrlCode: 'ArrowDown'}",
+  ArrowRight: "Move cursor: {ctrlCode: 'ArrowRight'}",
+  ArrowLeft: "Move cursor: {ctrlCode: 'ArrowLeft'}",
+  Backspace: "Erase char: {ctrlCode: 'Backspace'}",
+  "Ctrl+Z": "Suspend job: {ctrlCode: 'Ctrl+Z'}, resume with 'fg'",
+  "Ctrl+R": "Search history: {ctrlCode: 'Ctrl+R'} in bash",
+  Return: "Raw CR in data mode: {data: 'text\\r\\n'}",
+  EOF: "Same as Ctrl+D",
+  EOT: "Same as Ctrl+D",
+  Interrupt: "Same as Ctrl+C",
+} as const;
