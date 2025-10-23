@@ -196,17 +196,18 @@ export const startHttpServer = async (
               sessionManager.updateStatus(sessionId, "active");
               logServer(`Initialized deferred session: ${sessionId}`);
             } else {
-              // Reconnect to existing active session - create new transport
-              const server = serverFactory();
-              const transport = createHttpTransport(sessionId);
+              // Reconnect to existing active session
+              // Don't immediately connect - let deferred initialization happen
+              sessionId = sessionHeader;
+              const newServer = serverFactory();
+              const newTransport = createHttpTransport(sessionId);
 
-              initializeSessionBindings(server, sessionId);
-              await server.connect(transport);
-              sessionManager.updateStatus(sessionId, "active");
+              initializeSessionBindings(newServer, sessionId);
+              // DON'T call server.connect() yet - let it happen via handleRequest()
 
-              session = { server, transport };
+              session = { server: newServer, transport: newTransport };
               sessions.set(sessionId, session);
-              logServer(`Reconnected to session: ${sessionId}`);
+              logServer(`Prepared reconnection for session: ${sessionId}`);
             }
           } else {
             // Session is terminated or doesn't exist
