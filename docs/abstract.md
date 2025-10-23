@@ -51,9 +51,9 @@ bun-pty + @xterm/headless 활용
 #### MCP Resources 기반
 
 - `pty://status`: 본 MCP 서버 상태 제공 (n 개 세션에서 m 개의 process)
-- `pty://sessions/list`: 현재 세션의 하위 PTY 프로세스 목록 조회
-- `pty://session/{id}/output`: 현재 세션의 특정 PTY 프로세스 출력 히스토리
-- `pty://session/{id}/status`: 현재 세션의 특정 PTY 프로세스 상태 정보
+- `pty://processes`: 현재 세션의 하위 PTY 프로세스 목록 조회 (상태, 종료코드 포함)
+- `pty://processes/{processId}`: 현재 세션의 특정 PTY 프로세스 출력 히스토리
+- `pty://control-codes`: 제어 코드 참조 (write_input 도구의 ctrlCode 파라미터용)
 
 #### MCP Tools 백업
 
