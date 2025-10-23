@@ -158,22 +158,7 @@ export const writeInputToolHandler = (async (
   const pty = ptyManager.getPty(processId);
   if (!pty) throw new Error("PTY not found");
 
-  // Validate input parameters
-  const validationResult = WriteInputSchema.safeParse({
-    processId,
-    input,
-    ctrlCode,
-    data,
-    waitMs,
-  });
-  if (!validationResult.success) {
-    throw new Error(
-      `Invalid input: ${validationResult.error.issues
-        .map((i) => i.message)
-        .join(", ")}`,
-    );
-  }
-
+  // Business rule validation (SDK already validated Zod schema)
   // At least one input mode required
   if (input === undefined && ctrlCode === undefined && data === undefined) {
     throw new Error(

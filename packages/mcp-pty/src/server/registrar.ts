@@ -35,6 +35,8 @@ export const registerTools = (
       outputSchema: StartPtyOutputSchema.shape,
     },
     async (args, extra) => {
+      // Fallback to bound sessionId for HTTP session recovery scenarios
+      // where extra.sessionId might be undefined during reconnection
       return toolHandlers.start(args, {
         ...context,
         sessionId: extra.sessionId || context.sessionId,
@@ -52,6 +54,7 @@ export const registerTools = (
       outputSchema: KillPtyOutputSchema.shape,
     },
     async (args, extra) => {
+      // Fallback to bound sessionId for HTTP session recovery
       return toolHandlers.kill(args, {
         ...context,
         sessionId: extra.sessionId || context.sessionId,
@@ -69,6 +72,7 @@ export const registerTools = (
       outputSchema: ListPtyOutputSchema.shape,
     },
     async (args, extra) => {
+      // Fallback to bound sessionId for HTTP session recovery
       return toolHandlers.list(args, {
         ...context,
         sessionId: extra.sessionId || context.sessionId,
@@ -86,6 +90,7 @@ export const registerTools = (
       outputSchema: ReadPtyOutputSchema.shape,
     },
     async (args, extra) => {
+      // Fallback to bound sessionId for HTTP session recovery
       return toolHandlers.read(args, {
         ...context,
         sessionId: extra.sessionId || context.sessionId,
@@ -104,6 +109,7 @@ export const registerTools = (
       outputSchema: WriteInputOutputSchema.shape,
     },
     async (args, extra) => {
+      // Fallback to bound sessionId for HTTP session recovery
       return toolHandlers.write_input(args, {
         ...context,
         sessionId: extra.sessionId || context.sessionId,
