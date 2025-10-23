@@ -54,6 +54,14 @@ export const WriteInputSchema = z.object({
       "Control code to send after input. Supports named codes (e.g., 'Enter', 'Escape', 'Ctrl+C') or raw sequences (e.g., '\\n', '\\x1b', '\\x03'). Named codes: Enter, Escape, Tab, Ctrl+A-Z, ArrowUp/Down/Left/Right, etc. This is sent AFTER input field.",
     ),
 
+  // CRLF option for Windows SSH
+  asCRLF: z
+    .boolean()
+    .optional()
+    .describe(
+      "Convert all LF (\\n) line endings to CRLF (\\r\\n). Use this for Windows SSH servers. Applied to both input and ctrlCode. Example: {input: 'whoami', ctrlCode: 'Enter', asCRLF: true}",
+    ),
+
   // Raw data field (for advanced use cases)
   data: z
     .string()

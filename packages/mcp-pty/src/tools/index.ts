@@ -172,12 +172,14 @@ export const createToolHandlers = (server: McpServer) => {
       processId,
       input,
       ctrlCode,
+      asCRLF,
       data,
       waitMs = 1000,
     }: {
       processId: string;
       input?: string;
       ctrlCode?: string;
+      asCRLF?: boolean;
       data?: string;
       waitMs?: number;
     }): Promise<ToolResult> => {
@@ -193,6 +195,7 @@ export const createToolHandlers = (server: McpServer) => {
         processId,
         input,
         ctrlCode,
+        asCRLF,
         data,
         waitMs,
       });
@@ -229,8 +232,13 @@ export const createToolHandlers = (server: McpServer) => {
       } else {
         // New mode: combine input + ctrlCode
         const { resolveControlCode } = await import("../types/control-codes");
-        finalData =
-          (input ?? "") + (ctrlCode ? resolveControlCode(ctrlCode) : "");
+        const resolvedCtrlCode = ctrlCode ? resolveControlCode(ctrlCode) : "";
+        finalData = (input ?? "") + resolvedCtrlCode;
+      }
+
+      // Handle asCRLF option: convert all LF to CRLF
+      if (asCRLF) {
+        finalData = finalData.replace(/\n/g, "\r\n");
       }
 
       const result = await pty.write(finalData, waitMs);
@@ -300,7 +308,7 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Write Input to PTY",
       description:
-        "Send input to PTY stdin, return screen state. Two modes: Safe (input + ctrlCode) or Raw (data). Ex: {input: 'ls', ctrlCode: 'Enter'} or {data: 'ls\\n'}. Windows SSH: use CRLF (\\r\\n) not LF.",
+        "Send input to PTY stdin, return screen state. Two modes: Safe (input + ctrlCode) or Raw (data). Ex: {input: 'ls', ctrlCode: 'Enter'} or {data: 'ls\\n'}. Windows SSH: use asCRLF: true to convert all LF to CRLF.",
       inputSchema: WriteInputSchema.shape,
       outputSchema: WriteInputOutputSchema.shape,
     },

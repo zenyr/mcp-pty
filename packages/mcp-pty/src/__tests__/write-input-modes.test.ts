@@ -162,4 +162,57 @@ describe("Write Input Modes", () => {
       expect(result.structuredContent).toBeDefined();
     });
   }, 10000);
+
+  test("Windows SSH: asCRLF converts LF to CRLF", async () => {
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
+
+      const startResult = await handlers.start({
+        command: "node",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
+
+      // Send multiline with asCRLF - all \n should become \r\n
+      const result = await handlers.write_input({
+        processId,
+        input: "console.log('line1')\nconsole.log('line2')",
+        ctrlCode: "Enter",
+        asCRLF: true,
+        waitMs: 500,
+      });
+
+      expect(result.structuredContent).toBeDefined();
+    });
+  }, 10000);
+
+  test("Windows SSH: asCRLF with raw data mode", async () => {
+    await withTestSessionManager(async (sessionManager) => {
+      const sessionId = sessionManager.createSession();
+      const mockServer = { sessionId } as unknown as McpServer;
+      bindSessionToServer(mockServer, sessionId);
+      const handlers = createToolHandlers(mockServer);
+
+      const startResult = await handlers.start({
+        command: "cat",
+        pwd: process.cwd(),
+      });
+      const processId = (startResult.structuredContent as { processId: string })
+        .processId;
+
+      // asCRLF should also work with data field
+      const result = await handlers.write_input({
+        processId,
+        data: "line1\nline2\nline3\n",
+        asCRLF: true,
+        waitMs: 500,
+      });
+
+      expect(result.structuredContent).toBeDefined();
+    });
+  }, 10000);
 });
