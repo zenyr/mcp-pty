@@ -120,11 +120,12 @@ export const startStdioServer = async (server: McpServer): Promise<void> => {
  * Start HTTP server
  * @param serverFactory Factory function to create MCP servers
  * @param port HTTP server port
+ * @returns Server instance for lifecycle management
  */
 export const startHttpServer = async (
   serverFactory: () => McpServer,
   port: number,
-): Promise<void> => {
+): Promise<ReturnType<typeof Bun.serve>> => {
   const app = new Hono();
 
   /**
@@ -210,7 +211,7 @@ export const startHttpServer = async (
             }
           } else {
             // Session is terminated or doesn't exist
-            // Create new session and register it, but defer server.connect() until first client request
+            // Create new session for reconnection
             logServer(
               `Cannot reconnect to terminated session: ${sessionHeader}, creating new session`,
             );
@@ -220,19 +221,57 @@ export const startHttpServer = async (
             const newTransport = createHttpTransport(newSessionId);
 
             initializeSessionBindings(newServer, newSessionId);
-            // DON'T call server.connect() yet - let it happen when client sends first request with new ID
+
+            /**
+             * MCP SDK Client Compatibility: Immediate Initialization on 404 Recovery
+             *
+             * StreamableHTTPClientTransport behavior:
+             * 1. Receives 404 with mcp-session-id header
+             * 2. Updates internal sessionId property
+             * 3. Immediately retries with new sessionId
+             *
+             * Critical: We MUST initialize server.connect() BEFORE returning 404.
+             * Otherwise, client's retry request will find uninitialized session
+             * and receive "Bad Request: Server not initialized" (400 error).
+             *
+             * This is NOT deferred initialization - we block until server.connect()
+             * completes to guarantee next client request succeeds.
+             */
+            try {
+              await newServer.connect(newTransport);
+              sessionManager.updateStatus(newSessionId, "active");
+            } catch (err) {
+              logError(
+                `Failed to initialize recovered session ${newSessionId}`,
+                err,
+              );
+              sessionManager.updateStatus(newSessionId, "terminated");
+              return c.json(createJsonRpcError(-32603, "Internal error"), 500);
+            }
 
             const newSession = { server: newServer, transport: newTransport };
             sessions.set(newSessionId, newSession);
 
-            logServer(`Created new session for reconnection: ${newSessionId}`);
+            logServer(
+              `Initialized recovered session (ready for retry): ${newSessionId}`,
+            );
 
             // Return 404 with new session ID in header
-            // Client will retry with this new session ID
+            // Client will retry with this new ID, and session is ready
             return createSessionNotFoundResponse(newSessionId);
           }
         } else {
-          // New session - defer server.connect() until handleRequest()
+          /**
+           * MCP SDK Client Compatibility: New Session Creation
+           *
+           * When client connects without mcp-session-id header (fresh connection),
+           * we create session in "initializing" state and defer server.connect()
+           * until handleRequest(). This allows SDK to send initialize request
+           * before server is fully connected.
+           *
+           * Deferred initialization prevents race conditions where concurrent
+           * requests might call server.connect() multiple times.
+           */
           sessionId = sessionManager.createSession();
           const server = serverFactory();
           const transport = createHttpTransport(sessionId);
@@ -278,13 +317,29 @@ export const startHttpServer = async (
         const newTransport = createHttpTransport(newSessionId);
 
         initializeSessionBindings(newServer, newSessionId);
-        // DON'T call server.connect() yet - let it happen when client sends first request with new ID
+
+        /**
+         * MCP SDK Client Compatibility: Initialize for GET 404 Recovery
+         * Same pattern as POST 404 recovery: initialize before returning 404
+         * so client's next request finds a ready session.
+         */
+        try {
+          await newServer.connect(newTransport);
+          sessionManager.updateStatus(newSessionId, "active");
+        } catch (err) {
+          logError(
+            `Failed to initialize recovered session ${newSessionId}`,
+            err,
+          );
+          sessionManager.updateStatus(newSessionId, "terminated");
+          return c.json(createJsonRpcError(-32603, "Internal error"), 500);
+        }
 
         const newSession = { server: newServer, transport: newTransport };
         sessions.set(newSessionId, newSession);
 
         logServer(
-          `Session ${sessionHeader} not found, created new session: ${newSessionId}`,
+          `Session ${sessionHeader} not found, created and initialized: ${newSessionId}`,
         );
 
         // Return 404 with new session ID in header so client can retry
@@ -310,8 +365,25 @@ export const startHttpServer = async (
         }
       });
 
-      // Initialize server if not yet connected (deferred initialization)
-      // Prevent race condition: only one thread should call server.connect()
+      /**
+       * MCP SDK Client Compatibility: Deferred Initialization
+       *
+       * Initialize server connection on first request to prevent race conditions.
+       * The isConnecting flag ensures only ONE concurrent request triggers server.connect().
+       *
+       * This pattern is required because:
+       * 1. StreamableHTTPClientTransport sends initialize request immediately after connect()
+       * 2. Multiple concurrent requests from client can arrive before server.connect() completes
+       * 3. Without this guard, concurrent calls would trigger multiple server.connect() attempts
+       *
+       * Race condition scenario (without isConnecting flag):
+       * - Request A: checks status=initializing, starts server.connect()
+       * - Request B: checks status=initializing, starts server.connect() (ERROR: double connect)
+       *
+       * With isConnecting flag:
+       * - Request A: sets isConnecting=true, starts server.connect()
+       * - Request B: sees isConnecting=true, waits for completion
+       */
       const sessionStatus = sessionManager.getSession(currentSessionId);
       if (
         sessionStatus &&
@@ -344,5 +416,19 @@ export const startHttpServer = async (
   });
 
   logServer(`MCP PTY server started via HTTP on port ${port}`);
-  Bun.serve({ port, fetch: app.fetch });
+  try {
+    return Bun.serve({ port, fetch: app.fetch });
+  } catch (err: unknown) {
+    // Handle port conflict
+    if (err instanceof Error && "code" in err && err.code === "EADDRINUSE") {
+      logError(
+        `Port ${port} is already in use. Please use a different port:`,
+        new Error(
+          `Use --port <PORT> flag or set MCP_PTY_PORT environment variable`,
+        ),
+      );
+      process.exit(1);
+    }
+    throw err;
+  }
 };
