@@ -1,7 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import {
+  sessionManager as globalSessionManager,
+  type SessionManager,
+} from "@pkgs/session-manager";
 import { registerPtyResources } from "../resources";
 import { registerPtyTools } from "../tools";
 import type { McpServerConfig } from "../types";
+import type { HandlerContext } from "./types";
+import { registerTools, registerResources } from "./registrar";
+import {
+  SESSION_ID_SYMBOL,
+  SESSION_MANAGER_SYMBOL,
+  type ServerWithContext,
+} from "../utils/server-context";
 
 /**
  * MCP server factory class
@@ -50,6 +61,58 @@ export class McpServerFactory {
   private registerResources(server: McpServer): void {
     // Resource registration logic from resources module
     registerPtyResources(server);
+  }
+
+  /**
+   * Get bound session ID from server instance
+   */
+  private getBoundSessionId(server: McpServer): string {
+    const serverWithContext = server as ServerWithContext;
+    const sessionId = serverWithContext[SESSION_ID_SYMBOL];
+    if (!sessionId) {
+      throw new Error(
+        "No session bound to server - transport initialization failed",
+      );
+    }
+    return sessionId;
+  }
+
+  /**
+   * Get SessionManager for server instance
+   */
+  private getSessionManager(server: McpServer): SessionManager {
+    const serverWithContext = server as ServerWithContext;
+    return serverWithContext[SESSION_MANAGER_SYMBOL] || globalSessionManager;
+  }
+
+  /**
+   * Create handler context for the new registrar functions
+   * This bridges the gap between old and new registration patterns
+   */
+  public createHandlerContext(server: McpServer): HandlerContext {
+    return {
+      server,
+      sessionId: this.getBoundSessionId(server),
+      sessionManager: this.getSessionManager(server),
+    };
+  }
+
+  /**
+   * Register tools using new structured handler pattern
+   * @param server McpServer instance
+   */
+  public registerToolsWithNewPattern(server: McpServer): void {
+    const context = this.createHandlerContext(server);
+    registerTools(server, context);
+  }
+
+  /**
+   * Register resources using new structured handler pattern
+   * @param server McpServer instance
+   */
+  public registerResourcesWithNewPattern(server: McpServer): void {
+    const context = this.createHandlerContext(server);
+    registerResources(server, context);
   }
 }
 
