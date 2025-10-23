@@ -308,7 +308,7 @@ export const registerPtyTools = (server: McpServer): void => {
     {
       title: "Write Input to PTY",
       description:
-        "Send input to PTY stdin, return screen state. Two modes: Safe (input + ctrlCode) or Raw (data). Ex: {input: 'ls', ctrlCode: 'Enter'} or {data: 'ls\\n'}. Windows SSH: use asCRLF: true to convert all LF to CRLF.",
+        "Send input to PTY stdin, return screen state. Safe mode: input+ctrlCode (Ex: {input:'ls', ctrlCode:'Enter'}). Raw mode: data (Ex: {data:'ls\\n'}, supports multiline/escapes). Windows SSH needs asCRLF:true. See pty://control-codes for all ctrlCode options.",
       inputSchema: WriteInputSchema.shape,
       outputSchema: WriteInputOutputSchema.shape,
     },
