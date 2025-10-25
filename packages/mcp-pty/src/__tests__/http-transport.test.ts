@@ -182,4 +182,73 @@ describe("HTTP Transport", () => {
     const error = data.error as Record<string, unknown>;
     expect(error.code).toBe(-32600);
   });
+
+  test("Reconnection creates fresh transport (avoids 400 errors)", async () => {
+    const factory = new McpServerFactory({ name: "mcp-pty", version: "0.1.0" });
+
+    const port = await reservePortAndStartServer(factory);
+
+    // First request creates session
+    const firstResponse = await fetch(`http://localhost:${port}/mcp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "initialize",
+        params: { clientInfo: { name: "test", version: "1.0" } },
+      }),
+    });
+
+    const sessionId = firstResponse.headers.get("mcp-session-id");
+    expect(sessionId).toBeDefined();
+    expect(firstResponse.status).not.toBe(400);
+
+    // Simulate server restart: attempt reconnection with same session ID
+    const reconnectResponse = await fetch(`http://localhost:${port}/mcp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "mcp-session-id": sessionId ?? "",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        method: "initialize",
+        params: { clientInfo: { name: "test", version: "1.0" } },
+      }),
+    });
+
+    // Reconnection should NOT return 400 (which would indicate transport reuse issue)
+    expect(reconnectResponse.status).not.toBe(400);
+    const reconnectSessionId = reconnectResponse.headers.get("mcp-session-id");
+    expect(reconnectSessionId).toBe(sessionId);
+  });
+
+  test("Session state persists across reconnections", async () => {
+    const factory = new McpServerFactory({ name: "mcp-pty", version: "0.1.0" });
+
+    const port = await reservePortAndStartServer(factory);
+
+    // Create initial session
+    const createResponse = await fetch(`http://localhost:${port}/mcp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    const sessionId = createResponse.headers.get("mcp-session-id");
+    expect(sessionId).toBeDefined();
+
+    // Check session status
+    const statusResponse = await fetch(`http://localhost:${port}/mcp`, {
+      method: "GET",
+      headers: { "mcp-session-id": sessionId ?? "" },
+    });
+
+    expect(statusResponse.status).toBe(200);
+    const statusData = (await statusResponse.json()) as Record<string, unknown>;
+    expect(statusData.sessionId).toBe(sessionId);
+    // Session should be initializing or active after first request
+    expect(
+      ["initializing", "active"].includes(statusData.status as string),
+    ).toBe(true);
+  });
 });
