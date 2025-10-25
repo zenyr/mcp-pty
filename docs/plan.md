@@ -159,6 +159,38 @@
 - [ ] Consent env vars docs
 - [ ] Incident response guide
 
+#### Detailed Todo List (Phase 6.2 Security Hardening)
+
+##### Critical Issues (Pre-Release Blocker)
+- [ ] sec-1: Command Injection: Dangerous pattern detect (rm -rf /, fork bombs)
+- [ ] sec-2: Command Injection: Command validation layer pre-exec
+- [ ] sec-3: Command Injection: bash-parser security checks
+- [ ] sec-4: Privilege Escalation Bypass: Enhance sudo detect (exec path: /usr/bin/sudo, doas, su, run0)
+- [ ] sec-5: Privilege Escalation Bypass: Validate normalized commands post-bash-parser
+- [ ] sec-6: Privilege Escalation Bypass: Exec basename check in checkExecutablePermission
+- [ ] sec-7: PTY Write Injection: Filter dangerous ANSI escapes
+- [ ] sec-8: PTY Write Injection: Control char whitelist/blacklist
+- [ ] sec-9: PTY Write Injection: Rate limiting for writes
+- [ ] sec-10: Shell Metachar Attacks: Restrict globs (*, ?, []) in sensitive contexts
+- [ ] sec-11: Shell Metachar Attacks: Validate redirects (>, >>, <, <<)
+- [ ] sec-12: Shell Metachar Attacks: Path traversal protection
+- [ ] sec-13: Env Var Pollution: Safe default env (whitelist)
+- [ ] sec-14: Env Var Pollution: Block dangerous vars (LD_PRELOAD, LD_LIBRARY_PATH)
+- [ ] sec-15: Env Var Pollution: Per-session env isolation
+
+##### Medium Priority (Post v1.0)
+- [ ] sec-16: Resource Exhaustion: PTY count limit/session (default: 10)
+- [ ] sec-17: Resource Exhaustion: Memory monitoring/limits
+- [ ] sec-18: Resource Exhaustion: Exec timeout (default: 30min)
+- [ ] sec-19: Resource Exhaustion: xterm buffer size limits
+- [ ] sec-20: Session Security: Eval ULID predictability
+- [ ] sec-21: Session Security: Configurable idle timeout (current: 5min)
+- [ ] sec-22: Session Security: Session auth (HTTP mode)
+- [ ] sec-23: Session Security: Rate limit session creation
+- [ ] sec-24: Info Disclosure: Log sanitization (commands/outputs)
+- [ ] sec-25: Info Disclosure: Redaction patterns (tokens, passwords)
+- [ ] sec-26: Info Disclosure: Separate audit log
+
 #### 6.3 Observability
 - [ ] Structured logging (consola)
 - [ ] Error tracking/reporting
