@@ -159,8 +159,8 @@
 
 ##### Critical Issues (Pre-Release Blocker)
 - [x] sec-1: Command Injection: Dangerous pattern detect (rm -rf /, fork bombs)
-- [x] sec-2: Command Injection: Command validation layer pre-exec
-- [x] sec-3: Command Injection: bash-parser security checks
+- [x] sec-2: Command Injection: Command validation layer pre-exec (including sh -c argument validation)
+- [x] sec-3: Command Injection: bash-parser security checks (AST-based recursive validation)
 - [x] sec-4: Privilege Escalation Bypass: Enhance sudo detect (exec path: /usr/bin/sudo, doas, su, run0)
 - [x] sec-5: Privilege Escalation Bypass: Validate normalized commands post-bash-parser
 - [x] sec-6: Privilege Escalation Bypass: Exec basename check in checkExecutablePermission
