@@ -6,6 +6,11 @@ import { checkRootPermission } from "./utils/safety";
 const logger = createLogger("pty-manager");
 
 /**
+ * Maximum PTY instances per session to prevent resource exhaustion
+ */
+const MAX_PTY_PER_SESSION = 10;
+
+/**
  * PTY Manager class
  * Manages PTY instances based on sessionId
  */
@@ -31,6 +36,13 @@ export class PtyManager {
     commandOrOptions: string | PtyOptions,
     timeoutMs = 500,
   ): Promise<{ processId: string; screen: string; exitCode: number | null }> {
+    // Check PTY count limit
+    if (this.instances.size >= MAX_PTY_PER_SESSION) {
+      throw new Error(
+        `PTY limit exceeded: maximum ${MAX_PTY_PER_SESSION} PTYs per session. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
+      );
+    }
+
     const process = new PtyProcess(commandOrOptions);
     this.instances.set(process.id, process);
 

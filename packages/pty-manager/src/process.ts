@@ -20,6 +20,35 @@ const DANGEROUS_CONTROL_PATTERNS = [
 ];
 
 /**
+ * Dangerous environment variables that can be exploited for attacks
+ */
+const DANGEROUS_ENV_VARS = [
+  "LD_PRELOAD",
+  "LD_LIBRARY_PATH",
+  "DYLD_INSERT_LIBRARIES", // macOS
+  "PYTHONPATH",
+  "NODE_PATH",
+  "GEM_PATH",
+  "PERL5LIB",
+  "RUBYLIB",
+  "CLASSPATH", // Java
+  "PATH", // Potentially dangerous if manipulated
+];
+
+/**
+ * Sanitize environment variables by removing dangerous ones
+ * @param env - Environment variables object
+ * @returns Sanitized environment variables
+ */
+const sanitizeEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => {
+  const cleaned = { ...env };
+  for (const dangerous of DANGEROUS_ENV_VARS) {
+    delete cleaned[dangerous];
+  }
+  return cleaned;
+};
+
+/**
  * Validate input data for dangerous control sequences
  * @param data - Input data to validate
  * @throws {Error} if dangerous control sequences detected
@@ -100,6 +129,7 @@ export class PtyProcess {
   }> = [];
   private initPromise: Promise<void>;
   private isDisposed = false;
+  private execTimeoutId?: ReturnType<typeof setTimeout>;
 
   constructor(commandOrOptions: string | PtyOptions) {
     this.id = nanoid();
@@ -129,12 +159,13 @@ export class PtyProcess {
     // Security check for executable
     checkExecutablePermission(command);
 
+    const sanitizedEnv = sanitizeEnv({ ...process.env, ...this.options.env });
     this.pty = spawn(command, args, {
       name: "xterm-256color",
       cols: this.terminal.cols,
       rows: this.terminal.rows,
       cwd: this.options.cwd || process.cwd(),
-      env: { ...process.env, ...this.options.env } as Record<string, string>,
+      env: sanitizedEnv as Record<string, string>,
     });
 
     // PTY output -> xterm and subscribers
@@ -175,6 +206,16 @@ export class PtyProcess {
     });
 
     this.status = "active";
+
+    // Set execution timeout if specified
+    if (this.options.execTimeout) {
+      this.execTimeoutId = setTimeout(() => {
+        logger.warn(
+          `PTY ${this.id} execution timeout (${this.options.execTimeout}ms), disposing`,
+        );
+        void this.dispose();
+      }, this.options.execTimeout);
+    }
   }
 
   async ready(): Promise<void> {
@@ -373,6 +414,17 @@ export class PtyProcess {
     if (this.status === "idle") {
       this.status = "active";
     }
+
+    // Reset execution timeout on activity
+    if (this.execTimeoutId && this.options.execTimeout) {
+      clearTimeout(this.execTimeoutId);
+      this.execTimeoutId = setTimeout(() => {
+        logger.warn(
+          `PTY ${this.id} execution timeout (${this.options.execTimeout}ms), disposing`,
+        );
+        void this.dispose();
+      }, this.options.execTimeout);
+    }
   }
 
   /**
@@ -397,6 +449,12 @@ export class PtyProcess {
     this.isDisposed = true;
     this.status = "terminating";
     this.subscribers = [];
+
+    // Clear execution timeout
+    if (this.execTimeoutId) {
+      clearTimeout(this.execTimeoutId);
+      this.execTimeoutId = undefined;
+    }
 
     if (this.pty) {
       // Only kill if process is still running
