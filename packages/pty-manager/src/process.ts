@@ -32,7 +32,6 @@ const DANGEROUS_ENV_VARS = [
   "PERL5LIB",
   "RUBYLIB",
   "CLASSPATH", // Java
-  "PATH", // Potentially dangerous if manipulated
 ];
 
 /**
