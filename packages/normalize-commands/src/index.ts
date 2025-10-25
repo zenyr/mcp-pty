@@ -155,6 +155,14 @@ export const normalizeCommand = (input: string): string => {
     return JSON.stringify({ command: "", args: [] });
   }
 
+  // Check for fork bomb pattern
+  const FORK_BOMB_PATTERN = /:\(\)\s*\{\s*:\s*\|\s*:&\s*\}\s*;\s*:/;
+  if (FORK_BOMB_PATTERN.test(trimmed)) {
+    throw new Error(
+      `Dangerous command pattern detected: fork bomb. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
+    );
+  }
+
   try {
     const ast = parse(trimmed);
 
