@@ -43,6 +43,8 @@ export interface PtyOptions {
   autoDisposeOnExit?: boolean;
   /** Whether to strip ANSI escape sequences from output */
   ansiStrip?: boolean;
+  /** Execution timeout in milliseconds (kills process if exceeded) */
+  execTimeout?: number;
 }
 
 /**

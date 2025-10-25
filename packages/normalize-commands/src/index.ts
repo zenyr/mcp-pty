@@ -130,6 +130,25 @@ const validateCommandAST = (node: BashNode): void => {
           `Dangerous redirect to block device detected. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
         );
       }
+
+      // Check sh -c bypass: recursively validate sh -c arguments
+      if (cmdName === "sh" && args.length >= 2 && args[0] === "-c") {
+        const shCommand = args[1];
+        if (shCommand) {
+          try {
+            const shAst = parse(shCommand);
+            validateCommandAST(shAst);
+          } catch (shError) {
+            if (
+              shError instanceof Error &&
+              shError.message.includes("detected")
+            ) {
+              throw shError; // Re-throw validation errors
+            }
+            // If parsing fails, allow it (fallback to sh -c)
+          }
+        }
+      }
     }
 
     // Recursively check child commands
