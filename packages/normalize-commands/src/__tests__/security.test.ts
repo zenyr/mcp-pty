@@ -23,9 +23,7 @@ test("should block dd to block device", () => {
   );
 });
 
-// Fork bomb detection is complex and may not catch all variants
-// This is an edge case that bash-parser handles but doesn't match the regex
-test.skip("should block fork bomb", () => {
+test("should block fork bomb", () => {
   expect(() => normalizeCommand(":(){ :|:& };:")).toThrow(
     /Dangerous command pattern detected/,
   );
