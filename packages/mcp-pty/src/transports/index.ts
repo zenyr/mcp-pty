@@ -2,7 +2,6 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { sessionManager } from "@pkgs/session-manager";
-import { createLogger } from "@pkgs/logger";
 import { toFetchResponse, toReqRes } from "fetch-to-node";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -10,8 +9,6 @@ import { logger } from "hono/logger";
 import { bindSessionToServerResources } from "../resources";
 import { bindSessionToServer } from "../tools";
 import { logError, logServer } from "../utils";
-
-const transportLogger = createLogger("http-transport");
 
 /**
  * MCP Streamable HTTP Error Handling Strategy
@@ -202,13 +199,13 @@ export const startHttpServer = async (
               // Reconnect to existing active session
               // Don't immediately connect - let deferred initialization happen
               sessionId = sessionHeader;
-              const server = serverFactory();
-              const transport = createHttpTransport(sessionId);
+              const newServer = serverFactory();
+              const newTransport = createHttpTransport(sessionId);
 
-              initializeSessionBindings(server, sessionId);
-              // Defer server.connect() to first request to avoid transport reuse after reconnection
+              initializeSessionBindings(newServer, sessionId);
+              // DON'T call server.connect() yet - let it happen via handleRequest()
 
-              session = { server, transport };
+              session = { server: newServer, transport: newTransport };
               sessions.set(sessionId, session);
               logServer(`Prepared reconnection for session: ${sessionId}`);
             }
@@ -220,13 +217,13 @@ export const startHttpServer = async (
             );
 
             const newSessionId = sessionManager.createSession();
-            const server = serverFactory();
-            const transport = createHttpTransport(newSessionId);
+            const newServer = serverFactory();
+            const newTransport = createHttpTransport(newSessionId);
 
-            initializeSessionBindings(server, newSessionId);
-            // Defer server.connect() to first request to prevent transport state issues
+            initializeSessionBindings(newServer, newSessionId);
+            // DON'T call server.connect() yet - let it happen when client sends first request with new ID
 
-            const newSession = { server, transport };
+            const newSession = { server: newServer, transport: newTransport };
             sessions.set(newSessionId, newSession);
 
             logServer(`Created new session for reconnection: ${newSessionId}`);
@@ -242,7 +239,7 @@ export const startHttpServer = async (
           const transport = createHttpTransport(sessionId);
 
           initializeSessionBindings(server, sessionId);
-          // Defer server.connect() to first request to prevent unnecessary connections
+          // DON'T call server.connect() yet - let it happen via handleRequest()
 
           session = { server, transport };
           sessions.set(sessionId, session);
@@ -278,13 +275,13 @@ export const startHttpServer = async (
         }
         // Session not found, create new session ID for client to use
         const newSessionId = sessionManager.createSession();
-        const server = serverFactory();
-        const transport = createHttpTransport(newSessionId);
+        const newServer = serverFactory();
+        const newTransport = createHttpTransport(newSessionId);
 
-        initializeSessionBindings(server, newSessionId);
-        // Defer server.connect() to first request to prevent transport state issues
+        initializeSessionBindings(newServer, newSessionId);
+        // DON'T call server.connect() yet - let it happen when client sends first request with new ID
 
-        const newSession = { server, transport };
+        const newSession = { server: newServer, transport: newTransport };
         sessions.set(newSessionId, newSession);
 
         logServer(
@@ -296,14 +293,11 @@ export const startHttpServer = async (
       }
 
       // Log request for debugging
-      transportLogger.debug(
-        `[${currentSessionId}] ${c.req.method} /mcp - headers:`,
-        {
-          "mcp-session-id": c.req.header("mcp-session-id"),
-          "content-type": c.req.header("content-type"),
-          accept: c.req.header("accept"),
-        },
-      );
+      console.log(`[${currentSessionId}] ${c.req.method} /mcp - headers:`, {
+        "mcp-session-id": c.req.header("mcp-session-id"),
+        "content-type": c.req.header("content-type"),
+        accept: c.req.header("accept"),
+      });
 
       // For POST/PUT requests, use raw request (do NOT read body with c.req.text())
       // The transport layer needs the original stream to handle JSON-RPC parsing

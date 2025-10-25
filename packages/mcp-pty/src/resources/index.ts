@@ -7,9 +7,9 @@ import {
   type SessionManager,
 } from "@pkgs/session-manager";
 import {
-  CONTROL_CODES,
   CONTROL_CODE_DESCRIPTIONS,
   CONTROL_CODE_EXAMPLES,
+  CONTROL_CODES,
 } from "../types/control-codes.js";
 import {
   SESSION_ID_SYMBOL,

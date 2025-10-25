@@ -88,47 +88,44 @@
 
 ##### Critical Issues (🔴 Pre-Release Blocker)
 1. **Command Injection** - `normalize-commands` lacks validation w/ `sh -c`
-   - [ ] Dangerous pattern detect (rm -rf /, fork bombs)
-   - [ ] Command validation layer pre-exec
-   - [ ] bash-parser security checks
+    - [x] Dangerous pattern detect (rm -rf /, fork bombs)
+    - [x] Command validation layer pre-exec
+    - [x] bash-parser security checks
 
 2. **Privilege Escalation Bypass** - sudo detect only checks prefix
-   - [ ] Enhance sudo detect (exec path: /usr/bin/sudo, doas, su, run0)
-   - [ ] Validate normalized commands post-bash-parser
-   - [ ] Exec basename check in `checkExecutablePermission`
+    - [x] Enhance sudo detect (exec path: /usr/bin/sudo, doas, su, run0)
+    - [x] Validate normalized commands post-bash-parser
+    - [x] Exec basename check in `checkExecutablePermission`
 
-3. **PTY Write Injection** - `write_input` accepts arbitrary bytes
-   - [ ] Filter dangerous ANSI escapes
-   - [ ] Control char whitelist/blacklist
-   - [ ] Rate limiting for writes
+3. **Env Var Pollution** - PTY inherits parent env
+    - [ ] Safe default env (whitelist)
+    - [ ] Block dangerous vars (`LD_PRELOAD`, `LD_LIBRARY_PATH`)
+    - [ ] Per-session env isolation
 
-4. **Shell Metachar Attacks** - Unfiltered globs/redirections
-   - [ ] Restrict globs (`*`, `?`, `[]`) in sensitive contexts
-   - [ ] Validate redirects (`>`, `>>`, `<`, `<<`)
-   - [ ] Path traversal protection
-
-5. **Env Var Pollution** - PTY inherits parent env
-   - [ ] Safe default env (whitelist)
-   - [ ] Block dangerous vars (`LD_PRELOAD`, `LD_LIBRARY_PATH`)
-   - [ ] Per-session env isolation
+4. **Resource Exhaustion** - No PTY/resource limits
+    - [ ] PTY count limit/session (default: 10)
+    - [ ] Exec timeout (default: 30min)
+    - [ ] Memory monitoring/limits
 
 ##### Medium Priority (🟡 Post v1.0)
-6. **Resource Exhaustion** - No PTY/resource limits
-   - [ ] PTY count limit/session (default: 10)
-   - [ ] Memory monitoring/limits
-   - [ ] Exec timeout (default: 30min)
-   - [ ] xterm buffer size limits
+6. **PTY Write Injection** - `write_input` accepts arbitrary bytes
+    - [ ] Filter dangerous ANSI escapes
+    - [ ] Control char whitelist/blacklist
+    - [ ] Rate limiting for writes
 
-7. **Session Security** - Predictable IDs, weak timeout
-   - [ ] Eval ULID predictability
-   - [ ] Configurable idle timeout (current: 5min)
-   - [ ] Session auth (HTTP mode)
-   - [ ] Rate limit session creation
+7. **Resource Exhaustion** - No PTY/resource limits
+    - [ ] xterm buffer size limits
 
-8. **Info Disclosure** - Logs contain sensitive data
-   - [ ] Log sanitization (commands/outputs)
-   - [ ] Redaction patterns (tokens, passwords)
-   - [ ] Separate audit log
+8. **Session Security** - Predictable IDs, weak timeout
+    - [ ] Eval ULID predictability
+    - [ ] Configurable idle timeout (current: 5min)
+    - [ ] Session auth (HTTP mode)
+    - [ ] Rate limit session creation
+
+9. **Info Disclosure** - Logs contain sensitive data
+    - [ ] Log sanitization (commands/outputs)
+    - [ ] Redaction patterns (tokens, passwords)
+    - [ ] Separate audit log
 
 ##### Existing Protections (🟢)
 - ✅ Root privilege detect w/ consent
@@ -139,18 +136,17 @@
 
 ##### Roadmap
 **6.2.1: Critical Fixes (Pre-Release)**
-- [ ] Command validation in `normalize-commands`
-- [ ] Privilege escalation detect (sudo/doas/su/run0/pkexec/dzdo)
-- [ ] Dangerous pattern detect (rm -rf /, chmod 777, dd, mkfs, fork bombs)
-- [ ] Safe env defaults
-- [ ] Basic resource limits (PTY count, exec timeout)
+- [x] Command validation in `normalize-commands` (sec-1~6)
+- [x] Privilege escalation detect (sudo/doas/su/run0/pkexec/dzdo) (sec-4~6)
+- [x] Dangerous pattern detect (rm -rf /, chmod 777, dd, mkfs, fork bombs) (sec-1)
+- [ ] Safe env defaults (sec-7~9)
+- [ ] Basic resource limits (PTY count, exec timeout) (sec-10~11)
 
 **6.2.2: Enhanced Security (Post v1.0)**
-- [ ] PTY write filtering/rate limiting
-- [ ] Advanced metachar protection
-- [ ] Memory monitoring/enforcement
-- [ ] Session auth (HTTP)
-- [ ] Comprehensive audit logging
+- [ ] PTY write filtering/rate limiting (sec-13~15)
+- [ ] Memory monitoring/enforcement (sec-12)
+- [ ] Session auth (HTTP) (sec-19)
+- [ ] Comprehensive audit logging (sec-21~23)
 
 **6.2.3: Security Docs (Parallel)**
 - [ ] SECURITY.md (threat model, mitigations)
@@ -158,6 +154,40 @@
 - [ ] Security best practices guide
 - [ ] Consent env vars docs
 - [ ] Incident response guide
+
+#### Detailed Todo List (Phase 6.2 Security Hardening)
+
+##### Critical Issues (Pre-Release Blocker)
+- [x] sec-1: Command Injection: Dangerous pattern detect (rm -rf /, fork bombs)
+- [x] sec-2: Command Injection: Command validation layer pre-exec (including sh -c argument validation)
+- [x] sec-3: Command Injection: bash-parser security checks (AST-based recursive validation)
+- [x] sec-4: Privilege Escalation Bypass: Enhance sudo detect (exec path: /usr/bin/sudo, doas, su, run0)
+- [x] sec-5: Privilege Escalation Bypass: Validate normalized commands post-bash-parser
+- [x] sec-6: Privilege Escalation Bypass: Exec basename check in checkExecutablePermission
+- [ ] sec-7: Env Var Pollution: Safe default env (whitelist)
+- [ ] sec-8: Env Var Pollution: Block dangerous vars (LD_PRELOAD, LD_LIBRARY_PATH)
+- [ ] sec-9: Env Var Pollution: Per-session env isolation
+- [ ] sec-10: Resource Exhaustion: PTY count limit/session (default: 10)
+- [ ] sec-11: Resource Exhaustion: Exec timeout (default: 30min)
+- [ ] sec-12: Resource Exhaustion: Memory monitoring/limits
+
+##### Medium Priority (Post v1.0)
+- [ ] sec-13: PTY Write Injection: Filter dangerous ANSI escapes
+- [ ] sec-14: PTY Write Injection: Control char whitelist/blacklist
+- [ ] sec-15: PTY Write Injection: Rate limiting for writes
+- [ ] sec-16: Resource Exhaustion: xterm buffer size limits
+- [ ] sec-17: Session Security: Eval ULID predictability
+- [ ] sec-18: Session Security: Configurable idle timeout (current: 5min)
+- [ ] sec-19: Session Security: Session auth (HTTP mode)
+- [ ] sec-20: Session Security: Rate limit session creation
+- [ ] sec-21: Info Disclosure: Log sanitization (commands/outputs)
+- [ ] sec-22: Info Disclosure: Redaction patterns (tokens, passwords)
+- [ ] sec-23: Info Disclosure: Separate audit log
+
+##### Rejected (Unnecessary or Low Risk)
+- [x] sec-24: Shell Metachar Attacks: Restrict globs (*, ?, []) - interferes with normal usage
+- [x] sec-25: Shell Metachar Attacks: Validate redirects (>, >>, <, <<) - current block device check sufficient
+- [x] sec-26: Shell Metachar Attacks: Path traversal protection - OS permissions handle this
 
 #### 6.3 Observability
 - [ ] Structured logging (consola)

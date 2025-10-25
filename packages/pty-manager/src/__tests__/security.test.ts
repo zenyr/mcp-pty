@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
 import { consola } from "consola";
+import { PtyManager } from "../manager";
 import { PtyProcess } from "../process";
 
 const ptys: PtyProcess[] = [];
@@ -140,4 +141,33 @@ test("should allow ls command", async () => {
 
   await pty.ready();
   expect(pty.status).toBe("active");
+});
+
+// ============================================================================
+// Environment Variable Sanitization Tests
+// ============================================================================
+
+// ============================================================================
+// Resource Limit Tests
+// ============================================================================
+
+test("should enforce PTY count limit per session", async () => {
+  const manager = new PtyManager("test-session");
+
+  // Create 10 PTYs (limit)
+  const ptys = [];
+  for (let i = 0; i < 10; i++) {
+    const pty = await manager.createPty(`echo ${i}`);
+    ptys.push(pty);
+  }
+
+  // 11th PTY should fail
+  await expect(manager.createPty("echo fail")).rejects.toThrow(
+    /PTY limit exceeded/,
+  );
+
+  // Cleanup
+  for (const p of ptys) {
+    manager.removePty(p.processId);
+  }
 });

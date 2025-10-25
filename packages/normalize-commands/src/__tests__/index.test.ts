@@ -132,3 +132,24 @@ test.each(testCases)(
     expect(result).toBe(expected);
   },
 );
+
+// ============================================================================
+// Security Tests
+// ============================================================================
+
+test("should block sh -c bypass for dangerous commands", () => {
+  expect(() => normalizeCommand('sh -c "rm -rf /"')).toThrow(
+    /Dangerous command pattern detected: rm -rf/,
+  );
+});
+
+test("should block sh -c bypass for privilege escalation", () => {
+  expect(() => normalizeCommand('sh -c "sudo rm -rf /tmp"')).toThrow(
+    /Privilege escalation command detected: sudo/,
+  );
+});
+
+test("should allow safe sh -c commands", () => {
+  const result = normalizeCommand('sh -c "echo hello"');
+  expect(result).toBe('{"command":"sh","args":["-c","echo hello"]}');
+});
