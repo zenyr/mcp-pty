@@ -1,11 +1,11 @@
 import type { z } from "zod";
 import { resolveControlCode } from "../../types/control-codes";
 import { normalizeWorkingDirectory } from "../../utils";
-import {
-  type KillPtyInputSchema,
-  type ListPtyInputSchema,
-  type ReadPtyInputSchema,
-  type StartPtyInputSchema,
+import type {
+  KillPtyInputSchema,
+  ListPtyInputSchema,
+  ReadPtyInputSchema,
+  StartPtyInputSchema,
   WriteInputSchema,
 } from "../schemas";
 import type { HandlerContext, ToolResult } from "../types";

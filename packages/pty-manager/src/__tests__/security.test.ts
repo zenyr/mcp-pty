@@ -1,12 +1,4 @@
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  expect,
-  mock,
-  spyOn,
-  test,
-} from "bun:test";
+import { afterAll, afterEach, beforeAll, expect, spyOn, test } from "bun:test";
 import { consola } from "consola";
 import { PtyManager } from "../manager";
 import { PtyProcess } from "../process";
@@ -175,5 +167,7 @@ test("should enforce PTY count limit per session", async () => {
   );
 
   // Cleanup
-  ptys.forEach((p) => manager.removePty(p.processId));
+  for (const p of ptys) {
+    manager.removePty(p.processId);
+  }
 });
