@@ -3,7 +3,8 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "baseUrl": "."
+    "baseUrl": ".",
+    "typeRoots": ["./src"]
   },
   "include": ["src/**/*"]
 }

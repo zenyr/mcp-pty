@@ -26,6 +26,6 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
-    "types": ["@types/bun"]
+    "types": ["@types/bun", "@types/node"]
   }
 }
