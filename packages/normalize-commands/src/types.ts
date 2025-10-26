@@ -2,22 +2,12 @@
  * Type definitions for normalize-commands package
  */
 
+import type parse from "bash-parser";
+
 /**
- * Basic AST node types for bash-parser
+ * Re-export BashNode from bash-parser patch
  */
-export interface BashNode {
-  type: string;
-  commands?: BashNode[];
-  prefix?: BashNode[];
-  suffix?: BashNode[];
-  name?: BashNode;
-  text?: string;
-  redirect?: BashNode[];
-  file?: BashNode;
-  op?: string;
-  left?: BashNode;
-  right?: BashNode;
-}
+export type BashNode = ReturnType<typeof parse>;
 
 /**
  * Danger pattern definition for security checks

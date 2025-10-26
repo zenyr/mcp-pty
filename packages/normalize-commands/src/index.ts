@@ -20,7 +20,10 @@ const getCommandName = (node: BashNode): string | null => {
 const getCommandArgs = (node: BashNode): string[] => {
   if (node.type === "Command" && node.suffix) {
     return node.suffix
-      .filter((s) => s && s.type === "Word")
+      .filter(
+        (s): s is Exclude<typeof s, null | undefined> =>
+          s !== null && s !== undefined && s.type === "Word",
+      )
       .map((s) => s.text || "");
   }
   return [];
@@ -156,7 +159,10 @@ const extractCommandInfo = (node: BashNode): CommandInfo | null => {
           : "";
       const args = cmd.suffix
         ? cmd.suffix
-            .filter((s) => s && s.type === "Word")
+            .filter(
+              (s): s is Exclude<typeof s, null | undefined> =>
+                s !== null && s !== undefined && s.type === "Word",
+            )
             .map((s) => s.text || "")
         : [];
       return { command: commandName, args };

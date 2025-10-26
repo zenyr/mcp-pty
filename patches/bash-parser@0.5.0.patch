@@ -1,0 +1,31 @@
+diff --git a/node_modules/bash-parser/src/index.d.ts b/src/index.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..8fceda7423eebecfc823c48ee977ded00ec4be23
+--- /dev/null
++++ b/src/index.d.ts
+@@ -0,0 +1,25 @@
++/**
++ * bash-parser type definitions
++ * Defines the AST node structure returned by parse()
++ */
++
++export interface BashNode {
++  type: string;
++  name?: { text?: string } & Record<string, any>;
++  suffix?: (
++    | { type: string; text?: string; [key: string]: any }
++    | null
++    | undefined
++  )[];
++  prefix?: Array<any>;
++  commands?: (BashNode | null | undefined)[];
++  [key: string]: any;
++}
++
++export interface ParseOptions {
++  mode?: "bash" | "posix" | "word-expansion";
++}
++
++declare function parse(sourceCode: string, options?: ParseOptions): BashNode;
++
++export = parse;

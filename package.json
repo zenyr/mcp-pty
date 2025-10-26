@@ -45,5 +45,8 @@
     "@xterm/xterm": "^5.5.0",
     "@zenyr/bun-pty": "0.4.3",
     "strip-ansi": "^7.1.2"
+  },
+  "patchedDependencies": {
+    "bash-parser@0.5.0": "patches/bash-parser@0.5.0.patch"
   }
 }
