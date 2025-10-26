@@ -4,7 +4,8 @@
     "target": "ES2022",
     "module": "ESNext",
     "baseUrl": ".",
-    "typeRoots": ["./src"]
+    "typeRoots": ["./src"],
+
   },
   "include": ["src/**/*"]
 }
