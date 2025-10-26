@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { sessionManager } from "@pkgs/session-manager";
 import { createLogger } from "@pkgs/logger";
+import { sessionManager } from "@pkgs/session-manager";
 import { toFetchResponse, toReqRes } from "fetch-to-node";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -202,13 +202,13 @@ export const startHttpServer = async (
               // Reconnect to existing active session
               // Don't immediately connect - let deferred initialization happen
               sessionId = sessionHeader;
-              const server = serverFactory();
-              const transport = createHttpTransport(sessionId);
+              const newServer = serverFactory();
+              const newTransport = createHttpTransport(sessionId);
 
-              initializeSessionBindings(server, sessionId);
-              // Defer server.connect() to first request to avoid transport reuse after reconnection
+              initializeSessionBindings(newServer, sessionId);
+              // DON'T call server.connect() yet - let it happen via handleRequest()
 
-              session = { server, transport };
+              session = { server: newServer, transport: newTransport };
               sessions.set(sessionId, session);
               logServer(`Prepared reconnection for session: ${sessionId}`);
             }
