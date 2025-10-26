@@ -1,5 +1,4 @@
-const parse = require("bash-parser");
-
+import parse from "bash-parser";
 import { checkDangerousPatterns, isDangerousRedirect } from "./patterns";
 import type { BashNode, CommandInfo } from "./types";
 
