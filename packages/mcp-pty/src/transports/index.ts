@@ -296,14 +296,11 @@ export const startHttpServer = async (
       }
 
       // Log request for debugging
-      transportLogger.debug(
-        `[${currentSessionId}] ${c.req.method} /mcp - headers:`,
-        {
-          "mcp-session-id": c.req.header("mcp-session-id"),
-          "content-type": c.req.header("content-type"),
-          accept: c.req.header("accept"),
-        },
-      );
+      console.log(`[${currentSessionId}] ${c.req.method} /mcp - headers:`, {
+        "mcp-session-id": c.req.header("mcp-session-id"),
+        "content-type": c.req.header("content-type"),
+        accept: c.req.header("accept"),
+      });
 
       // For POST/PUT requests, use raw request (do NOT read body with c.req.text())
       // The transport layer needs the original stream to handle JSON-RPC parsing
