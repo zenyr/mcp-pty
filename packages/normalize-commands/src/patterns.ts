@@ -1,5 +1,5 @@
-import type { DangerPattern, BashNode } from "./types";
 import { PRIVILEGE_ESCALATION_COMMANDS } from "./constants";
+import type { BashNode, DangerPattern } from "./types";
 
 /**
  * Check if command is a dangerous mkfs variant

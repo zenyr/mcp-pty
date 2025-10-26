@@ -1,7 +1,6 @@
 import parse from "bash-parser";
-
-import type { BashNode, CommandInfo } from "./types";
 import { checkDangerousPatterns, isDangerousRedirect } from "./patterns";
+import type { BashNode, CommandInfo } from "./types";
 
 /**
  * Extract command name from AST node
