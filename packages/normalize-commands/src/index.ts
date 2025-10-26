@@ -1,24 +1,6 @@
-const parse = require("bash-parser");
-
-// Basic AST node types for bash-parser
-interface BashNode {
-  type: string;
-  commands?: BashNode[];
-  prefix?: BashNode[];
-  suffix?: BashNode[];
-  name?: BashNode;
-  text?: string;
-  redirect?: BashNode[];
-}
-
-import { PRIVILEGE_ESCALATION_COMMANDS } from "./constants";
-
-/**
- * Check if command is a dangerous mkfs variant
- */
-const isDangerousMkfsCommand = (cmdName: string): boolean => {
-  return cmdName === "mkfs" || cmdName.startsWith("mkfs.");
-};
+import parse from "bash-parser";
+import { checkDangerousPatterns, isDangerousRedirect } from "./patterns";
+import type { BashNode, CommandInfo } from "./types";
 
 /**
  * Extract command name from AST node
@@ -38,31 +20,13 @@ const getCommandName = (node: BashNode): string | null => {
 const getCommandArgs = (node: BashNode): string[] => {
   if (node.type === "Command" && node.suffix) {
     return node.suffix
-      .filter((s) => s && s.type === "Word")
+      .filter(
+        (s): s is Exclude<typeof s, null | undefined> =>
+          s !== null && s !== undefined && s.type === "Word",
+      )
       .map((s) => s.text || "");
   }
   return [];
-};
-
-/**
- * Check if redirect target is a dangerous device
- */
-const isDangerousRedirect = (node: BashNode): boolean => {
-  // Check suffix for Redirect nodes
-  if (node.suffix) {
-    for (const s of node.suffix) {
-      if (s && s.type === "Redirect") {
-        const target = (s as { file?: BashNode }).file;
-        if (target?.text) {
-          // Block writes to block devices
-          if (/^\/dev\/sd[a-z]/.test(target.text)) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-  return false;
 };
 
 /**
@@ -77,52 +41,9 @@ const validateCommandAST = (node: BashNode): void => {
 
       if (!cmdName) return;
 
-      // Check privilege escalation
+      // Check dangerous patterns
       const baseName = cmdName.split("/").pop() ?? "";
-      if (PRIVILEGE_ESCALATION_COMMANDS.includes(baseName as never)) {
-        throw new Error(
-          `Privilege escalation command detected: ${baseName}. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
-        );
-      }
-
-      // Check dangerous mkfs commands
-      if (isDangerousMkfsCommand(baseName)) {
-        throw new Error(
-          `Dangerous command detected: ${baseName}. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
-        );
-      }
-
-      // Check rm -rf /
-      if (cmdName === "rm") {
-        const hasRf = args.includes("-rf") || args.includes("-fr");
-        const hasRoot = args.includes("/");
-        if (hasRf && hasRoot) {
-          throw new Error(
-            `Dangerous command pattern detected: rm -rf /. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
-          );
-        }
-      }
-
-      // Check chmod 777
-      if (cmdName === "chmod") {
-        if (args.some((arg) => arg.includes("777"))) {
-          throw new Error(
-            `Dangerous command pattern detected: chmod 777. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
-          );
-        }
-      }
-
-      // Check dd to block device
-      if (cmdName === "dd") {
-        const hasBlockDeviceOutput = args.some((arg) =>
-          /^of=\/dev\/sd[a-z]/.test(arg),
-        );
-        if (hasBlockDeviceOutput) {
-          throw new Error(
-            `Dangerous command pattern detected: dd to block device. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
-          );
-        }
-      }
+      checkDangerousPatterns(baseName, args);
 
       // Check dangerous redirects
       if (isDangerousRedirect(n)) {
@@ -223,9 +144,7 @@ const requiresShellExecution = (node: BashNode): boolean => {
   return false;
 };
 
-const extractCommandInfo = (
-  node: BashNode,
-): { command: string; args: string[] } | null => {
+const extractCommandInfo = (node: BashNode): CommandInfo | null => {
   // For Script, get first command
   if (node.type === "Script" && node.commands && node.commands.length > 0) {
     const cmd = node.commands[0];
@@ -240,7 +159,10 @@ const extractCommandInfo = (
           : "";
       const args = cmd.suffix
         ? cmd.suffix
-            .filter((s) => s && s.type === "Word")
+            .filter(
+              (s): s is Exclude<typeof s, null | undefined> =>
+                s !== null && s !== undefined && s.type === "Word",
+            )
             .map((s) => s.text || "")
         : [];
       return { command: commandName, args };

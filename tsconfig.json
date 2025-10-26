@@ -12,6 +12,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
     "noEmit": true,
 
     // Best practices
@@ -25,7 +26,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "baseUrl": ".",
-    "types": ["@types/bun"]
+    "baseUrl": "."
   }
 }
