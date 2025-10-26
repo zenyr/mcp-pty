@@ -24,7 +24,7 @@ export interface BashNode {
  */
 export interface DangerPattern {
   check: (cmdName: string, args: string[]) => boolean;
-  message: (cmdName: string) => string;
+  message: string | ((cmdName: string) => string);
 }
 
 /**

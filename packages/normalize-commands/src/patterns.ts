@@ -27,19 +27,31 @@ export const DANGER_PATTERNS: DangerPattern[] = [
   {
     check: (cmdName, args) =>
       cmdName === "rm" && args.includes("-rf") && args.includes("/"),
-    message: () => "Dangerous command pattern detected: rm -rf /",
+    message: "Dangerous command pattern detected: rm -rf /",
   },
   // chmod 777 pattern
   {
     check: (cmdName, args) =>
       cmdName === "chmod" && args.some((arg) => arg.includes("777")),
-    message: () => "Dangerous command pattern detected: chmod 777",
+    message: "Dangerous command pattern detected: chmod 777",
   },
   // dd to block device pattern
   {
     check: (cmdName, args) =>
       cmdName === "dd" && args.some((arg) => /^of=\/dev\/sd[a-z]/.test(arg)),
-    message: () => "Dangerous command pattern detected: dd to block device",
+    message: "Dangerous command pattern detected: dd to block device",
+  },
+  // chmod 777 pattern
+  {
+    check: (cmdName, args) =>
+      cmdName === "chmod" && args.some((arg) => arg.includes("777")),
+    message: "Dangerous command pattern detected: chmod 777",
+  },
+  // dd to block device pattern
+  {
+    check: (cmdName, args) =>
+      cmdName === "dd" && args.some((arg) => /^of=\/dev\/sd[a-z]/.test(arg)),
+    message: "Dangerous command pattern detected: dd to block device",
   },
 ];
 
@@ -52,8 +64,12 @@ export const checkDangerousPatterns = (
 ): void => {
   for (const pattern of DANGER_PATTERNS) {
     if (pattern.check(cmdName, args)) {
+      const message =
+        typeof pattern.message === "function"
+          ? pattern.message(cmdName)
+          : pattern.message;
       throw new Error(
-        `${pattern.message(cmdName)}. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
+        `${message}. Set MCP_PTY_USER_CONSENT_FOR_DANGEROUS_ACTIONS to bypass.`,
       );
     }
   }
