@@ -1,5 +1,14 @@
 # mcp-pty
 
+> [!WARNING]
+> **Archived — no longer maintained (2026-10).**
+> mcp-pty filled a gap when Bun lacked PTY support and agent harnesses had no async PTY. Both gaps are closed:
+> - Bun ships native PTY via `Bun.spawn({ terminal })` (`Bun.Terminal`).
+> - Major agent harnesses provide persistent/interactive PTY sessions natively; `tmux send-keys` + `capture-pane` covers the rest.
+>
+> Use those instead. The code stays available for reference.
+
+
 MCP (Model Context Protocol) server for PTY session management with Bun runtime.
 
 ## Installation
