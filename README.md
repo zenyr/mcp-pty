@@ -1,5 +1,14 @@
 # mcp-pty
 
+> [!WARNING]
+> **Archived — no longer maintained (2026-10).**
+> mcp-pty filled a gap when Bun lacked PTY support and agent harnesses had no async PTY. Both gaps are closed:
+> - Bun ships native PTY via `Bun.spawn({ terminal })` (`Bun.Terminal`).
+> - Major agent harnesses provide persistent/interactive PTY sessions natively; `tmux send-keys` + `capture-pane` covers the rest.
+>
+> Use those instead. The code stays available for reference.
+
+
 An MCP server that manages persistent pseudo-terminal sessions bound to MCP clients using Bun, xterm.js, and the official MCP SDK. Unlike typical shell execution, it provides a continuous terminal environment maintained across multiple command invocations within a client session.
 
 ## Installation
